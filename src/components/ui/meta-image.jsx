@@ -19,7 +19,7 @@ function useLinkPreview(link) {
 
       try {
         const url = encodeURIComponent(link)
-        const response = await axios.get(`/api/link-meta2?url=${url}`);
+        const response = await axios.get(`/api/link-meta?url=${url}`);
         const data = response.data;
 
         setState({
