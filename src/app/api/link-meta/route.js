@@ -29,8 +29,8 @@ export async function GET(request) {
 
   try {
     const result = await fetchMetaData(url);
-    await redis.set(cacheKey, JSON.stringify(meta), 'EX', CACHE_TTL)
-    
+    await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL)
+
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
     return NextResponse.json(
