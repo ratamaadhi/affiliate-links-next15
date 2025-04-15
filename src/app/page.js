@@ -8,6 +8,7 @@ import Link from "next/link";
 import { RxMagnifyingGlass } from "react-icons/rx";
 import qs from "qs";
 import { debounce } from "lodash";
+import MetaImage from "@/components/ui/meta-image";
 
 export default function Home() {
   const [posts, setPosts] = useState([]);
@@ -98,7 +99,9 @@ export default function Home() {
             <Link href={post.link} target="_blank">
               <Card>
                 <CardContent>
+                  <MetaImage link={post.link} />
                   <h2 className="text-xl font-bold">{post.title}</h2>
+                  <p className="text-gray-500">{post.description}</p>
                   <p className="text-gray-700">{post.link}</p>
                 </CardContent>
               </Card>
