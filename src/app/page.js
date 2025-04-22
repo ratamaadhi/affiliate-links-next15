@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { fetchAPI } from "@/lib/api";
@@ -10,6 +10,8 @@ import qs from "qs";
 import { debounce } from "lodash";
 import MetaImage from "@/components/ui/meta-image";
 
+const PAGE_SIZE = 5;
+
 export default function Home() {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
@@ -17,70 +19,102 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const loaderRef = useRef(null);
 
-  const loadPosts = async (pageNumber, keyword = "") => {
-    const query = qs.stringify(
-      {
-        populate: "*",
-        pagination: {
-          page: pageNumber,
-          pageSize: 5,
+  const fetchPosts = useCallback(async (pageNumber, queryParams = {}) => {
+    try {
+      const query = qs.stringify(
+        {
+          populate: "*",
+          pagination: {
+            page: pageNumber,
+            pageSize: PAGE_SIZE,
+          },
+          filters: queryParams,
         },
-        filters: keyword
-          ? {
-              title: {
-                $containsi: keyword,
-              },
-            }
-          : undefined,
-      },
-      { encodeValuesOnly: true }
-    );
+        { encodeValuesOnly: true }
+      );
 
-    const response = await fetchAPI(`/posts?query=${query}`);
-    const newPosts = response.data;
-    const total = response.meta.pagination.total;
+      const response = await fetchAPI(`/posts?${query}`);
 
-    if (pageNumber === 1) {
-      setPosts(newPosts);
-    } else {
-      setPosts((prev) => [...prev, ...newPosts]);
-    }
+      if (!response?.data || !response?.meta) {
+        console.error("Invalid API response structure:", response);
+        setHasMore(false);
+        return;
+      }
 
-    if (posts.length + newPosts.length >= total) {
+      const newPosts = response.data;
+      const total = response.meta.pagination.total;
+      const isFirstPage = pageNumber === 1;
+
+      setPosts((prevPosts) => {
+        const updatedPosts = isFirstPage ? newPosts : [...prevPosts, ...newPosts];
+        setHasMore(updatedPosts.length < total);
+        return updatedPosts;
+      });
+    } catch (error) {
+      console.error("Failed to load posts:", error);
       setHasMore(false);
-    } else {
-      setHasMore(true);
     }
-  };
+  }, []);
+
+  const loadPosts = useCallback(
+    (pageNumber, keyword = "") => {
+      const queryParams = keyword
+        ? {
+            $or: [
+              { title: { $containsi: keyword } },
+              { description: { $containsi: keyword } },
+              { link: { $containsi: keyword } },
+            ],
+          }
+        : undefined;
+
+      return fetchPosts(pageNumber, queryParams);
+    },
+    [fetchPosts]
+  );
 
   useEffect(() => {
-    loadPosts(1, searchTerm);
     setPage(1);
-  }, [searchTerm]);
+    setHasMore(true);
+    loadPosts(1, searchTerm);
+  }, [searchTerm, loadPosts]);
 
   useEffect(() => {
-    if (page === 1) return;
-    loadPosts(page, searchTerm);
-  }, [page]);
+    if (page > 1) {
+      loadPosts(page, searchTerm);
+    }
+  }, [page, searchTerm, loadPosts]);
 
   useEffect(() => {
+    if (!loaderRef.current) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const first = entries[0];
-        if (first.isIntersecting && hasMore) {
+        if (entries[0].isIntersecting && hasMore) {
           setPage((prev) => prev + 1);
         }
       },
       { threshold: 1 }
     );
 
-    if (loaderRef.current) observer.observe(loaderRef.current);
-    return () => observer.disconnect();
-  }, [loaderRef, hasMore]);
+    const currentLoaderRef = loaderRef.current;
+    observer.observe(currentLoaderRef);
 
-  const handleSearch = debounce((e) => {
-    setSearchTerm(e.target.value);
-  }, 300); // debounce 300ms
+    return () => {
+      if (currentLoaderRef) {
+        observer.unobserve(currentLoaderRef);
+      }
+      observer.disconnect();
+    };
+  }, [hasMore]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleSearch = useCallback(
+    debounce((e) => {
+      setSearchTerm(e.target.value);
+    }, 300),
+    []
+  );
 
   return (
     <div className="px-4 w-full mt-4">

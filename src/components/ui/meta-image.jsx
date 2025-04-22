@@ -13,15 +13,18 @@ function useLinkPreview(link) {
     error: null,
   });
 
+  const isInitialMount = React.useRef(true);
+
   React.useEffect(() => {
     async function fetchPreview() {
       setState((prev) => ({ ...prev, loading: true }));
 
       try {
         const url = encodeURIComponent(link)
-        const response = await axios.get(`/api/link-meta?url=${url}`);
+        const response = await axios.get(`/api/link-meta2?url=${url}`);
         const data = response.data;
-
+        console.log("Fetched data:", data);
+                
         setState({
           image: data.image,
           title: data.title,
@@ -35,7 +38,11 @@ function useLinkPreview(link) {
       }
     }
 
-    fetchPreview();
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    } else {
+      fetchPreview();
+    }
   }, [link]);
 
   return state;
