@@ -101,8 +101,8 @@ export default function Home() {
                 <CardContent>
                   <MetaImage link={post.link} />
                   <h2 className="text-xl font-bold">{post.title}</h2>
-                  <p className="text-gray-500">{post.description}</p>
-                  <p className="text-gray-700">{post.link}</p>
+                  <p className="text-gray-500 line-clamp-2">{post.description}</p>
+                  <p className="text-gray-700 line-clamp-2">{post.link}</p>
                 </CardContent>
               </Card>
             </Link>
