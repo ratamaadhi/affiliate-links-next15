@@ -1,6 +1,6 @@
 import Redis from 'ioredis'
 
-let redis = process.env.REDIS_URL || 'redis://localhost:6379'
+let redis = process.env.REDIS_URL;
 
 if (process.env.NODE_ENV === 'production') {
   // ✅ Production (e.g., Vercel + Upstash)
