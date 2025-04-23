@@ -14,6 +14,7 @@ const config = {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
   setupFilesAfterEnv: ["@testing-library/jest-dom"],
+  testMatch: ["<rootDir>/__test__/**/*.js"],
   // Add more setup options before each test is run
   // setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
-import PostPage from "./page";
+import PostPage from "@/app/posts/page";
 import usePosts from "@/hooks/usePosts";
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
 
