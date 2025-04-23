@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React from "react";
-import { Skeleton } from "./skeleton";
-import axios from "axios";
-import _ from "lodash";
+import React from 'react';
+import { Skeleton } from './skeleton';
+import axios from 'axios';
+import _ from 'lodash';
 
 const scrapingApiUrl = process.env.NEXT_PUBLIC_SCRAPING_API;
 
@@ -17,18 +17,18 @@ function useLinkPreview(link) {
     error: null,
   });
 
-  const isInitialMount = React.useRef(true);
-
   React.useEffect(() => {
     async function fetchPreview() {
       setState((prev) => ({ ...prev, loading: true }));
 
       try {
-        const url = encodeURIComponent(link)
+        const url = encodeURIComponent(link);
         // const response = await axios.get(`/api/link-meta2?url=${url}`);
-        const response = await axios.get(`${scrapingApiUrl}/metadata?url=${url}`);
+        const response = await axios.get(
+          `${scrapingApiUrl}/metadata?url=${url}`
+        );
         const data = await response.data;
-        console.log("Fetched data:", data);
+        console.log('Fetched data:', data);
 
         setState({
           image: data.image,
@@ -43,11 +43,7 @@ function useLinkPreview(link) {
       }
     }
 
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    } else {
-      fetchPreview();
-    }
+    fetchPreview();
   }, [link]);
 
   return state;
@@ -61,7 +57,7 @@ function ImagePreview({ image, title }) {
   return (
     <img
       src={image}
-      alt={title || "Preview"}
+      alt={title || 'Preview'}
       width={400}
       height={300}
       className="object-cover w-full h-full rounded-lg"
@@ -87,7 +83,9 @@ function MetaImage({ link }) {
   return (
     <div className="aspect-[4/3] w-full mb-4">
       {loading && <LoadingSkeleton />}
-      {!loading && !_.isEmpty(image) && <ImagePreview image={image} title={title} />}
+      {!loading && !_.isEmpty(image) && (
+        <ImagePreview image={image} title={title} />
+      )}
     </div>
   );
 }
