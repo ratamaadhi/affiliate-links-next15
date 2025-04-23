@@ -1,7 +1,11 @@
+"use client";
+
 import React from "react";
 import { Skeleton } from "./skeleton";
 import axios from "axios";
 import _ from "lodash";
+
+const scrapingApiUrl = process.env.NEXT_PUBLIC_SCRAPING_API;
 
 function useLinkPreview(link) {
   const [state, setState] = React.useState({
@@ -21,10 +25,11 @@ function useLinkPreview(link) {
 
       try {
         const url = encodeURIComponent(link)
-        const response = await axios.get(`/api/link-meta2?url=${url}`);
-        const data = response.data;
+        // const response = await axios.get(`/api/link-meta2?url=${url}`);
+        const response = await axios.get(`${scrapingApiUrl}/metadata?url=${url}`);
+        const data = await response.data;
         console.log("Fetched data:", data);
-                
+
         setState({
           image: data.image,
           title: data.title,

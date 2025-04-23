@@ -1,13 +1,14 @@
 import Redis from 'ioredis'
 
-let redis = process.env.REDIS_URL;
+let redis = process.env.NEXT_PUBLIC_REDIS_URL || "http://localhost:6379";
 
 if (process.env.NODE_ENV === 'production') {
   // ✅ Production (e.g., Vercel + Upstash)
-  redis = new Redis(process.env.REDIS_URL, {
+  redis = new Redis(process.env.NEXT_PUBLIC_REDIS_URL, {
     // optional: log friendly name
     name: 'vercel-prod-redis',
-    // tls: process.env.REDIS_URL?.startsWith('rediss://') ? {} : undefined,
+    // tls: process.env.NEXT_PUBLIC_REDIS_URL?.startsWith('rediss://') ? {} : undefined,
+    maxRetriesPerRequest: null,
     reconnectOnError(err) {
       const targetError = "READONLY";
       if (err.message.includes(targetError)) {
