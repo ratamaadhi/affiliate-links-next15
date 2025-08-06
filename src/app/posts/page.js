@@ -3,9 +3,9 @@
 import React from 'react';
 import usePosts from "@/hooks/usePosts";
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
-import SearchBar from "@/components/SearchBar";
-import PostItem from "@/components/PostItem";
-import LoadingIndicator from "@/components/LoadingIndicator";
+import SearchBar from "@/components/search-bar";
+import PostItem from "@/components/post-item";
+import LoadingIndicator from "@/components/loading-indicator";
 
 // Main component
 export default function Home() {
