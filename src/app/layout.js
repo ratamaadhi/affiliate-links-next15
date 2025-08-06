@@ -1,16 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Input } from "@/components/ui/input";
-import { RxMagnifyingGlass } from "react-icons/rx";
-import { BiSortAlt2 } from "react-icons/bi";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-
+import { ThemeProvider } from "@/components/theme-provider";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -28,26 +18,18 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="w-full max-w-md mx-auto bg-background">
-          <nav className="px-4 py-2">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Links</h1>
-              {/* <div className="flex space-x-4">
-                <a href="/" className="text-blue-500 hover:underline">
-                  Home
-                </a>
-                <a href="/posts" className="text-blue-500 hover:underline">
-                  Posts
-                </a>
-              </div> */}
-            </div>
-          </nav>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
-        </div>
+        </ThemeProvider>
       </body>
     </html>
   );

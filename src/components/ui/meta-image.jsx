@@ -28,7 +28,6 @@ function useLinkPreview(link) {
           `${scrapingApiUrl}/metadata?url=${url}`
         );
         const data = await response.data;
-        console.log('Fetched data:', data);
 
         setState({
           image: data.image,
