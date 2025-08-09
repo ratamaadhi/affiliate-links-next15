@@ -1,23 +1,21 @@
-import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import PostPage from "@/app/posts/page";
-import usePosts from "@/hooks/usePosts";
-import useInfiniteScroll from "@/hooks/useInfiniteScroll";
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import PostPage from '@/app/posts/page';
+import usePosts from '@/hooks/usePosts';
+import useInfiniteScroll from '@/hooks/useInfiniteScroll';
 
 // Mock the hooks
-jest.mock("@/hooks/usePosts");
-jest.mock("@/hooks/useInfiniteScroll");
+jest.mock('@/hooks/usePosts');
+jest.mock('@/hooks/useInfiniteScroll');
 
-const setupUsePostsMock = (
-  {
-    posts = [],
-    hasMore = false,
-    isLoading = false,
-    setPage = jest.fn(),
-    handleSearch = jest.fn(),
-    setIsLoading = jest.fn(),
-  } = {}
-) => {
+const setupUsePostsMock = ({
+  posts = [],
+  hasMore = false,
+  isLoading = false,
+  setPage = jest.fn(),
+  handleSearch = jest.fn(),
+  setIsLoading = jest.fn(),
+} = {}) => {
   usePosts.mockReturnValue({
     posts,
     hasMore,
@@ -28,37 +26,47 @@ const setupUsePostsMock = (
   });
 };
 
-describe("PostPage Component", () => {
+describe('PostPage Component', () => {
   beforeEach(() => {
     useInfiniteScroll.mockReturnValue(null);
   });
 
-  it("renders without errors", () => {
+  it('renders without errors', () => {
     setupUsePostsMock();
     render(<PostPage />);
-    expect(screen.getByText("No more posts")).toBeInTheDocument();
+    expect(screen.getByText('No more posts')).toBeInTheDocument();
   });
 
-  it("displays posts when available", () => {
+  it('displays posts when available', () => {
     setupUsePostsMock({
       posts: [
-        { id: 1, title: "Test Post 1", description: "Test Description 1", link: "test-link-1" },
-        { id: 2, title: "Test Post 2", description: "Test Description 2", link: "test-link-2" },
+        {
+          id: 1,
+          title: 'Test Post 1',
+          description: 'Test Description 1',
+          link: 'test-link-1',
+        },
+        {
+          id: 2,
+          title: 'Test Post 2',
+          description: 'Test Description 2',
+          link: 'test-link-2',
+        },
       ],
     });
 
     render(<PostPage />);
-    expect(screen.getByText("Test Post 1")).toBeInTheDocument();
-    expect(screen.getByText("Test Post 2")).toBeInTheDocument();
+    expect(screen.getByText('Test Post 1')).toBeInTheDocument();
+    expect(screen.getByText('Test Post 2')).toBeInTheDocument();
   });
 
-  it("displays loading indicator when loading", () => {
+  it('displays loading indicator when loading', () => {
     setupUsePostsMock({ hasMore: true, isLoading: true });
     render(<PostPage />);
     //expect(screen.getByText("Loading more...")).toBeInTheDocument();
   });
 
-  it("calls setPage when infinite scroll triggers", () => {
+  it('calls setPage when infinite scroll triggers', () => {
     const setPageMock = jest.fn();
     setupUsePostsMock({ hasMore: true, setPage: setPageMock });
     const loaderRef = { current: document.createElement('div') };

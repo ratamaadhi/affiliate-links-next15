@@ -1,6 +1,6 @@
 import React from 'react';
-import { Input } from "@/components/ui/input";
-import { RxMagnifyingGlass } from "react-icons/rx";
+import { Input } from '@/components/ui/input';
+import { RxMagnifyingGlass } from 'react-icons/rx';
 
 // SearchBar component
 function SearchBar({ onSearch }) {

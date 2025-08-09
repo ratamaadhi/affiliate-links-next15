@@ -1,7 +1,7 @@
 import React from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import MetaImage from "@/components/ui/meta-image";
-import Link from "next/link";
+import { Card, CardContent } from '@/components/ui/card';
+import MetaImage from '@/components/ui/meta-image';
+import Link from 'next/link';
 
 // PostItem component
 function PostItem({ post }) {

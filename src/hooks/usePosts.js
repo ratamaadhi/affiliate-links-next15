@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAPI } from "@/lib/api";
-import qs from "qs";
-import { debounce } from "lodash";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchAPI } from '@/lib/api';
+import qs from 'qs';
+import { debounce } from 'lodash';
 
 const PAGE_SIZE = 5;
 
@@ -12,14 +12,14 @@ function usePosts() {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchPosts = useCallback(async (pageNumber, queryParams = {}) => {
     try {
       const query = qs.stringify(
         {
-          populate: "*",
+          populate: '*',
           pagination: {
             page: pageNumber,
             pageSize: PAGE_SIZE,
@@ -32,19 +32,19 @@ function usePosts() {
       const response = await fetchAPI(`/posts?${query}`);
 
       if (!response?.data || !response?.meta) {
-        console.error("Invalid API response structure:", response);
+        console.error('Invalid API response structure:', response);
         setHasMore(false);
         return;
       }
 
       if (!response.data) {
-        console.error("API response missing data:", response);
+        console.error('API response missing data:', response);
         setHasMore(false);
         return;
       }
 
       if (!response.meta) {
-        console.error("API response missing meta:", response);
+        console.error('API response missing meta:', response);
         setHasMore(false);
         return;
       }
@@ -54,21 +54,22 @@ function usePosts() {
       const isFirstPage = pageNumber === 1;
 
       setPosts((prevPosts) => {
-        const updatedPosts = isFirstPage ? newPosts : [...prevPosts, ...newPosts];
+        const updatedPosts = isFirstPage
+          ? newPosts
+          : [...prevPosts, ...newPosts];
         setHasMore(updatedPosts.length < total);
         return updatedPosts;
       });
     } catch (error) {
-      console.error("Failed to load posts:", error);
+      console.error('Failed to load posts:', error);
       setHasMore(false);
-    }
-    finally {
+    } finally {
       setIsLoading(false);
     }
   }, []);
 
   const loadPosts = useCallback(
-    (pageNumber, keyword = "") => {
+    (pageNumber, keyword = '') => {
       setIsLoading(true);
       const queryParams = keyword
         ? {
@@ -99,9 +100,12 @@ function usePosts() {
 
   const debouncedSetSearchTerm = useRef(debounce(setSearchTerm, 300)).current;
 
-  const handleSearch = useCallback((value) => {
-    debouncedSetSearchTerm(value);
-  }, [debouncedSetSearchTerm]);
+  const handleSearch = useCallback(
+    (value) => {
+      debouncedSetSearchTerm(value);
+    },
+    [debouncedSetSearchTerm]
+  );
 
   return {
     posts,
