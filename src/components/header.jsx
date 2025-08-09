@@ -1,18 +1,18 @@
-"use client";
-import Link from "next/link";
-import { Logo } from "@/components/logo";
-import { Menu, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import React from "react";
-import { cn } from "@/lib/utils";
-import { useScroll } from "motion/react";
-import { ModeToggle } from "./mode-toggle";
+'use client';
+import Link from 'next/link';
+import { Logo } from '@/components/logo';
+import { Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { useScroll } from 'motion/react';
+import { ModeToggle } from './mode-toggle';
 
 const menuItems = [
-  { name: "Features", href: "#link" },
-  { name: "Solution", href: "#link" },
-  { name: "Pricing", href: "#link" },
-  { name: "About", href: "#link" },
+  { name: 'Features', href: '#link' },
+  { name: 'Solution', href: '#link' },
+  { name: 'Pricing', href: '#link' },
+  { name: 'About', href: '#link' },
 ];
 
 export const HeroHeader = () => {
@@ -22,7 +22,7 @@ export const HeroHeader = () => {
   const { scrollYProgress } = useScroll();
 
   React.useEffect(() => {
-    const unsubscribe = scrollYProgress.on("change", (latest) => {
+    const unsubscribe = scrollYProgress.on('change', (latest) => {
       setScrolled(latest > 0.05);
     });
     return () => unsubscribe();
@@ -31,10 +31,10 @@ export const HeroHeader = () => {
   return (
     <header>
       <nav
-        data-state={menuState && "active"}
+        data-state={menuState && 'active'}
         className={cn(
-          "fixed z-20 w-full border-b transition-colors duration-150",
-          scrolled && "bg-background/50 backdrop-blur-3xl"
+          'fixed z-20 w-full border-b transition-colors duration-150',
+          scrolled && 'bg-background/50 backdrop-blur-3xl'
         )}
       >
         <div className="mx-auto max-w-5xl px-6 transition-all duration-300">
@@ -50,7 +50,7 @@ export const HeroHeader = () => {
 
               <button
                 onClick={() => setMenuState(!menuState)}
-                aria-label={menuState == true ? "Close Menu" : "Open Menu"}
+                aria-label={menuState == true ? 'Close Menu' : 'Open Menu'}
                 className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 lg:hidden"
               >
                 <Menu className="in-data-[state=active]:rotate-180 in-data-[state=active]:scale-0 in-data-[state=active]:opacity-0 m-auto size-6 duration-200" />

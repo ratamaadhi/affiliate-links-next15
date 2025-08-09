@@ -1,6 +1,6 @@
-import Redis from 'ioredis'
+import Redis from 'ioredis';
 
-let redis = process.env.NEXT_PUBLIC_REDIS_URL || "http://localhost:6379";
+let redis = process.env.NEXT_PUBLIC_REDIS_URL || 'http://localhost:6379';
 
 if (process.env.NODE_ENV === 'production') {
   // ✅ Production (e.g., Vercel + Upstash)
@@ -10,20 +10,20 @@ if (process.env.NODE_ENV === 'production') {
     // tls: process.env.NEXT_PUBLIC_REDIS_URL?.startsWith('rediss://') ? {} : undefined,
     maxRetriesPerRequest: null,
     reconnectOnError(err) {
-      const targetError = "READONLY";
+      const targetError = 'READONLY';
       if (err.message.includes(targetError)) {
         // Only reconnect when the error contains "READONLY"
         return true; // or `return 1;`
       }
     },
-  })
+  });
 } else {
   // ✅ Local development
   redis = new Redis({
-    port: 6379,          // default Redis port
-    host: '127.0.0.1',   // localhost
+    port: 6379, // default Redis port
+    host: '127.0.0.1', // localhost
     // password: 'your_local_password', // kalau Redis lokal kamu ada password
-  })
+  });
 }
 
-export { redis }
+export { redis };

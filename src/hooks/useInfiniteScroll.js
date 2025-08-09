@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from 'react';
 
 // Custom hook for infinite scrolling
 function useInfiniteScroll(hasMore, onLoadMore, isLoading, setIsLoading) {
@@ -11,7 +11,10 @@ function useInfiniteScroll(hasMore, onLoadMore, isLoading, setIsLoading) {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading) {
+        const entry = entries[0];
+        const canLoadMore = entry.isIntersecting && hasMore && !isLoading;
+
+        if (canLoadMore) {
           setIsLoading(true);
           onLoadMore();
         }
