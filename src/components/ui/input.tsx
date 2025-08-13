@@ -2,7 +2,14 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-const Input = React.forwardRef(
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  className?: string;
+  type?: string;
+  startIcon?: React.ElementType<{ size?: number; className?: string }>;
+  endIcon?: React.ElementType<{ size?: number; className?: string }>;
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, startIcon, endIcon, ...props }, ref) => {
     const StartIcon = startIcon;
     const EndIcon = endIcon;
@@ -36,5 +43,7 @@ const Input = React.forwardRef(
     );
   }
 );
+
+Input.displayName = 'Input';
 
 export { Input };

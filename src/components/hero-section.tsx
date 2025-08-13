@@ -5,8 +5,10 @@ import Image from 'next/image';
 import { TextEffect } from '@/components/ui/text-effect';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 import { HeroHeader } from './header';
+import { Variants } from 'motion/react'; // Import Variants type
 
-const transitionVariants = {
+const transitionVariants: { item: Variants } = {
+  // Explicitly type transitionVariants
   item: {
     hidden: {
       opacity: 0,
@@ -26,10 +28,10 @@ const transitionVariants = {
   },
 };
 
-export default function HeroSection() {
+export default function HeroSection({ session }) {
   return (
     <>
-      <HeroHeader />
+      <HeroHeader session={session} />
       <main className="overflow-hidden">
         <div
           aria-hidden
@@ -75,7 +77,7 @@ export default function HeroSection() {
                         },
                       },
                     },
-                    ...transitionVariants,
+                    item: transitionVariants.item, // Correctly pass item variant
                   }}
                   className="mt-12 flex items-center gap-2"
                 >
@@ -117,7 +119,7 @@ export default function HeroSection() {
                     },
                   },
                 },
-                ...transitionVariants,
+                item: transitionVariants.item, // Correctly pass item variant
               }}
             >
               <div className="relative -mr-56 mt-8 overflow-hidden px-2 sm:mr-0 sm:mt-12 md:mt-20">

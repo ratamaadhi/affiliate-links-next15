@@ -70,10 +70,29 @@ const presetVariants = {
   },
 };
 
-const addDefaultVariants = (variants) => ({
+type MotionVariant = {
+  hidden?: object;
+  visible?: object;
+};
+
+type PresetVariantKey = keyof typeof presetVariants;
+
+const addDefaultVariants = (variants: MotionVariant): MotionVariant => ({
   hidden: { ...defaultItemVariants.hidden, ...variants.hidden },
   visible: { ...defaultItemVariants.visible, ...variants.visible },
 });
+
+interface AnimatedGroupProps {
+  children: React.ReactNode;
+  className?: string;
+  variants?: {
+    container?: MotionVariant;
+    item?: MotionVariant;
+  };
+  preset?: PresetVariantKey;
+  as?: string | React.ComponentType<any>;
+  asChild?: string | React.ComponentType<any>;
+}
 
 function AnimatedGroup({
   children,
@@ -82,7 +101,7 @@ function AnimatedGroup({
   preset,
   as = 'div',
   asChild = 'div',
-}) {
+}: AnimatedGroupProps) {
   const selectedVariants = {
     item: addDefaultVariants(preset ? presetVariants[preset] : {}),
     container: addDefaultVariants(defaultContainerVariants),

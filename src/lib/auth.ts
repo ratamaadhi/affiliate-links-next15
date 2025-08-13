@@ -2,8 +2,15 @@ import type { User } from 'better-auth';
 
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import db from '@/lib/db'; // your drizzle instance
+import db from './db';
+import * as schema from '@/lib/db/schema';
 import { createAuthMiddleware } from 'better-auth/plugins';
+import { nextCookies } from 'better-auth/next-js';
+import { Resend } from 'resend';
+import VerificationEmail from '@/components/email/verification-email';
+import PasswordResetEmail from '@/components/email/reset-password';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export type UserWithId = Omit<User, 'id'> & {
   id: number;
@@ -12,6 +19,30 @@ export type UserWithId = Omit<User, 'id'> & {
 export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }) => {
+      await resend.emails.send({
+        from: 'Affiliate Links App <onboarding@resend.dev>',
+        to: [user.email],
+        subject: 'Reset your password',
+        react: PasswordResetEmail({
+          userName: user.name,
+          resetUrl: url,
+          userEmail: user.email,
+        }),
+      });
+    },
+  },
+  emailVerification: {
+    sendVerificationEmail: async ({ user, url }) => {
+      await resend.emails.send({
+        from: 'Affiliate Links App <onboarding@resend.dev>',
+        to: [user.email],
+        subject: 'Verify your email',
+        react: VerificationEmail({ userName: user.name, verificationUrl: url }),
+      });
+    },
+    sendOnSignUp: true,
   },
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
@@ -28,14 +59,16 @@ export const auth = betterAuth({
   },
   database: drizzleAdapter(db, {
     provider: 'sqlite',
+    schema,
   }),
   advanced: {
     generateId: false,
   },
   socialProviders: {
-    github: {
-      clientId: process.env.AUTH_GITHUB_CLIENT_ID,
-      clientSecret: process.env.AUTH_GITHUB_CLIENT_SECRET,
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
+  plugins: [nextCookies()],
 });

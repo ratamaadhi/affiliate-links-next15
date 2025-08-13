@@ -15,7 +15,7 @@ const menuItems = [
   { name: 'About', href: '#link' },
 ];
 
-export const HeroHeader = () => {
+export const HeroHeader = ({ session: sessionData }) => {
   const [menuState, setMenuState] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
 
@@ -45,7 +45,7 @@ export const HeroHeader = () => {
                 aria-label="home"
                 className="flex items-center space-x-2"
               >
-                <Logo />
+                <Logo className="" uniColor="" />
               </Link>
 
               <button
@@ -90,16 +90,26 @@ export const HeroHeader = () => {
               </div>
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
                 <ModeToggle />
-                <Button asChild variant="outline">
-                  <Link href="#">
-                    <span>Login</span>
-                  </Link>
-                </Button>
-                <Button asChild>
-                  <Link href="#">
-                    <span>Sign Up</span>
-                  </Link>
-                </Button>
+                {sessionData.session ? (
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard">
+                      <span>Dashboard</span>
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button asChild variant="outline">
+                      <Link href="/login">
+                        <span>Login</span>
+                      </Link>
+                    </Button>
+                    <Button asChild>
+                      <Link href="/signup">
+                        <span>Sign Up</span>
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
