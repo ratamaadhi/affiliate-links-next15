@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { LoginForm } from '../src/components/form/login-form';
 import { useRouter } from 'next/navigation';
 import { signInUser } from '../src/server/users';
@@ -47,10 +53,15 @@ describe('LoginForm', () => {
       target: { value: 'password123' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Login', type: 'submit' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Login', type: 'submit' })
+    );
 
     await waitFor(() => {
-      expect(signInUser).toHaveBeenCalledWith('test@example.com', 'password123');
+      expect(signInUser).toHaveBeenCalledWith(
+        'test@example.com',
+        'password123'
+      );
     });
 
     await waitFor(() => {
@@ -63,7 +74,10 @@ describe('LoginForm', () => {
   });
 
   it('should display an error message for invalid credentials', async () => {
-    signInUser.mockResolvedValue({ success: false, message: 'Invalid credentials' });
+    signInUser.mockResolvedValue({
+      success: false,
+      message: 'Invalid credentials',
+    });
 
     render(<LoginForm />);
 
@@ -74,10 +88,15 @@ describe('LoginForm', () => {
       target: { value: 'wrongpassword' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Login', type: 'submit' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Login', type: 'submit' })
+    );
 
     await waitFor(() => {
-      expect(signInUser).toHaveBeenCalledWith('test@example.com', 'wrongpassword');
+      expect(signInUser).toHaveBeenCalledWith(
+        'test@example.com',
+        'wrongpassword'
+      );
     });
 
     await waitFor(() => {
@@ -90,14 +109,20 @@ describe('LoginForm', () => {
   it('should display validation errors for empty fields', async () => {
     render(<LoginForm />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Login', type: 'submit' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Login', type: 'submit' })
+    );
 
     await waitFor(() => {
       expect(screen.getByText(/Invalid email/i)).toBeInTheDocument();
     });
     const passwordInput = screen.getByPlaceholderText('******');
     const passwordInputParent = passwordInput.closest('.grid.gap-3');
-    expect(await within(passwordInputParent).findByText(/Too small: expected string to have >=6 characters/i)).toBeInTheDocument();
+    expect(
+      await within(passwordInputParent).findByText(
+        /Too small: expected string to have >=6 characters/i
+      )
+    ).toBeInTheDocument();
 
     expect(signInUser).not.toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();
@@ -108,7 +133,9 @@ describe('LoginForm', () => {
     render(<LoginForm />);
 
     const passwordInput = screen.getByPlaceholderText('******');
-    const showPasswordCheckbox = screen.getByRole('checkbox', { name: /Show Password/i });
+    const showPasswordCheckbox = screen.getByRole('checkbox', {
+      name: /Show Password/i,
+    });
 
     expect(passwordInput).toHaveAttribute('type', 'password');
 

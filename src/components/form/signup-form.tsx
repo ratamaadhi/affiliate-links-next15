@@ -133,9 +133,10 @@ export function SignUpForm({
                       disabled={isLoading}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel htmlFor="email">Email</FormLabel>
                           <FormControl>
                             <Input
+                              id="email"
                               type="email"
                               placeholder="m@example.com"
                               {...field}
@@ -153,9 +154,11 @@ export function SignUpForm({
                       disabled={isLoading}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel htmlFor="password">Password</FormLabel>
                           <FormControl>
                             <Input
+                              id="password"
+                              data-testid="password-input"
                               type="password"
                               placeholder="******"
                               {...field}
@@ -173,9 +176,13 @@ export function SignUpForm({
                       disabled={isLoading}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
+                          <FormLabel htmlFor="confirmPassword">
+                            Confirm Password
+                          </FormLabel>
                           <FormControl>
                             <Input
+                              id="confirmPassword"
+                              data-testid="confirm-password-input"
                               type="password"
                               placeholder="******"
                               {...field}
