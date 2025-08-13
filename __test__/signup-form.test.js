@@ -17,6 +17,23 @@ jest.mock('sonner', () => ({
   },
 }));
 
+jest.mock('nanostores', () => ({
+  atom: jest.fn(() => ({
+    get: jest.fn(),
+    set: jest.fn(),
+    subscribe: jest.fn(),
+  })),
+}));
+
+jest.mock('better-auth/client', () => ({
+  createAuthClient: jest.fn(() => ({
+    api: {
+      signInEmail: jest.fn(),
+      signUpEmail: jest.fn(),
+    },
+  })),
+}));
+
 // Mock src/server/users
 jest.mock('../src/server/users', () => ({
   signUpUser: jest.fn(),
