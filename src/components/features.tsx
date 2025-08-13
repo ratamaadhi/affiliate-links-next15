@@ -7,11 +7,11 @@ export default function Features() {
       <div className="@container mx-auto max-w-5xl px-6">
         <div className="text-center">
           <h2 className="text-balance text-4xl font-semibold lg:text-5xl">
-            Built to cover your needs
+            Built For All Your Affiliate Needs
           </h2>
           <p className="mt-4">
-            Libero sapiente aliquam quibusdam aspernatur, praesentium iusto
-            repellendus.
+            One powerful platform to maximize the potential of every link you
+            share.
           </p>
         </div>
         <div className="@min-4xl:max-w-full @min-4xl:grid-cols-3 mx-auto mt-8 grid max-w-sm gap-6 *:text-center md:mt-16">
@@ -21,13 +21,13 @@ export default function Features() {
                 <Zap className="size-6" aria-hidden />
               </CardDecorator>
 
-              <h3 className="mt-6 font-medium">Customizable</h3>
+              <h3 className="mt-6 font-medium">Paste & Go</h3>
             </CardHeader>
 
             <CardContent>
-              <p className="text-sm">
-                Extensive customization options, allowing you to tailor every
-                aspect to meet your specific needs.
+              <p className="mt-3 text-sm">
+                Just paste a link. We instantly pull the product image, title,
+                and details. Zero manual work.
               </p>
             </CardContent>
           </Card>
@@ -38,13 +38,13 @@ export default function Features() {
                 <Settings2 className="size-6" aria-hidden />
               </CardDecorator>
 
-              <h3 className="mt-6 font-medium">You have full control</h3>
+              <h3 className="mt-6 font-medium">More Than a List</h3>
             </CardHeader>
 
             <CardContent>
               <p className="mt-3 text-sm">
-                From design elements to functionality, you have complete control
-                to create a unique and personalized experience.
+                Turn your boring list of links into a visual gallery your
+                audience will love to tap through.
               </p>
             </CardContent>
           </Card>
@@ -55,13 +55,13 @@ export default function Features() {
                 <Sparkles className="size-6" aria-hidden />
               </CardDecorator>
 
-              <h3 className="mt-6 font-medium">Powered By AI</h3>
+              <h3 className="mt-6 font-medium">Your One-Stop Link</h3>
             </CardHeader>
 
             <CardContent>
               <p className="mt-3 text-sm">
-                Elements to functionality, you have complete control to create a
-                unique experience.
+                Share one simple link in your bio for everything you promote.
+                Make it easy for followers to find and buy.
               </p>
             </CardContent>
           </Card>
