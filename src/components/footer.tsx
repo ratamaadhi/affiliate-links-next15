@@ -15,7 +15,8 @@ export default function FooterSection() {
         <SocialLinks />
         <span className="text-muted-foreground block text-center text-sm">
           {' '}
-          © {new Date().getFullYear()} Tailark, All rights reserved
+          © {new Date().getFullYear()} Affiliate Links App. All Rights
+          Reserved.
         </span>
       </div>
     </footer>

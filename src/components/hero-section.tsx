@@ -50,9 +50,9 @@ export default function HeroSection({ session }) {
                   preset="fade-in-blur"
                   speedSegment={0.3}
                   as="h1"
-                  className="mt-8 max-w-2xl text-balance text-5xl font-medium md:text-6xl lg:mt-16"
+                  className="mt-8 max-w-2xl text-balance text-5xl font-semibold md:text-6xl lg:mt-16"
                 >
-                  Build and Ship 10x faster with NS
+                  💎 The &ldquo;Link in Bio&rdquo; that Actually Sells.
                 </TextEffect>
                 <TextEffect
                   per="line"
@@ -62,9 +62,8 @@ export default function HeroSection({ session }) {
                   as="p"
                   className="mt-8 max-w-2xl text-pretty text-lg"
                 >
-                  Tailwindcss highly customizable components for building modern
-                  websites and applications that look and feel the way you mean
-                  it.
+                  Just paste your affiliate links. We&apos;ll instantly turn
+                  them into a beautiful, shoppable gallery.
                 </TextEffect>
 
                 <AnimatedGroup
@@ -91,7 +90,9 @@ export default function HeroSection({ session }) {
                       className="rounded-xl px-5 text-base"
                     >
                       <Link href="#link">
-                        <span className="text-nowrap">Start Building</span>
+                        <span className="text-nowrap">
+                          Create Your Free Page
+                        </span>
                       </Link>
                     </Button>
                   </div>
@@ -103,7 +104,7 @@ export default function HeroSection({ session }) {
                     className="h-10.5 rounded-xl px-5 text-base"
                   >
                     <Link href="#link">
-                      <span className="text-nowrap">Request a demo</span>
+                      <span className="text-nowrap">View Demo</span>
                     </Link>
                   </Button>
                 </AnimatedGroup>
