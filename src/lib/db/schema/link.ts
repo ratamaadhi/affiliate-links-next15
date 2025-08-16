@@ -31,3 +31,6 @@ export const linksRelations = relations(link, ({ one }) => ({
     references: [page.id],
   }),
 }));
+
+export type LinkSelect = typeof link.$inferSelect;
+export type LinkInsert = typeof link.$inferInsert;

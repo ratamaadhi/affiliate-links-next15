@@ -65,11 +65,7 @@ export function SignUpFormFields() {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-8"
-        aria-disabled={isLoading}
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid gap-6">
           <div className="grid gap-3">
             <FormField

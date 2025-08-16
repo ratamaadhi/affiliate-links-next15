@@ -8,6 +8,7 @@ export const user = sqliteTable('user', {
   email: text().notNull().unique(),
   emailVerified: integer({ mode: 'boolean' }).notNull(),
   image: text(),
+  username: text().unique(),
   createdAt: integer().notNull(),
   updatedAt: integer().notNull(),
 });
@@ -55,3 +56,5 @@ export const verification = sqliteTable('verification', {
 export const usersRelations = relations(user, ({ many }) => ({
   pages: many(page),
 }));
+
+export type UsernameUpdate = typeof user.$inferInsert.username;

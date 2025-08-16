@@ -2,7 +2,7 @@ import { int, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 import { user } from './auth';
-import { link } from './link';
+import { link, LinkSelect } from './link';
 
 export const page = sqliteTable('page', {
   id: int().primaryKey({ autoIncrement: true }),
@@ -32,3 +32,8 @@ export const pagesRelations = relations(page, ({ one, many }) => ({
   }),
   links: many(link),
 }));
+
+export type PageSelect = typeof page.$inferSelect & {
+  links: LinkSelect[];
+};
+export type PageInsert = typeof page.$inferInsert;
