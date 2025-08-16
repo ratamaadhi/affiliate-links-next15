@@ -91,14 +91,12 @@ export function SignInForm() {
                 <FormItem>
                   <div className="flex items-center justify-between">
                     <FormLabel>Password</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="show-password"
-                        checked={showPassword}
-                        onCheckedChange={(checked) => setShowPassword(checked)}
-                      />
-                      <Label htmlFor="show-password">Show Password</Label>
-                    </div>
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm underline-offset-4 hover:underline"
+                    >
+                      Forgot your password?
+                    </Link>
                   </div>
                   <FormControl>
                     <Input
@@ -109,12 +107,14 @@ export function SignInForm() {
                     />
                   </FormControl>
                   <FormMessage />
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="show-password"
+                      checked={showPassword}
+                      onCheckedChange={(checked) => setShowPassword(checked)}
+                    />
+                    <Label htmlFor="show-password">Show Password</Label>
+                  </div>
                 </FormItem>
               )}
             />

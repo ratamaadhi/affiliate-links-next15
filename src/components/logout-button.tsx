@@ -9,14 +9,14 @@ export function LogoutButton() {
   async function handleLogout() {
     try {
       await authClient.signOut();
-      router.push('/login');
+      router.push('/');
     } catch (error) {
       console.error('Logout failed:', error);
       toast.error('Failed to log out. Please try again.');
     }
   }
   return (
-    <Button variant="outline" onClick={handleLogout}>
+    <Button variant="ghost" onClick={handleLogout} size="sm">
       Logout
     </Button>
   );

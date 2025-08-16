@@ -15,9 +15,7 @@ const config = {
   },
   setupFilesAfterEnv: ['@testing-library/jest-dom', '<rootDir>/jest.setup.js'],
   testMatch: ['<rootDir>/__test__/**/*.js'],
-  transformIgnorePatterns: [
-    'node_modules/(?!nanostores|better-auth)',
-  ],
+  transformIgnorePatterns: ['node_modules/(?!nanostores|better-auth)'],
   // Add more setup options before each test is run
   // setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };

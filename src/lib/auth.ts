@@ -4,7 +4,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import db from './db';
 import * as schema from '@/lib/db/schema';
-import { createAuthMiddleware } from 'better-auth/plugins';
+import { customSession, username } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 import { Resend } from 'resend';
 import VerificationEmail from '@/components/email/verification-email';
@@ -22,7 +22,7 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
-        from: 'Affiliate Links App <onboarding@resend.dev>',
+        from: 'Affiliate Links App <noreply@ratama.space>',
         to: [user.email],
         subject: 'Reset your password',
         react: PasswordResetEmail({
@@ -36,26 +36,13 @@ export const auth = betterAuth({
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
-        from: 'Affiliate Links App <onboarding@resend.dev>',
+        from: 'Affiliate Links App <noreply@ratama.space>',
         to: [user.email],
         subject: 'Verify your email',
         react: VerificationEmail({ userName: user.name, verificationUrl: url }),
       });
     },
     sendOnSignUp: true,
-  },
-  hooks: {
-    after: createAuthMiddleware(async (ctx) => {
-      if (ctx.path === '/get-session') {
-        if (!ctx.context.session) {
-          return ctx.json({
-            session: null,
-            user: null,
-          });
-        }
-        return ctx.json(ctx.context.session);
-      }
-    }),
   },
   database: drizzleAdapter(db, {
     provider: 'sqlite',
@@ -71,5 +58,20 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
-  plugins: [nextCookies()],
+  plugins: [
+    nextCookies(),
+    username(),
+    customSession(async ({ user, session }) => {
+      // const userData = await db.query.user.findFirst({
+      //   where: eq(schema.user.id, +user.id),
+      // });
+      return {
+        user: {
+          ...user,
+          // ...userData,
+        },
+        session,
+      };
+    }),
+  ],
 });
