@@ -1,12 +1,12 @@
 'use client';
-import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import React from 'react';
 import { cn } from '@/lib/utils';
+import { Menu, X } from 'lucide-react';
 import { useScroll } from 'motion/react';
-import { ModeToggle } from './mode-toggle';
+import Link from 'next/link';
+import React from 'react';
 import { LogoutButton } from './logout-button';
+import { ModeToggle } from './mode-toggle';
 
 const menuItems = [
   { name: 'Features', href: '#link' },

@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -14,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
@@ -23,13 +21,15 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { authClient } from '@/lib/auth-client';
+import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { authClient } from '@/lib/auth-client';
-import { TbLink } from 'react-icons/tb';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { TbLink } from 'react-icons/tb';
+import { toast } from 'sonner';
 
 const formSchema = z.object({
   username: z
@@ -63,8 +63,6 @@ export function NewUserForm({
       const { data, error } = await authClient.updateUser({
         username: values.username,
       });
-
-      console.log('data', data);
 
       if (!error) {
         toast.success('Updated username successfully');

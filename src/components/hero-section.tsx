@@ -1,11 +1,10 @@
-import React from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import Image from 'next/image';
-import { TextEffect } from '@/components/ui/text-effect';
 import { AnimatedGroup } from '@/components/ui/animated-group';
-import { HeroHeader } from './header';
+import { Button } from '@/components/ui/button';
+import { TextEffect } from '@/components/ui/text-effect';
 import { Variants } from 'motion/react'; // Import Variants type
+import Image from 'next/image';
+import Link from 'next/link';
+import { HeroHeader } from './header';
 
 const transitionVariants: { item: Variants } = {
   // Explicitly type transitionVariants

@@ -14,7 +14,9 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold mb-2 hidden">Dashboard</h1>
         <div className="flex gap-2 w-max rounded-lg px-4 py-2 bg-background shadow border border-muted">
           <div className="text-nowrap text-sm">
-            <span className="font-semibold">My Linkid: </span>
+            <span className="font-semibold text-foreground/70">
+              My Linkid:{' '}
+            </span>
             <a
               href={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}
               target="_blank"
