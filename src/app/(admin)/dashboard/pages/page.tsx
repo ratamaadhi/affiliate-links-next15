@@ -1,8 +1,14 @@
-import { CreatePageButton } from '@/components/create-page-button';
-import { ListPages } from '@/components/list-pages';
-import PageWrapper from '@/components/page-wrapper';
+import { CreatePageButton } from '@/components/page/create-page-button';
+import { ListPages } from '@/components/page/list-pages';
+import PageWrapper from '@/components/page/page-wrapper';
 import { headers } from 'next/headers';
 import Link from 'next/link';
+
+export const metadata = {
+  title: 'Pages | Aff-Link',
+  description:
+    '💎 The &ldquo;Link in Bio&rdquo; that Actually Sells. Just paste your affiliate links. We&apos;ll instantly turn them into a beautiful, shoppable gallery.',
+};
 
 export default async function PagesPage() {
   const breadcrumbs = [
@@ -31,7 +37,7 @@ export default async function PagesPage() {
         </div>
         <div className="w-full flex flex-col md:flex-row justify-between gap-6">
           <div className="md:w-1/2 w-full">
-            <div className="w-full inline-flex justify-between items-center mb-3">
+            <div className="w-full inline-flex justify-between items-center mb-4">
               <h1 className="text-xl font-bold">Page List</h1>
               <CreatePageButton />
             </div>

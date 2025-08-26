@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
-import { PageInsert, page } from '@/lib/db/schema';
+import { PageInsert, page as pageSchema } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
@@ -10,17 +10,20 @@ import slugify from 'slug';
 
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 5);
 
-export const createPage = async (values: Omit<PageInsert, 'slug'>) => {
-  let slug = slugify(values.title);
+export const createPage = async (
+  url,
+  { arg }: { arg: Omit<PageInsert, 'slug'> }
+) => {
+  let slug = slugify(arg.title);
   let existingSlug = !!(await db.query.page.findFirst({
-    where: eq(page.slug, slug),
+    where: eq(pageSchema.slug, slug),
   }));
 
   while (existingSlug) {
     const ids = nanoid();
     const idSlug = `${slug}-${ids}`;
     existingSlug = !!(await db.query.page.findFirst({
-      where: eq(page.slug, idSlug),
+      where: eq(pageSchema.slug, idSlug),
     }));
 
     if (!existingSlug) {
@@ -30,14 +33,24 @@ export const createPage = async (values: Omit<PageInsert, 'slug'>) => {
   }
 
   try {
-    await db.insert(page).values({ ...values, slug });
+    await db.insert(pageSchema).values({ ...arg, slug });
     return { success: true, message: 'Page created successfully' };
   } catch {
     return { success: false, message: 'Failed to create page' };
   }
 };
 
-export const getPages = async () => {
+export type PaginationParams = {
+  page?: number;
+  limit?: number;
+};
+
+export const getPages = async (
+  params: PaginationParams = { page: 1, limit: 5 }
+) => {
+  const { page, limit } = params;
+  const offset = (page - 1) * limit;
+
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -50,10 +63,12 @@ export const getPages = async () => {
     }
 
     const pagesByUser = await db.query.page.findMany({
-      where: eq(page.userId, userId),
+      where: eq(pageSchema.userId, userId),
       with: {
         links: true,
       },
+      limit,
+      offset,
     });
 
     return { success: true, pages: pagesByUser };
@@ -65,7 +80,7 @@ export const getPages = async () => {
 export const getPageById = async (id: number) => {
   try {
     const pageById = await db.query.page.findFirst({
-      where: eq(page.id, id),
+      where: eq(pageSchema.id, id),
       with: {
         links: true,
       },
@@ -77,22 +92,50 @@ export const getPageById = async (id: number) => {
   }
 };
 
-export const updatePage = async (id: number, values: Partial<PageInsert>) => {
+export const updatePage = async (
+  url,
+  { arg }: { arg: { id: number; values: Partial<PageInsert> } }
+) => {
   try {
-    const newValues: Partial<PageInsert> = { ...values };
-    if (values.title) {
-      newValues.slug = values.title.toLowerCase().replace(/\s+/g, '-');
+    const newValues: Partial<PageInsert> = { ...arg.values };
+
+    if (arg.values.title) {
+      const originalPage = await db.query.page.findFirst({
+        where: eq(pageSchema.id, arg.id),
+      });
+
+      if (originalPage && originalPage.title !== arg.values.title) {
+        let slug = slugify(arg.values.title);
+        let existingSlug = !!(await db.query.page.findFirst({
+          where: eq(pageSchema.slug, slug),
+        }));
+
+        while (existingSlug) {
+          const ids = nanoid();
+          const idSlug = `${slug}-${ids}`;
+          existingSlug = !!(await db.query.page.findFirst({
+            where: eq(pageSchema.slug, idSlug),
+          }));
+
+          if (!existingSlug) {
+            slug = idSlug;
+            break;
+          }
+        }
+        newValues.slug = slug;
+      }
     }
-    await db.update(page).set(newValues).where(eq(page.id, id));
+
+    await db.update(pageSchema).set(newValues).where(eq(pageSchema.id, arg.id));
     return { success: true, message: 'Page updated successfully' };
-  } catch {
+  } catch (error) {
     return { success: false, message: 'Failed to update page' };
   }
 };
 
-export const deletePage = async (id: number) => {
+export const deletePage = async (url, { arg }: { arg: { id: number } }) => {
   try {
-    await db.delete(page).where(eq(page.id, id));
+    await db.delete(pageSchema).where(eq(pageSchema.id, arg.id));
     return { success: true, message: 'Notebook deleted successfully' };
   } catch {
     return { success: false, message: 'Failed to delete notebook' };

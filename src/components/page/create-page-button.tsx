@@ -1,17 +1,18 @@
 'use client';
 
 import z from 'zod';
-import { Button } from './ui/button';
+import { Button } from '../ui/button';
 import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from './ui/dialog';
-import { Input } from './ui/input';
+} from '../ui/dialog';
+import { Input } from '../ui/input';
 
 import {
   Form,
@@ -21,20 +22,20 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { useCreatePage } from '@/hooks/mutations';
 import { authClient } from '@/lib/auth-client';
-import { createPage } from '@/server/pages';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { TbLibraryPlus } from 'react-icons/tb';
 import { toast } from 'sonner';
 
 const formSchema = z.object({
   title: z
     .string()
     .min(2, {
-      error: 'Title must be at least 2 characters long',
+      message: 'Title must be at least 2 characters long',
     })
     .max(50)
     .nonempty('Title is required'),
@@ -42,10 +43,9 @@ const formSchema = z.object({
 });
 
 export const CreatePageButton = ({}) => {
-  const router = useRouter();
-
-  const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+
+  const { trigger, isMutating } = useCreatePage();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,40 +56,32 @@ export const CreatePageButton = ({}) => {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      setIsLoading(true);
-      const userId = (await authClient.getSession()).data?.user.id;
-      if (!userId) {
-        toast.error('You must be logged in to create a notebook');
-        return;
-      }
-      const response = await createPage({
-        ...values,
-        userId: +userId,
-      });
-      if (response.success) {
-        form.reset();
-        toast.success('Notebook created successfully');
-        router.refresh();
-        setIsOpen(false);
-      } else {
-        toast.error(response.message);
-      }
-    } catch {
-      toast.error('Failed to create notebook');
-    } finally {
-      setIsLoading(false);
+    const userId = (await authClient.getSession()).data?.user.id;
+    if (!userId) {
+      toast.error('You must be logged in to create a notebook');
+      return;
+    }
+
+    const response = await trigger({ ...values, userId: +userId });
+    if (response.success) {
+      form.reset();
+      setIsOpen(false);
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="default">+ Page</Button>
+        <Button variant="default" size="sm">
+          <TbLibraryPlus /> {` Page`}
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add new page</DialogTitle>
+          <DialogDescription>
+            Create a new page to start collecting links.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -104,7 +96,7 @@ export const CreatePageButton = ({}) => {
                       <FormControl>
                         <Input
                           placeholder="My page title"
-                          disabled={isLoading}
+                          disabled={isMutating}
                           {...field}
                         />
                       </FormControl>
@@ -123,7 +115,7 @@ export const CreatePageButton = ({}) => {
                       <FormControl>
                         <Input
                           placeholder="What page is about?"
-                          disabled={isLoading}
+                          disabled={isMutating}
                           {...field}
                         />
                       </FormControl>
@@ -135,12 +127,12 @@ export const CreatePageButton = ({}) => {
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button disabled={isLoading} variant="outline">
+                <Button disabled={isMutating} variant="outline">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button disabled={isLoading} type="submit">
-                {isLoading ? (
+              <Button disabled={isMutating} type="submit">
+                {isMutating ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   'Create'

@@ -1,8 +1,9 @@
 'use client';
 
+import { cn } from '@/lib/utils';
 import { Fragment } from 'react';
-import { LogoutButton } from './logout-button';
-import { ModeToggle } from './mode-toggle';
+import { LogoutButton } from '../logout-button';
+import { ModeToggle } from '../mode-toggle';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,10 +11,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from './ui/breadcrumb';
-import { Separator } from './ui/separator';
-import { SidebarInset, SidebarTrigger } from './ui/sidebar';
-import { cn } from '@/lib/utils';
+} from '../ui/breadcrumb';
+import { Separator } from '../ui/separator';
+import { SidebarInset, SidebarTrigger } from '../ui/sidebar';
 
 export default function PageWrapper({
   children,
