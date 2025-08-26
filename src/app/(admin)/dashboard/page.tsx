@@ -1,5 +1,11 @@
-import PageWrapper from '@/components/page-wrapper';
+import PageWrapper from '@/components/page/page-wrapper';
 import { headers } from 'next/headers';
+
+export const metadata = {
+  title: 'Dashboard | Aff-Link',
+  description:
+    '💎 The &ldquo;Link in Bio&rdquo; that Actually Sells. Just paste your affiliate links. We&apos;ll instantly turn them into a beautiful, shoppable gallery.',
+};
 
 export default async function DashboardPage() {
   const headersList = await headers();
