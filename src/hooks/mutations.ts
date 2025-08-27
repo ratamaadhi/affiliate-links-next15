@@ -1,10 +1,18 @@
-import { createPage, deletePage, updatePage } from '@/server/pages';
+import {
+  createPage,
+  deletePage,
+  PaginationParams,
+  updatePage,
+} from '@/server/pages';
 import { toast } from 'sonner';
 import useSWRmutation from 'swr/mutation';
 import { usePages } from './queries';
 
-export function useCreatePage() {
-  const { mutate } = usePages();
+export function useCreatePage(
+  params: PaginationParams = { page: 1, limit: 5 }
+) {
+  const { page, limit = 5 } = params;
+  const { mutate } = usePages({ page, limit });
 
   return useSWRmutation('/pages', createPage, {
     onSuccess: () => {
@@ -17,8 +25,11 @@ export function useCreatePage() {
   });
 }
 
-export function useUpdatePage() {
-  const { mutate } = usePages();
+export function useUpdatePage(
+  params: PaginationParams = { page: 1, limit: 5 }
+) {
+  const { page, limit = 5 } = params;
+  const { mutate } = usePages({ page, limit });
 
   return useSWRmutation('/pages', updatePage, {
     onSuccess: () => {
@@ -31,8 +42,11 @@ export function useUpdatePage() {
   });
 }
 
-export function useDeletePage() {
-  const { mutate } = usePages();
+export function useDeletePage(
+  params: PaginationParams = { page: 1, limit: 5 }
+) {
+  const { page, limit = 5 } = params;
+  const { mutate } = usePages({ page, limit });
 
   return useSWRmutation('/pages', deletePage, {
     onSuccess: () => {

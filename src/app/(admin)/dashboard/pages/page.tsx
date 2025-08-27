@@ -38,7 +38,7 @@ export default async function PagesPage() {
         <div className="w-full flex flex-col md:flex-row justify-between gap-6">
           <div className="md:w-1/2 w-full">
             <div className="w-full inline-flex justify-between items-center mb-4">
-              <h1 className="text-xl font-bold">Page List</h1>
+              <h1 className="text-xl font-bold ms-1">Page List</h1>
               <CreatePageButton />
             </div>
             <ListPages />

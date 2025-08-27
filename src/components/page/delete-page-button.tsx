@@ -1,5 +1,6 @@
 import { useDeletePage } from '@/hooks/mutations';
 import { authClient } from '@/lib/auth-client';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { HiOutlineTrash } from 'react-icons/hi';
 import { toast } from 'sonner';
@@ -17,9 +18,11 @@ import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 export const DeletePageButton = ({ pageId }) => {
+  const searchParams = useSearchParams();
+  const pageIndex = +(searchParams.get('_page') ?? 1);
   const [isOpen, setIsOpen] = useState(false);
 
-  const { trigger, isMutating } = useDeletePage();
+  const { trigger, isMutating } = useDeletePage({ page: pageIndex });
 
   const handleDelete = async () => {
     const userId = (await authClient.getSession()).data?.user.id;

@@ -26,6 +26,7 @@ import { useCreatePage } from '@/hooks/mutations';
 import { authClient } from '@/lib/auth-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { TbLibraryPlus } from 'react-icons/tb';
@@ -43,9 +44,11 @@ const formSchema = z.object({
 });
 
 export const CreatePageButton = ({}) => {
+  const searchParams = useSearchParams();
+  const pageIndex = +(searchParams.get('_page') ?? 1);
   const [isOpen, setIsOpen] = useState(false);
 
-  const { trigger, isMutating } = useCreatePage();
+  const { trigger, isMutating } = useCreatePage({ page: pageIndex });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

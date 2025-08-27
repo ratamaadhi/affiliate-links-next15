@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
 import { PageInsert, page as pageSchema } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
 import slugify from 'slug';
@@ -71,7 +71,24 @@ export const getPages = async (
       offset,
     });
 
-    return { success: true, pages: pagesByUser };
+    const [totalItems] = await db
+      .select({ count: count() })
+      .from(pageSchema)
+      .where(eq(pageSchema.userId, userId));
+    const totalPages = Math.ceil(Number(totalItems.count) / limit);
+
+    const data = {
+      data: pagesByUser,
+      pagination: {
+        totalItems: Number(totalItems.count),
+        itemCount: pagesByUser.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage: page,
+      },
+    };
+
+    return { success: true, data: data };
   } catch {
     return { success: false, message: 'Failed to get pages' };
   }
