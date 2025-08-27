@@ -87,7 +87,11 @@ export const CreatePageButton = ({}) => {
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            role="form"
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+          >
             <div className="grid gap-4">
               <div className="grid gap-3">
                 <FormField
