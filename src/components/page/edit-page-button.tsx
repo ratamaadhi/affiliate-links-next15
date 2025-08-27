@@ -25,6 +25,7 @@ import { useUpdatePage } from '@/hooks/mutations';
 import { authClient } from '@/lib/auth-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { HiOutlinePencilAlt } from 'react-icons/hi';
@@ -43,9 +44,11 @@ const formSchema = z.object({
 });
 
 export const EditPageButton = ({ data }) => {
+  const searchParams = useSearchParams();
+  const pageIndex = +(searchParams.get('_page') ?? 1);
   const [isOpen, setIsOpen] = useState(false);
 
-  const { trigger, isMutating } = useUpdatePage();
+  const { trigger, isMutating } = useUpdatePage({ page: pageIndex });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

@@ -1,10 +1,11 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/auth-client';
+import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-export function LogoutButton() {
+export function LogoutButton({ className }: { className?: string }) {
   const router = useRouter();
   async function handleLogout() {
     try {
@@ -16,8 +17,14 @@ export function LogoutButton() {
     }
   }
   return (
-    <Button variant="ghost" onClick={handleLogout} size="sm">
-      Logout
+    <Button
+      variant="ghost"
+      onClick={handleLogout}
+      size="sm"
+      className={className}
+    >
+      <LogOut />
+      Log out
     </Button>
   );
 }
