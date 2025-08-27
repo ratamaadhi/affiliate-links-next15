@@ -14,10 +14,12 @@ const config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   setupFilesAfterEnv: ['@testing-library/jest-dom', '<rootDir>/jest.setup.js'],
-  testMatch: ['<rootDir>/__test__/**/*.js'],
-  transformIgnorePatterns: ['node_modules/(?!nanostores|better-auth)'],
-  // Add more setup options before each test is run
-  // setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  testMatch: ['<rootDir>/__test__/**/*.{js,jsx,ts,tsx}'],
+  transformIgnorePatterns: [
+    'node_modules/(?!nanostores|better-auth|better-call|uncrypto|resend)',
+  ],
+  extensionsToTreatAsEsm: ['.ts', '.tsx', '.jsx'],
+  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json', 'node', 'mjs'],
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

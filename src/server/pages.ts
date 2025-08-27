@@ -145,7 +145,7 @@ export const updatePage = async (
 
     await db.update(pageSchema).set(newValues).where(eq(pageSchema.id, arg.id));
     return { success: true, message: 'Page updated successfully' };
-  } catch (error) {
+  } catch {
     return { success: false, message: 'Failed to update page' };
   }
 };
