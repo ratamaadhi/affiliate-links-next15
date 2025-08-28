@@ -46,9 +46,11 @@ const formSchema = z.object({
 export const CreatePageButton = ({}) => {
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
+  const search = searchParams.get('_search') ?? '';
+
   const [isOpen, setIsOpen] = useState(false);
 
-  const { trigger, isMutating } = useCreatePage({ page: pageIndex });
+  const { trigger, isMutating } = useCreatePage({ page: pageIndex, search });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -75,8 +77,8 @@ export const CreatePageButton = ({}) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm">
-          <TbLibraryPlus /> {` Page`}
+        <Button variant="default" size="sm" className="w-8 md:w-auto">
+          <TbLibraryPlus /> <span className="hidden md:block">{` Page`}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

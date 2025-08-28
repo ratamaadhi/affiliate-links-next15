@@ -12,7 +12,9 @@ import { EditPageButton } from './edit-page-button';
 export const ListPages = () => {
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
-  const { data, isLoading } = usePages({ page: pageIndex });
+  const search = searchParams.get('_search') ?? '';
+
+  const { data, isLoading } = usePages({ page: pageIndex, search });
   const { user } = useAuth();
 
   const pages = data?.data || [];

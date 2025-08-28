@@ -46,9 +46,11 @@ const formSchema = z.object({
 export const EditPageButton = ({ data }) => {
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
+  const search = searchParams.get('_search') ?? '';
+
   const [isOpen, setIsOpen] = useState(false);
 
-  const { trigger, isMutating } = useUpdatePage({ page: pageIndex });
+  const { trigger, isMutating } = useUpdatePage({ page: pageIndex, search });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

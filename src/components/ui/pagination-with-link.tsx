@@ -48,7 +48,7 @@ function PaginationWithLink({
       <Pagination>
         <PaginationContent>
           <PaginationItem>
-            <Skeleton className="w-[100.59px] h-9" />
+            <Skeleton className="md:w-[100.59px] w-9 h-9" />
           </PaginationItem>
           <PaginationItem>
             <Skeleton className="w-9 h-9" />
@@ -60,7 +60,7 @@ function PaginationWithLink({
             <Skeleton className="w-9 h-9" />
           </PaginationItem>
           <PaginationItem>
-            <Skeleton className="w-[75.11px] h-9" />
+            <Skeleton className="md:w-[100.59px] w-9 h-9" />
           </PaginationItem>
         </PaginationContent>
       </Pagination>

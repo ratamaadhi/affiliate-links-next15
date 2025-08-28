@@ -9,10 +9,10 @@ import useSWRmutation from 'swr/mutation';
 import { usePages } from './queries';
 
 export function useCreatePage(
-  params: PaginationParams = { page: 1, limit: 5 }
+  params: PaginationParams = { page: 1, limit: 5, search: '' }
 ) {
-  const { page, limit = 5 } = params;
-  const { mutate } = usePages({ page, limit });
+  const { page, limit = 5, search } = params;
+  const { mutate } = usePages({ page, limit, search });
 
   return useSWRmutation('/pages', createPage, {
     onSuccess: () => {
@@ -26,10 +26,10 @@ export function useCreatePage(
 }
 
 export function useUpdatePage(
-  params: PaginationParams = { page: 1, limit: 5 }
+  params: PaginationParams = { page: 1, limit: 5, search: '' }
 ) {
-  const { page, limit = 5 } = params;
-  const { mutate } = usePages({ page, limit });
+  const { page, limit = 5, search } = params;
+  const { mutate } = usePages({ page, limit, search });
 
   return useSWRmutation('/pages', updatePage, {
     onSuccess: () => {
@@ -43,10 +43,10 @@ export function useUpdatePage(
 }
 
 export function useDeletePage(
-  params: PaginationParams = { page: 1, limit: 5 }
+  params: PaginationParams = { page: 1, limit: 5, search: '' }
 ) {
-  const { page, limit = 5 } = params;
-  const { mutate } = usePages({ page, limit });
+  const { page, limit = 5, search } = params;
+  const { mutate } = usePages({ page, limit, search });
 
   return useSWRmutation('/pages', deletePage, {
     onSuccess: () => {
