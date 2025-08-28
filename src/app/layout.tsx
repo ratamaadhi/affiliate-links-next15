@@ -1,4 +1,4 @@
-import SWRProvider from '@/components/swr-provider';
+import { AuthProvider } from '@/components/auth-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { Geist, Geist_Mono } from 'next/font/google';
@@ -30,7 +30,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SWRProvider>
+        <AuthProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -40,7 +40,7 @@ export default function RootLayout({ children }) {
             <Toaster />
             {children}
           </ThemeProvider>
-        </SWRProvider>
+        </AuthProvider>
       </body>
     </html>
   );
