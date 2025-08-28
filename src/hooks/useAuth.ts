@@ -1,14 +1,15 @@
 import { authClient } from '@/lib/auth-client';
-import { Session, User } from 'better-auth';
+import { SessionUser } from '@/lib/types';
+import { Session } from 'better-auth';
 import useSWR from 'swr';
 
-interface SessionUser {
-  user: User;
+interface InfSession {
+  user: SessionUser;
   session: Session;
 }
 
 // Fetcher function untuk SWR
-const sessionFetcher = async (): Promise<SessionUser | null> => {
+const sessionFetcher = async (): Promise<InfSession | null> => {
   try {
     const { data, error } = await authClient.getSession();
     if (error || !data) {
@@ -23,6 +24,7 @@ const sessionFetcher = async (): Promise<SessionUser | null> => {
       user: {
         ...data.user,
         email: data.user.email as string, // force required
+        username: (data.user as any).username ?? null, // ensure username is present
       },
     };
   } catch (error) {
@@ -37,7 +39,7 @@ export const useAuth = () => {
     error,
     isLoading,
     mutate,
-  } = useSWR<SessionUser | null>('session', sessionFetcher, {
+  } = useSWR<InfSession | null>('session', sessionFetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
     shouldRetryOnError: false,

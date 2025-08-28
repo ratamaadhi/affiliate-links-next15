@@ -9,6 +9,7 @@ export const user = sqliteTable('user', {
   emailVerified: integer({ mode: 'boolean' }).notNull(),
   image: text(),
   username: text().unique(),
+  displayUsername: text(),
   createdAt: integer().notNull(),
   updatedAt: integer().notNull(),
 });
