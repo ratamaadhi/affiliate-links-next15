@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
 import PagesPage from '@/app/(admin)/dashboard/pages/page';
+import { render, screen } from '@testing-library/react';
 import { headers } from 'next/headers';
 
 // Mock the child components
@@ -14,6 +14,20 @@ jest.mock('@/components/page/page-wrapper', () => ({
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="page-wrapper">{children}</div>
   ),
+}));
+jest.mock('@/components/page/search-page-input', () => ({
+  __esModule: true,
+  default: () => <div data-testid="search-page-input" />,
+}));
+jest.mock('next/link', () => ({
+  __esModule: true,
+  default: ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode;
+    href: string;
+  }) => <a href={href}>{children}</a>,
 }));
 
 // Mock next/headers

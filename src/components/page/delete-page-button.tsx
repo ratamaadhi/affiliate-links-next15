@@ -20,9 +20,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 export const DeletePageButton = ({ pageId }) => {
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
+  const search = searchParams.get('_search') ?? '';
+
   const [isOpen, setIsOpen] = useState(false);
 
-  const { trigger, isMutating } = useDeletePage({ page: pageIndex });
+  const { trigger, isMutating } = useDeletePage({ page: pageIndex, search });
 
   const handleDelete = async () => {
     const userId = (await authClient.getSession()).data?.user.id;

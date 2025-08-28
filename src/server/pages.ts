@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 import db from '@/lib/db';
 import { PageInsert, page as pageSchema } from '@/lib/db/schema';
 import { SessionUser } from '@/lib/types';
-import { count, eq } from 'drizzle-orm';
+import { and, count, eq, like, or } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
 import slugify from 'slug';
@@ -68,12 +68,13 @@ export const createPage = async (
 export type PaginationParams = {
   page?: number;
   limit?: number;
+  search?: string;
 };
 
 export const getPages = async (
-  params: PaginationParams = { page: 1, limit: 5 }
+  params: PaginationParams = { page: 1, limit: 5, search: '' }
 ) => {
-  const { page, limit } = params;
+  const { page, limit, search } = params;
   const offset = (page - 1) * limit;
 
   try {
@@ -88,7 +89,16 @@ export const getPages = async (
     }
 
     const pagesByUser = await db.query.page.findMany({
-      where: eq(pageSchema.userId, userId),
+      where: search
+        ? and(
+            eq(pageSchema.userId, userId),
+            or(
+              like(pageSchema.title, `%${search}%`),
+              like(pageSchema.description, `%${search}%`),
+              like(pageSchema.slug, `%${search}%`)
+            )
+          )
+        : eq(pageSchema.userId, userId),
       with: {
         links: true,
       },
@@ -99,7 +109,18 @@ export const getPages = async (
     const [totalItems] = await db
       .select({ count: count() })
       .from(pageSchema)
-      .where(eq(pageSchema.userId, userId));
+      .where(
+        search
+          ? and(
+              eq(pageSchema.userId, userId),
+              or(
+                like(pageSchema.title, `%${search}%`),
+                like(pageSchema.description, `%${search}%`),
+                like(pageSchema.slug, `%${search}%`)
+              )
+            )
+          : eq(pageSchema.userId, userId)
+      );
     const totalPages = Math.ceil(Number(totalItems.count) / limit);
 
     const data = {
