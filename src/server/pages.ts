@@ -3,12 +3,37 @@
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
 import { PageInsert, page as pageSchema } from '@/lib/db/schema';
+import { SessionUser } from '@/lib/types';
 import { count, eq } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
 import slugify from 'slug';
 
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 5);
+
+export const createHomePageUser = async () => {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  const user = session.user as SessionUser;
+  const userId = +user?.id;
+  if (!userId) {
+    return { success: false, message: 'User not found' };
+  }
+  const username = user?.username || 'user';
+  try {
+    await db.insert(pageSchema).values({
+      title: `${username}'s Home`,
+      description: `${username}'s Aff-Link `,
+      slug: username,
+      userId,
+    });
+    return { success: true, message: 'Page created successfully' };
+  } catch {
+    return { success: false, message: 'Failed to create page' };
+  }
+};
 
 export const createPage = async (
   url,

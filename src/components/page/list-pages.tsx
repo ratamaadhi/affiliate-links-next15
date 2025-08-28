@@ -3,6 +3,7 @@
 import { usePages } from '@/hooks/queries';
 import { useSearchParams } from 'next/navigation';
 
+import { useAuth } from '@/hooks/useAuth';
 import PaginationWithLink from '../ui/pagination-with-link';
 import { Skeleton } from '../ui/skeleton';
 import { DeletePageButton } from './delete-page-button';
@@ -12,6 +13,7 @@ export const ListPages = () => {
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
   const { data, isLoading } = usePages({ page: pageIndex });
+  const { user } = useAuth();
 
   const pages = data?.data || [];
   const pagination = data?.pagination;
@@ -35,10 +37,12 @@ export const ListPages = () => {
                     {page.description || 'No description'}
                   </p>
                 </div>
-                <div className="space-x-2">
-                  <EditPageButton data={page} />
-                  <DeletePageButton pageId={page.id} />
-                </div>
+                {user && user.username && user.username !== page.slug && (
+                  <div className="space-x-2">
+                    <EditPageButton data={page} />
+                    <DeletePageButton pageId={page.id} />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

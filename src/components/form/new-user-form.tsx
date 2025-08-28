@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
+import { createHomePageUser } from '@/server/pages';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -60,18 +61,30 @@ export function NewUserForm({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      const { data, error } = await authClient.updateUser({
+      const usernameCheck = await authClient.isUsernameAvailable({
         username: values.username,
       });
 
-      if (!error) {
+      if (!usernameCheck.data?.available) {
+        toast.error('Username is already taken');
+        return;
+      }
+
+      const { error } = await authClient.updateUser({
+        username: values.username,
+      });
+
+      const response = await createHomePageUser();
+
+      if (!error && response.success) {
         toast.success('Updated username successfully');
         router.push('/dashboard');
       } else {
-        toast.error(error.message);
+        toast.error('Failed to update username');
       }
     } catch (error) {
-      console.error(error);
+      const e = error as Error;
+      console.error(e.message);
     } finally {
       setIsLoading(false);
     }
