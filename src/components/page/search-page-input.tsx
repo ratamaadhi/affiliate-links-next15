@@ -11,6 +11,7 @@ function SearchPageInput() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.get('_search') ?? '';
+  const pageIndex = searchParams.get('_page') ?? '1';
 
   const [searchTerm, setSearchTerm] = useState(search ?? '');
 
@@ -18,12 +19,13 @@ function SearchPageInput() {
     const params = new URLSearchParams();
     if (term) {
       params.append('_search', term);
-      params.append('_page', '1');
+      params.append('_page', pageIndex);
     } else {
       params.delete('_search');
     }
     router.push(`${pathname}?${params.toString()}`);
   }
+
   const debouncedSetSearchTerm = useRef(debounce(setSearchTerm, 500)).current;
 
   const handleSearch = useCallback(

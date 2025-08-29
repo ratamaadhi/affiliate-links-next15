@@ -60,7 +60,7 @@ describe('PagesPage', () => {
 
     // Check for main headings
     expect(
-      screen.getByRole('heading', { name: /Page List/i })
+      screen.getByRole('heading', { name: /Your Pages/i })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: /Page Preview/i })
@@ -95,7 +95,7 @@ describe('PagesPage', () => {
 
     // Check for main headings (should still be present)
     expect(
-      screen.getByRole('heading', { name: /Page List/i })
+      screen.getByRole('heading', { name: /Your Pages/i })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: /Page Preview/i })

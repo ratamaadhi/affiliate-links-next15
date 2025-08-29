@@ -40,7 +40,7 @@ export default async function PagesPage() {
           <div className="xl:w-1/2 w-full">
             <div className="w-full flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
               <h1 className="xl:text-xl text-lg font-bold ms-1 self-start lg:self-center-safe">
-                Page List
+                Your Pages
               </h1>
               <div className="lg:max-w-sm w-full flex gap-2 items-center flex-1 place-self-end-safe">
                 <SearchPageInput />
