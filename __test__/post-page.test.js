@@ -1,8 +1,7 @@
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
 import PostPage from '@/app/posts/page';
-import usePosts from '@/hooks/usePosts';
 import useInfiniteScroll from '@/hooks/useInfiniteScroll';
+import usePosts from '@/hooks/usePosts';
+import { render, screen } from '@testing-library/react';
 
 // Mock the hooks
 jest.mock('@/hooks/usePosts');
@@ -34,7 +33,7 @@ describe('PostPage Component', () => {
   it('renders without errors', () => {
     setupUsePostsMock();
     render(<PostPage />);
-    expect(screen.getByText('No more posts')).toBeInTheDocument();
+    expect(screen.getByText('No more data')).toBeInTheDocument();
   });
 
   it('displays posts when available', () => {

@@ -15,16 +15,19 @@ function SearchPageInput() {
 
   const [searchTerm, setSearchTerm] = useState(search ?? '');
 
-  function setSearchParams(term: string) {
-    const params = new URLSearchParams();
-    if (term) {
-      params.append('_search', term);
-      params.append('_page', pageIndex);
-    } else {
-      params.delete('_search');
-    }
-    router.push(`${pathname}?${params.toString()}`);
-  }
+  const setSearchParams = useCallback(
+    (term: string) => {
+      const params = new URLSearchParams();
+      if (term) {
+        params.append('_search', term);
+        params.append('_page', pageIndex);
+      } else {
+        params.delete('_search');
+      }
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [pageIndex, pathname, router]
+  );
 
   const debouncedSetSearchTerm = useRef(debounce(setSearchTerm, 500)).current;
 
@@ -37,7 +40,7 @@ function SearchPageInput() {
 
   useEffect(() => {
     setSearchParams(searchTerm);
-  }, [searchTerm]);
+  }, [searchTerm, setSearchParams]);
 
   return (
     <Input

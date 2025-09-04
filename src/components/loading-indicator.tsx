@@ -1,13 +1,15 @@
-import React from 'react';
+interface LoadingIndicatorProps {
+  hasMore: boolean;
+  loaderRef: React.RefObject<HTMLDivElement>;
+}
 
-// LoadingIndicator component
-function LoadingIndicator({ hasMore, loaderRef }) {
+function LoadingIndicator({ hasMore, loaderRef }: LoadingIndicatorProps) {
   return (
-    <div ref={loaderRef} className="flex justify-center items-center py-4">
+    <div ref={loaderRef} className="flex justify-center items-center">
       {hasMore ? (
         <span className="text-sm text-gray-500">Loading more...</span>
       ) : (
-        <span className="text-sm text-gray-400">No more posts</span>
+        <span className="text-sm text-gray-400">No more data</span>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { InPagination } from '@/lib/types';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ReactNode, useCallback } from 'react';
 import {
@@ -13,34 +14,51 @@ import {
   PaginationPrevious,
 } from './pagination';
 
-type PaginationInfo = {
-  totalItems: number;
-  itemCount: number;
-  itemsPerPage: number;
-  totalPages: number;
-  currentPage: number;
-};
-
 type PaginationWithLinkProps = {
-  pagination: PaginationInfo | null;
+  pagination: InPagination | null;
   pageSearchParam?: string;
+  minPage?: number;
+  maxVisiblePages?: number;
 };
 
 function PaginationWithLink({
   pagination,
   pageSearchParam = '_page',
+  minPage = 1,
+  maxVisiblePages = 5,
 }: PaginationWithLinkProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const buildLink = useCallback(
     (newPage: number) => {
-      const key = pageSearchParam || 'page';
       const newSearchParams = new URLSearchParams(searchParams);
-      newSearchParams.set(key, String(newPage));
+      newSearchParams.set(pageSearchParam, String(Math.max(minPage, newPage)));
       return `${pathname}?${newSearchParams.toString()}`;
     },
-    [pageSearchParam, searchParams, pathname]
+    [pageSearchParam, searchParams, pathname, minPage]
+  );
+
+  const createPageItem = useCallback(
+    (pageNum: number) => {
+      if (!pagination) return null;
+      const { currentPage } = pagination;
+      return (
+        <PaginationItem key={pageNum}>
+          <PaginationLink
+            href={buildLink(pageNum)}
+            isActive={currentPage === pageNum}
+            aria-disabled={currentPage === pageNum}
+            className={
+              currentPage === pageNum ? 'pointer-events-none' : undefined
+            }
+          >
+            {pageNum}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    },
+    [buildLink, pagination]
   );
 
   if (!pagination) {
@@ -69,61 +87,44 @@ function PaginationWithLink({
 
   const { totalPages, currentPage } = pagination;
 
-  const renderPageNumbers = () => {
-    const items: ReactNode[] = [];
-    const maxVisiblePages = 5;
+  const createEllipsis = (key: string) => (
+    <PaginationItem key={key}>
+      <PaginationEllipsis />
+    </PaginationItem>
+  );
 
-    const createPageItem = (pageNum: number) => {
-      return (
-        <PaginationItem key={pageNum}>
-          <PaginationLink
-            href={buildLink(pageNum)}
-            isActive={currentPage === pageNum}
-            aria-disabled={currentPage === pageNum}
-            className={
-              currentPage === pageNum ? 'pointer-events-none' : undefined
-            }
-          >
-            {pageNum}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    };
+  const renderSimplePagination = () => {
+    return Array.from({ length: totalPages }, (_, i) => i + 1).map(
+      createPageItem
+    );
+  };
 
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
-        items.push(createPageItem(i));
-      }
-    } else {
-      items.push(createPageItem(1));
+  const renderComplexPagination = () => {
+    const items: ReactNode[] = [createPageItem(1)];
 
-      if (currentPage > 3) {
-        items.push(
-          <PaginationItem key="ellipsis-start">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
-
-      for (let i = start; i <= end; i++) {
-        items.push(createPageItem(i));
-      }
-
-      if (currentPage < totalPages - 2) {
-        items.push(
-          <PaginationItem key="ellipsis-end">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-
-      items.push(createPageItem(totalPages));
+    if (currentPage > 3) {
+      items.push(createEllipsis('start'));
     }
 
+    // Render middle pages
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) {
+      items.push(createPageItem(i));
+    }
+
+    if (currentPage < totalPages - 2) {
+      items.push(createEllipsis('end'));
+    }
+
+    items.push(createPageItem(totalPages));
     return items;
+  };
+
+  const renderPageNumbers = () => {
+    return totalPages <= maxVisiblePages
+      ? renderSimplePagination()
+      : renderComplexPagination();
   };
 
   return (

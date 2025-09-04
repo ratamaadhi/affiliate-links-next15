@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
 import { PageInsert, page as pageSchema } from '@/lib/db/schema';
-import { SessionUser } from '@/lib/types';
+import { InPagination, SessionUser } from '@/lib/types';
 import { and, count, eq, like, or } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
@@ -35,29 +35,27 @@ export const createHomePageUser = async () => {
   }
 };
 
+const generateUniqueSlug = async (title: string): Promise<string> => {
+  let slug = slugify(title);
+
+  while (true) {
+    const existingPage = await db.query.page.findFirst({
+      where: eq(pageSchema.slug, slug),
+    });
+
+    if (!existingPage) return slug;
+
+    const ids = nanoid();
+    slug = `${slugify(title)}-${ids}`;
+  }
+};
+
 export const createPage = async (
   url,
   { arg }: { arg: Omit<PageInsert, 'slug'> }
 ) => {
-  let slug = slugify(arg.title);
-  let existingSlug = !!(await db.query.page.findFirst({
-    where: eq(pageSchema.slug, slug),
-  }));
-
-  while (existingSlug) {
-    const ids = nanoid();
-    const idSlug = `${slug}-${ids}`;
-    existingSlug = !!(await db.query.page.findFirst({
-      where: eq(pageSchema.slug, idSlug),
-    }));
-
-    if (!existingSlug) {
-      slug = idSlug;
-      break;
-    }
-  }
-
   try {
+    const slug = await generateUniqueSlug(arg.title);
     await db.insert(pageSchema).values({ ...arg, slug });
     return { success: true, message: 'Page created successfully' };
   } catch {
@@ -88,17 +86,19 @@ export const getPages = async (
       return { success: false, message: 'User not found' };
     }
 
-    const pagesByUser = await db.query.page.findMany({
-      where: search
-        ? and(
-            eq(pageSchema.userId, userId),
-            or(
-              like(pageSchema.title, `%${search}%`),
-              like(pageSchema.description, `%${search}%`),
-              like(pageSchema.slug, `%${search}%`)
-            )
+    const whereCondition = search
+      ? and(
+          eq(pageSchema.userId, userId),
+          or(
+            like(pageSchema.title, `%${search}%`),
+            like(pageSchema.description, `%${search}%`),
+            like(pageSchema.slug, `%${search}%`)
           )
-        : eq(pageSchema.userId, userId),
+        )
+      : eq(pageSchema.userId, userId);
+
+    const pagesByUser = await db.query.page.findMany({
+      where: whereCondition,
       with: {
         links: true,
       },
@@ -109,32 +109,66 @@ export const getPages = async (
     const [totalItems] = await db
       .select({ count: count() })
       .from(pageSchema)
-      .where(
-        search
-          ? and(
-              eq(pageSchema.userId, userId),
-              or(
-                like(pageSchema.title, `%${search}%`),
-                like(pageSchema.description, `%${search}%`),
-                like(pageSchema.slug, `%${search}%`)
-              )
-            )
-          : eq(pageSchema.userId, userId)
-      );
+      .where(whereCondition);
     const totalPages = Math.ceil(Number(totalItems.count) / limit);
+
+    const pagination: InPagination = {
+      totalItems: Number(totalItems.count),
+      itemCount: pagesByUser.length,
+      itemsPerPage: limit,
+      totalPages,
+      currentPage: page,
+    };
 
     const data = {
       data: pagesByUser,
-      pagination: {
-        totalItems: Number(totalItems.count),
-        itemCount: pagesByUser.length,
-        itemsPerPage: limit,
-        totalPages,
-        currentPage: page,
-      },
+      pagination,
     };
 
     return { success: true, data: data };
+  } catch {
+    return { success: false, message: 'Failed to get pages' };
+  }
+};
+
+export const getPageInfinite = async (
+  params: PaginationParams = { page: 1, limit: 5, search: '' }
+) => {
+  const { page, limit, search } = params;
+  const offset = (page - 1) * limit;
+
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    const userId = +session?.user?.id;
+
+    if (!userId) {
+      return { success: false, message: 'User not found' };
+    }
+
+    const whereCondition = search
+      ? and(
+          eq(pageSchema.userId, userId),
+          or(
+            like(pageSchema.title, `%${search}%`),
+            like(pageSchema.description, `%${search}%`),
+            like(pageSchema.slug, `%${search}%`)
+          )
+        )
+      : eq(pageSchema.userId, userId);
+
+    const pagesByUser = await db.query.page.findMany({
+      where: whereCondition,
+      with: {
+        links: true,
+      },
+      limit,
+      offset,
+    });
+
+    return { success: true, data: pagesByUser };
   } catch {
     return { success: false, message: 'Failed to get pages' };
   }
@@ -155,6 +189,11 @@ export const getPageById = async (id: number) => {
   }
 };
 
+const updatePageValues = async (id: number, values: Partial<PageInsert>) => {
+  await db.update(pageSchema).set(values).where(eq(pageSchema.id, id));
+  return { success: true, message: 'Page updated successfully' };
+};
+
 export const updatePage = async (
   url,
   { arg }: { arg: { id: number; values: Partial<PageInsert> } }
@@ -162,35 +201,18 @@ export const updatePage = async (
   try {
     const newValues: Partial<PageInsert> = { ...arg.values };
 
-    if (arg.values.title) {
-      const originalPage = await db.query.page.findFirst({
-        where: eq(pageSchema.id, arg.id),
-      });
+    if (!arg.values.title) return await updatePageValues(arg.id, newValues);
 
-      if (originalPage && originalPage.title !== arg.values.title) {
-        let slug = slugify(arg.values.title);
-        let existingSlug = !!(await db.query.page.findFirst({
-          where: eq(pageSchema.slug, slug),
-        }));
+    const originalPage = await db.query.page.findFirst({
+      where: eq(pageSchema.id, arg.id),
+    });
 
-        while (existingSlug) {
-          const ids = nanoid();
-          const idSlug = `${slug}-${ids}`;
-          existingSlug = !!(await db.query.page.findFirst({
-            where: eq(pageSchema.slug, idSlug),
-          }));
-
-          if (!existingSlug) {
-            slug = idSlug;
-            break;
-          }
-        }
-        newValues.slug = slug;
-      }
+    if (!originalPage || originalPage.title === arg.values.title) {
+      return await updatePageValues(arg.id, newValues);
     }
 
-    await db.update(pageSchema).set(newValues).where(eq(pageSchema.id, arg.id));
-    return { success: true, message: 'Page updated successfully' };
+    newValues.slug = await generateUniqueSlug(arg.values.title);
+    return await updatePageValues(arg.id, newValues);
   } catch {
     return { success: false, message: 'Failed to update page' };
   }
@@ -199,8 +221,8 @@ export const updatePage = async (
 export const deletePage = async (url, { arg }: { arg: { id: number } }) => {
   try {
     await db.delete(pageSchema).where(eq(pageSchema.id, arg.id));
-    return { success: true, message: 'Notebook deleted successfully' };
+    return { success: true, message: 'Page deleted successfully' };
   } catch {
-    return { success: false, message: 'Failed to delete notebook' };
+    return { success: false, message: 'Failed to delete Page' };
   }
 };

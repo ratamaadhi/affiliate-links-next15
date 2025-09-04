@@ -3,11 +3,15 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { CreatePageButton } from '../../../src/components/page/create-page-button';
 import { useCreatePage } from '../../../src/hooks/mutations';
+import { useAuth } from '../../../src/hooks/useAuth';
 import { authClient } from '../../../src/lib/auth-client';
 
 // Mock external modules
 jest.mock('@/hooks/mutations', () => ({
   useCreatePage: jest.fn(),
+}));
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: jest.fn(),
 }));
 jest.mock('@/lib/auth-client', () => ({
   authClient: {
@@ -32,6 +36,10 @@ describe('CreatePageButton', () => {
     (useCreatePage as jest.Mock).mockReturnValue({
       trigger: mockTrigger,
       isMutating: false,
+    });
+    (useAuth as jest.Mock).mockReturnValue({
+      user: { id: 123, username: 'testuser' },
+      isAuthenticated: true,
     });
     (authClient.getSession as jest.Mock).mockResolvedValue({
       data: { user: { id: 123 } },
@@ -131,7 +139,7 @@ describe('CreatePageButton', () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        'You must be logged in to create a notebook'
+        'You must be logged in to create a page'
       );
     });
     expect(mockTrigger).not.toHaveBeenCalled();
