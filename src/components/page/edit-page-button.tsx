@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useUpdatePage } from '@/hooks/mutations';
-import { authClient } from '@/lib/auth-client';
+import { useAuth } from '@/hooks/useAuth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -44,6 +44,7 @@ const formSchema = z.object({
 });
 
 export const EditPageButton = ({ data }) => {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
   const search = searchParams.get('_search') ?? '';
@@ -70,9 +71,9 @@ export const EditPageButton = ({ data }) => {
   }, [data, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const userId = (await authClient.getSession()).data?.user.id;
+    const userId = user.id;
     if (!userId) {
-      toast.error('You must be logged in to create a notebook');
+      toast.error('You must be logged in to edit page');
       return;
     }
     const response = await trigger({

@@ -1,5 +1,6 @@
-import { getPages, PaginationParams } from '@/server/pages';
+import { getPageInfinite, getPages, PaginationParams } from '@/server/pages';
 import useSWR from 'swr';
+import useSWRInfinite from 'swr/infinite';
 
 export function usePages(
   params: PaginationParams = { page: 1, limit: 5, search: '' }
@@ -18,4 +19,15 @@ export function usePages(
     mutate,
     isValidating,
   };
+}
+
+export function usePageInfinite(
+  params: PaginationParams = { page: 1, limit: 5, search: '' }
+) {
+  const { page, limit = 10, search } = params;
+  const getKey = (pageIndex, previousPageData) => {
+    if (previousPageData && !previousPageData.length) return null; // reached the end
+    return `/pages?_page=${pageIndex}&limit=10`; // SWR key
+  };
+  return useSWRInfinite(getKey, () => getPageInfinite({ page, limit, search }));
 }

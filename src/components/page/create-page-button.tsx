@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useCreatePage } from '@/hooks/mutations';
+import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
@@ -44,6 +45,8 @@ const formSchema = z.object({
 });
 
 export const CreatePageButton = ({}) => {
+  const { user } = useAuth();
+
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
   const search = searchParams.get('_search') ?? '';
@@ -63,7 +66,7 @@ export const CreatePageButton = ({}) => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const userId = (await authClient.getSession()).data?.user.id;
     if (!userId) {
-      toast.error('You must be logged in to create a notebook');
+      toast.error('You must be logged in to create a page');
       return;
     }
 
@@ -74,10 +77,14 @@ export const CreatePageButton = ({}) => {
     }
   }
 
+  if (!user || !user.username) {
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm" className="w-8 md:w-auto">
+        <Button variant="default" size="default" className="w-9 md:w-auto">
           <TbLibraryPlus /> <span className="hidden md:block">{` Page`}</span>
         </Button>
       </DialogTrigger>

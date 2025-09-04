@@ -48,7 +48,7 @@ const data = {
         },
         {
           title: 'Links',
-          url: '#',
+          url: '/dashboard/links',
         },
         {
           title: 'Profile',

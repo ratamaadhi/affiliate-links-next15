@@ -29,7 +29,7 @@ export const DeletePageButton = ({ pageId }) => {
   const handleDelete = async () => {
     const userId = (await authClient.getSession()).data?.user.id;
     if (!userId) {
-      toast.error('You must be logged in to create a notebook');
+      toast.error('You must be logged in to delete a page');
       return;
     }
     const response = await trigger({
