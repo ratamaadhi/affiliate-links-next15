@@ -20,7 +20,7 @@ function SearchPageInput() {
       const params = new URLSearchParams();
       if (term) {
         params.append('_search', term);
-        params.append('_page', pageIndex);
+        params.append('_page', '1');
       } else {
         params.delete('_search');
       }
@@ -40,7 +40,7 @@ function SearchPageInput() {
 
   useEffect(() => {
     setSearchParams(searchTerm);
-  }, [searchTerm, setSearchParams]);
+  }, [searchTerm]);
 
   return (
     <Input
