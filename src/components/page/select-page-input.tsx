@@ -1,21 +1,23 @@
 'use client';
 
+import {
+  LinkPageContext,
+  LinkPageDispatchContext,
+} from '@/context/link-page-context';
 import useInfiniteScroll from '@/hooks/useInfiniteScroll';
 import usePagesInfinite from '@/hooks/usePagesInfinite';
 import { cn } from '@/lib/utils';
 import { CheckIcon, ChevronsUpDown, Loader2, SearchIcon } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
-function SelectPageInput() {
+function SelectPageInput({ defaultPageSlug }) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState({
-    label: '',
-    value: '',
-  });
   const [search, setSearch] = useState('');
+  const dispatch = useContext(LinkPageDispatchContext);
+  const { selectedPage } = useContext(LinkPageContext);
   const {
     data,
     hasMore,
@@ -47,6 +49,24 @@ function SelectPageInput() {
     setSearch(value);
   }
 
+  useEffect(() => {
+    const shouldSetDefaultValue =
+      !selectedPage && dataToList.length > 0 && defaultPageSlug;
+
+    if (shouldSetDefaultValue) {
+      const defaultValue = dataToList.find(
+        (list) => list.slug === defaultPageSlug
+      );
+
+      if (defaultValue) {
+        dispatch({
+          type: 'changed',
+          payload: defaultValue,
+        });
+      }
+    }
+  }, [dataToList, defaultPageSlug, selectedPage]);
+
   return (
     <div>
       <Popover open={open} onOpenChange={setOpen}>
@@ -57,7 +77,7 @@ function SelectPageInput() {
             aria-expanded={open}
             className="w-[200px] justify-between"
           >
-            {value?.label ? value?.label : 'Select list...'}
+            {selectedPage?.label ? selectedPage?.label : 'Select list...'}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -83,14 +103,19 @@ function SelectPageInput() {
                     key={ls.value}
                     className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
-                      setValue(ls.value === value.value ? '' : ls);
+                      dispatch({
+                        type: 'changed',
+                        payload: ls.value === selectedPage.value ? '' : ls,
+                      });
                       setOpen(false);
                     }}
                   >
                     <CheckIcon
                       className={cn(
                         'mr-2 h-4 w-4',
-                        value.label === ls.label ? 'opacity-100' : 'opacity-0'
+                        selectedPage.label === ls.label
+                          ? 'opacity-100'
+                          : 'opacity-0'
                       )}
                     />
                     {ls.label}
