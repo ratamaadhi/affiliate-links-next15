@@ -220,6 +220,15 @@ export const updatePage = async (
 
 export const deletePage = async (url, { arg }: { arg: { id: number } }) => {
   try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    const user = session.user as SessionUser;
+    const userId = +user?.id;
+
+    if (!userId) {
+      return { success: false, message: 'User not found' };
+    }
     await db.delete(pageSchema).where(eq(pageSchema.id, arg.id));
     return { success: true, message: 'Page deleted successfully' };
   } catch {
