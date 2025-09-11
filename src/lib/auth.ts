@@ -1,14 +1,14 @@
 import type { User } from 'better-auth';
 
+import PasswordResetEmail from '@/components/email/reset-password';
+import VerificationEmail from '@/components/email/verification-email';
+import * as schema from '@/lib/db/schema';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import db from './db';
-import * as schema from '@/lib/db/schema';
-import { customSession, username } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
+import { customSession, username } from 'better-auth/plugins';
 import { Resend } from 'resend';
-import VerificationEmail from '@/components/email/verification-email';
-import PasswordResetEmail from '@/components/email/reset-password';
+import db from './db';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -49,7 +49,9 @@ export const auth = betterAuth({
     schema,
   }),
   advanced: {
-    generateId: false,
+    database: {
+      generateId: false,
+    },
   },
   socialProviders: {
     google: {
