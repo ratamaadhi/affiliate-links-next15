@@ -124,25 +124,40 @@ function ListLinks() {
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-
-    if (!over) {
-      return;
-    }
-
-    if (active.id === over.id) {
-      return;
-    }
+    if (!over || active.id === over.id) return;
 
     const oldIndex = dndLinks.findIndex((item) => item.id === active.id);
     const newIndex = dndLinks.findIndex((item) => item.id === over.id);
-    const newOrderedLinks = arrayMove(dndLinks, oldIndex, newIndex);
-    const payload = newOrderedLinks.map((item, index) => ({
-      id: item.id,
-      displayOrder: index,
-    }));
-    setDndLinks(newOrderedLinks);
+
+    // Create the new visual order for the optimistic update
+    const newOrderedLinksForUI = arrayMove(dndLinks, oldIndex, newIndex);
+    setDndLinks(newOrderedLinksForUI); // Update UI immediately
+
+    // --- Fractional Indexing Calculation ---
+
+    // Item before the new position
+    const prevItem = newOrderedLinksForUI[newIndex - 1];
+    // Item after the new position
+    const nextItem = newOrderedLinksForUI[newIndex + 1];
+
+    // Get order of previous item, or 0 if it's the first item
+    const prevOrder = prevItem ? parseFloat(`${prevItem.displayOrder}`) : 0;
+
+    // Get order of next item, or last item's order + 1 if it's the last
+    const nextOrder = nextItem
+      ? parseFloat(`${nextItem.displayOrder}`)
+      : prevOrder + 1;
+
+    const newDisplayOrder = (prevOrder + nextOrder) / 2.0;
+
+    const payload = {
+      id: Number(active.id),
+      displayOrder: newDisplayOrder,
+    };
+
+    // WARNING: `updateLinkOrder` and its server-side endpoint must be updated
+    // to handle this new single-item payload instead of an array.
     updateLinkOrder(payload, {
-      optimisticData: newOrderedLinks,
       rollbackOnError: true,
     });
   }

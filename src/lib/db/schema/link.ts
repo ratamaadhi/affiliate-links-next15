@@ -1,6 +1,6 @@
-import { int, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { page } from './page';
 import { relations } from 'drizzle-orm';
+import { int, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { page } from './page';
 
 export const link = sqliteTable('link', {
   id: int().primaryKey({ autoIncrement: true }),
@@ -11,7 +11,7 @@ export const link = sqliteTable('link', {
     .notNull()
     .references(() => page.id),
 
-  displayOrder: integer().default(0).notNull(),
+  displayOrder: real().default(0).notNull(),
   clickCount: integer().default(0).notNull(),
 
   isActive: integer({ mode: 'boolean' }).default(true).notNull(),

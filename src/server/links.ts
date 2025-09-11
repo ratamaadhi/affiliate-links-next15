@@ -8,7 +8,7 @@ import {
   page as pageSchema,
 } from '@/lib/db/schema';
 import { InPagination, SessionUser } from '@/lib/types';
-import { and, count, eq, like, or } from 'drizzle-orm';
+import { and, count, asc, eq, like, or } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
 
@@ -29,11 +29,24 @@ export const createLink = async (url, { arg }: { arg: LinkInsert }) => {
       });
       defaultPageId = getPageByUsername.id;
     }
-    await db
-      .insert(linkSchema)
-      .values({ ...arg, pageId: arg?.pageId ? arg.pageId : defaultPageId });
+
+    // 1. Find the first link to determine the new displayOrder
+    const firstLink = await db.query.link.findFirst({
+      where: eq(linkSchema.pageId, defaultPageId),
+      orderBy: [asc(linkSchema.displayOrder)],
+    });
+
+    // 2. Calculate the new displayOrder to place it at the beginning
+    const newDisplayOrder = firstLink ? firstLink.displayOrder / 2 : 1;
+
+    await db.insert(linkSchema).values({
+      ...arg,
+      pageId: defaultPageId,
+      displayOrder: newDisplayOrder,
+    });
     return { success: true, message: 'Page created successfully' };
-  } catch {
+  } catch (e) {
+    console.error('Failed to create link:', e);
     return { success: false, message: 'Failed to create page' };
   }
 };
@@ -170,7 +183,7 @@ export const deleteLink = async (url, { arg }: { arg: { id: number } }) => {
 
 export const updateLinkOrder = async (
   url,
-  { arg }: { arg: { id: number; displayOrder: number }[] }
+  { arg }: { arg: { id: number; displayOrder: number } }
 ) => {
   try {
     const session = await auth.api.getSession({
@@ -183,15 +196,14 @@ export const updateLinkOrder = async (
       return { success: false, message: 'User not found' };
     }
 
-    for (const link of arg) {
-      await db
-        .update(linkSchema)
-        .set({ displayOrder: link.displayOrder })
-        .where(eq(linkSchema.id, link.id));
-    }
+    await db
+      .update(linkSchema)
+      .set({ displayOrder: arg.displayOrder })
+      .where(eq(linkSchema.id, arg.id));
 
     return { success: true, message: 'Link order updated successfully' };
-  } catch {
+  } catch (e) {
+    console.error('Failed to update link order:', e);
     return { success: false, message: 'Failed to update link order' };
   }
 };
