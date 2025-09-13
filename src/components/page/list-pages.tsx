@@ -31,16 +31,16 @@ export const ListPages = () => {
             {pages.map((page) => (
               <li
                 key={page.id}
-                className="flex justify-between items-center px-4 py-2 border rounded-md shadow"
+                className="w-full flex gap-x-1 justify-between items-center px-4 py-2 border rounded-md shadow"
               >
-                <div>
-                  <h3 className="font-medium">{page.title}</h3>
-                  <p className="text-sm text-muted-foreground">
+                <div className="min-w-0">
+                  <h3 className="font-medium truncate">{page.title}</h3>
+                  <p className="text-sm text-muted-foreground truncate">
                     {page.description || 'No description'}
                   </p>
                 </div>
                 {user && user.username && user.username !== page.slug && (
-                  <div className="space-x-2">
+                  <div className="space-x-2 flex-shrink-0">
                     <EditPageButton data={page} />
                     <DeletePageButton pageId={page.id} />
                   </div>
