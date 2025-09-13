@@ -12,7 +12,7 @@ import {
 } from '@/server/pages';
 import { toast } from 'sonner';
 import useSWRmutation from 'swr/mutation';
-import { useLinks, usePages } from './queries';
+import { useLinkInfinite, usePages } from './queries';
 
 export function useCreatePage(
   params: PaginationParams = { page: 1, limit: 5, search: '' }
@@ -74,7 +74,7 @@ export function useCreateLink(
   }
 ) {
   const { page, limit = 5, search, pageId } = params;
-  const { mutate } = useLinks({ page, limit, search, pageId });
+  const { mutate } = useLinkInfinite({ limit, search, pageId });
 
   return useSWRmutation('/links', createLink, {
     onSuccess: () => {
@@ -96,7 +96,7 @@ export function useSwitchIsActive(
   }
 ) {
   const { page, limit = 5, search, pageId } = params;
-  const { mutate } = useLinks({ page, limit, search, pageId });
+  const { mutate } = useLinkInfinite({ limit, search, pageId });
 
   return useSWRmutation('/links', switchIsActiveLink, {
     onSuccess: () => {
@@ -118,7 +118,7 @@ export function useDeleteLink(
   }
 ) {
   const { page, limit = 5, search, pageId } = params;
-  const { mutate } = useLinks({ page, limit, search, pageId });
+  const { mutate } = useLinkInfinite({ limit, search, pageId });
 
   return useSWRmutation('/links', deleteLink, {
     onSuccess: () => {
@@ -140,7 +140,7 @@ export function useUpdateLinkOrder(
   }
 ) {
   const { page, limit = 5, search, pageId } = params;
-  const { mutate } = useLinks({ page, limit, search, pageId });
+  const { mutate } = useLinkInfinite({ limit, search, pageId });
 
   return useSWRmutation('/links', updateLinkOrder, {
     onSuccess: () => {

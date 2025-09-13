@@ -57,3 +57,32 @@ export function useLinks(
     isValidating,
   };
 }
+
+const getKey = ({ index, previousPageData, pageId, limit, search }) => {
+  // The previous page's data is the raw response from the fetcher
+  // We need to check the length of the actual data array inside the response
+  if (previousPageData && !previousPageData.data.data.length) return null; // reached the end
+
+  return pageId ? { page: index, limit, search, pageId } : null; // SWR key
+};
+
+export function useLinkInfinite(
+  params: Omit<PaginationParams, 'page'> & { pageId: number } = {
+    limit: 5,
+    search: '',
+    pageId: null,
+  }
+) {
+  const { limit = 5, search = '', pageId } = params;
+  return useSWRInfinite(
+    (prev, data) =>
+      getKey({ index: prev, previousPageData: data, pageId, limit, search }),
+    (arg) =>
+      getLinks({
+        page: arg.page + 1,
+        limit: arg.limit,
+        search: arg.search,
+        pageId: arg.pageId,
+      })
+  );
+}

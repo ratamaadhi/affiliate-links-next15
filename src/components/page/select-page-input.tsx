@@ -77,8 +77,10 @@ function SelectPageInput({ defaultPageSlug }) {
             aria-expanded={open}
             className="w-[200px] justify-between"
           >
-            {selectedPage?.label ? selectedPage?.label : 'Select list...'}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <span className="truncate">
+              {selectedPage?.label ? selectedPage?.label : 'Select list...'}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-srink-0" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0">
@@ -101,7 +103,7 @@ function SelectPageInput({ defaultPageSlug }) {
                 {dataToList.map((ls) => (
                   <div
                     key={ls.value}
-                    className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-accent hover:text-accent-foreground"
+                    className="min-w-0 relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
                       dispatch({
                         type: 'changed',
@@ -112,13 +114,13 @@ function SelectPageInput({ defaultPageSlug }) {
                   >
                     <CheckIcon
                       className={cn(
-                        'mr-2 h-4 w-4',
+                        'mr-2 h-4 w-4 flex-shrink-0',
                         selectedPage.label === ls.label
                           ? 'opacity-100'
                           : 'opacity-0'
                       )}
                     />
-                    {ls.label}
+                    <span className="truncate">{ls.label}</span>
                   </div>
                 ))}
                 {hasMore && !isLoading && (
