@@ -66,7 +66,7 @@ export function Combobox({
             <CommandGroup>
               {list &&
                 list.length > 0 &&
-                list.map((ls, index) => (
+                list.map((ls) => (
                   <CommandItem
                     key={ls.value}
                     value={ls.value}

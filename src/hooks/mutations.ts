@@ -2,6 +2,7 @@ import {
   createLink,
   deleteLink,
   switchIsActiveLink,
+  updateLink,
   updateLinkOrder,
 } from '@/server/links';
 import {
@@ -73,7 +74,7 @@ export function useCreateLink(
     pageId: null,
   }
 ) {
-  const { page, limit = 5, search, pageId } = params;
+  const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
 
   return useSWRmutation('/links', createLink, {
@@ -95,7 +96,7 @@ export function useSwitchIsActive(
     pageId: null,
   }
 ) {
-  const { page, limit = 5, search, pageId } = params;
+  const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
 
   return useSWRmutation('/links', switchIsActiveLink, {
@@ -117,7 +118,7 @@ export function useDeleteLink(
     pageId: null,
   }
 ) {
-  const { page, limit = 5, search, pageId } = params;
+  const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
 
   return useSWRmutation('/links', deleteLink, {
@@ -139,7 +140,7 @@ export function useUpdateLinkOrder(
     pageId: null,
   }
 ) {
-  const { page, limit = 5, search, pageId } = params;
+  const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
 
   return useSWRmutation('/links', updateLinkOrder, {
@@ -149,6 +150,28 @@ export function useUpdateLinkOrder(
     },
     onError: () => {
       toast.error('Failed to update link order');
+    },
+  });
+}
+
+export function useUpdateLink(
+  params: PaginationParams & { pageId: number } = {
+    page: 1,
+    limit: 5,
+    search: '',
+    pageId: null,
+  }
+) {
+  const { limit = 5, search, pageId } = params;
+  const { mutate } = useLinkInfinite({ limit, search, pageId });
+
+  return useSWRmutation('/links', updateLink, {
+    onSuccess: () => {
+      mutate();
+      toast.success('Link updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update link');
     },
   });
 }

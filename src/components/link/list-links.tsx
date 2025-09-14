@@ -24,13 +24,14 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, PencilIcon } from 'lucide-react';
+import { GripVertical } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import React, { useCallback, useContext } from 'react';
 import { HiOutlineChartBar } from 'react-icons/hi';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { DeleteLinkButton } from './delete-link-button';
+import { EditLinkButton } from './edit-link-button';
 import ToggleLinkActive from './toggle-link-active';
 
 function DragHandle(props) {
@@ -119,7 +120,7 @@ function ListLinks() {
   const linkPageState = useContext(LinkPageContext);
   const searchParams = useSearchParams();
   const search = searchParams.get('_search') ?? '';
-  const { data, isLoading, size, setSize, isValidating } = useLinkInfinite({
+  const { data, isLoading, size, setSize } = useLinkInfinite({
     pageId: linkPageState?.selectedPage?.id,
   });
   const { trigger: updateLinkOrder } = useUpdateLinkOrder({
@@ -233,9 +234,7 @@ function ListLinks() {
             {user && (
               <div className="w-full flex justify-between">
                 <div className="flex items-center gap-2 text-muted-foreground/75">
-                  <Button type="button" variant="ghost" className="size-8">
-                    <PencilIcon />
-                  </Button>
+                  <EditLinkButton data={link} />
                   <Button type="button" variant="ghost" className="h-8">
                     <HiOutlineChartBar />
                     <span className="text-xs">{link.clickCount} clicks</span>
