@@ -151,6 +151,7 @@ export function useUpdateLinkOrder(
     onError: () => {
       toast.error('Failed to update link order');
     },
+    revalidate: true,
   });
 }
 
@@ -173,5 +174,6 @@ export function useUpdateLink(
     onError: () => {
       toast.error('Failed to update link');
     },
+    revalidate: true,
   });
 }
