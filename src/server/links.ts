@@ -8,7 +8,7 @@ import {
   page as pageSchema,
 } from '@/lib/db/schema';
 import { InPagination, SessionUser } from '@/lib/types';
-import { and, count, asc, eq, like, or } from 'drizzle-orm';
+import { and, asc, count, eq, like, or } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
 
@@ -22,6 +22,11 @@ export const createLink = async (url, { arg }: { arg: LinkInsert }) => {
     });
     const user = session.user as SessionUser;
     const username = user.username;
+    const userId = +user?.id;
+
+    if (!userId) {
+      return { success: false, message: 'User not found' };
+    }
 
     if (!arg.pageId) {
       const getPageByUsername = await db.query.page.findFirst({
@@ -205,5 +210,30 @@ export const updateLinkOrder = async (
   } catch (e) {
     console.error('Failed to update link order:', e);
     return { success: false, message: 'Failed to update link order' };
+  }
+};
+
+export const updateLink = async (
+  url,
+  { arg }: { arg: { id: number; values: Partial<LinkInsert> } }
+) => {
+  const newValues: Partial<LinkInsert> = { ...arg.values };
+
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    const user = session.user as SessionUser;
+    const userId = +user?.id;
+
+    if (!userId) {
+      return { success: false, message: 'User not found' };
+    }
+
+    await db.update(linkSchema).set(newValues).where(eq(linkSchema.id, arg.id));
+    return { success: true, message: 'Link updated successfully' };
+  } catch (error) {
+    console.error('Failed to update link:', error);
+    return { success: false, message: 'Failed to update link' };
   }
 };

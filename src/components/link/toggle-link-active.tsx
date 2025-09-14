@@ -18,7 +18,7 @@ function ToggleLinkActive({ isActive = false, linkId }) {
     pageId: selectedPage?.id,
   });
 
-  async function handleSwitchIsActive(e) {
+  async function handleSwitchIsActive(s) {
     const userId = (await authClient.getSession()).data?.user.id;
     if (!userId) {
       toast.error('You must be logged in to create a link');
