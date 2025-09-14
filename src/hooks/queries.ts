@@ -83,6 +83,9 @@ export function useLinkInfinite(
         limit: arg.limit,
         search: arg.search,
         pageId: arg.pageId,
-      })
+      }),
+    {
+      revalidateAll: true,
+    }
   );
 }

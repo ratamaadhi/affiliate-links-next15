@@ -1,6 +1,7 @@
 import { CreateLinkButton } from '@/components/link/create-link-button';
 import LinkPageProvider from '@/components/link/link-page-provider';
 import ListLinks from '@/components/link/list-links';
+import SearchLinkInput from '@/components/link/search-link-input';
 import PageWrapper from '@/components/page/page-wrapper';
 import SelectPageInput from '@/components/page/select-page-input';
 import { Label } from '@/components/ui/label';
@@ -52,6 +53,9 @@ async function LinksPage() {
               </div>
               <div className="mb-4">
                 <CreateLinkButton />
+              </div>
+              <div className="mb-4">
+                <SearchLinkInput />
               </div>
               <div>
                 <ListLinks />

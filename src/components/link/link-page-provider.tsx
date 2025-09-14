@@ -8,6 +8,7 @@ import { useReducer } from 'react';
 
 const initialLinkPageState = {
   selectedPage: '',
+  keywordLink: '',
 };
 
 function linkPageReducer(state, action) {
@@ -16,6 +17,12 @@ function linkPageReducer(state, action) {
       return {
         ...state,
         selectedPage: action.payload,
+      };
+    }
+    case 'search-link': {
+      return {
+        ...state,
+        keywordLink: action.payload,
       };
     }
     default: {

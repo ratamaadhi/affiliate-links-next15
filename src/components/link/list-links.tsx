@@ -25,7 +25,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import React, { useCallback, useContext } from 'react';
 import { HiOutlineChartBar } from 'react-icons/hi';
 import { Button } from '../ui/button';
@@ -117,22 +116,29 @@ function calculateNewDisplayOrder<T extends { displayOrder: number | string }>(
 function ListLinks() {
   const { user } = useAuth();
 
-  const linkPageState = useContext(LinkPageContext);
-  const searchParams = useSearchParams();
-  const search = searchParams.get('_search') ?? '';
+  const { selectedPage, keywordLink } = useContext(LinkPageContext);
   const { data, isLoading, size, setSize } = useLinkInfinite({
-    pageId: linkPageState?.selectedPage?.id,
-  });
-  const { trigger: updateLinkOrder } = useUpdateLinkOrder({
-    page: 1,
-    search,
-    pageId: linkPageState?.selectedPage?.id,
+    pageId: selectedPage?.id,
+    search: keywordLink || '',
   });
 
-  const links = React.useMemo(
-    () => (data ? data.flatMap((page) => page?.data?.data || []) : []),
-    [data]
-  );
+  const { trigger: updateLinkOrder } = useUpdateLinkOrder({
+    search: keywordLink || '',
+    pageId: selectedPage?.id,
+  });
+
+  const links = React.useMemo(() => {
+    const allLinks = data ? data.flatMap((page) => page?.data?.data || []) : [];
+    const uniqueLinks = [];
+    const seenIds = new Set();
+    for (const link of allLinks) {
+      if (link.id && !seenIds.has(link.id)) {
+        seenIds.add(link.id);
+        uniqueLinks.push(link);
+      }
+    }
+    return uniqueLinks;
+  }, [data]);
   const [dndLinks, setDndLinks] = React.useState(links);
 
   const isLoadingMore =
@@ -149,7 +155,7 @@ function ListLinks() {
     if (!isLoadingMore && !isReachingEnd) {
       setSize(size + 1);
     }
-  }, [isLoadingMore, isReachingEnd, size]);
+  }, [isLoadingMore, isReachingEnd, size, setSize]);
 
   const loaderRef = useInfiniteScroll(!isReachingEnd, loadMore, isLoadingMore);
 
@@ -263,7 +269,7 @@ function ListLinks() {
             sensors={sensors}
             id={sortableId}
           >
-            <ul className="space-y-3 h-[558px] overflow-y-scroll">
+            <ul className="space-y-3 h-[calc(100vh-408px)] overflow-y-scroll no-scrollbar">
               <SortableContext
                 items={dataIds}
                 strategy={verticalListSortingStrategy}
