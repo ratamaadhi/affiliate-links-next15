@@ -259,8 +259,8 @@ function ListLinks() {
   }
 
   return (
-    <div>
-      <div className="min-h-[342px] mb-3">
+    <div className="h-full">
+      <div className="h-full relative mb-3">
         {dndLinks.length > 0 && (
           <DndContext
             collisionDetection={closestCenter}
@@ -269,7 +269,7 @@ function ListLinks() {
             sensors={sensors}
             id={sortableId}
           >
-            <ul className="space-y-3 h-[calc(100vh-408px)] overflow-y-scroll no-scrollbar">
+            <ul className="absolute inset-0 space-y-3 overflow-y-scroll no-scrollbar">
               <SortableContext
                 items={dataIds}
                 strategy={verticalListSortingStrategy}
