@@ -27,7 +27,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, PencilIcon } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import { useContext, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -47,15 +46,12 @@ const formSchema = z.object({
 
 export const EditLinkButton = ({ data }) => {
   const { user } = useAuth();
-  const { selectedPage } = useContext(LinkPageContext);
-  const searchParams = useSearchParams();
-
-  const search = searchParams.get('_search') ?? '';
+  const { selectedPage, keywordLink } = useContext(LinkPageContext);
 
   const [isOpen, setIsOpen] = useState(false);
 
   const { trigger, isMutating } = useUpdateLink({
-    search,
+    search: keywordLink || '',
     pageId: selectedPage?.id,
   });
 

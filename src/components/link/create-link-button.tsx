@@ -28,7 +28,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, PlusIcon } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import { useContext, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -47,16 +46,12 @@ const formSchema = z.object({
 
 export const CreateLinkButton = ({}) => {
   const { user } = useAuth();
-  const { selectedPage } = useContext(LinkPageContext);
-  const searchParams = useSearchParams();
-  const pageIndex = +(searchParams.get('_page') ?? 1);
-  const search = searchParams.get('_search') ?? '';
+  const { selectedPage, keywordLink } = useContext(LinkPageContext);
 
   const [isOpen, setIsOpen] = useState(false);
 
   const { trigger, isMutating } = useCreateLink({
-    page: pageIndex,
-    search,
+    search: keywordLink || '',
     pageId: selectedPage?.id,
   });
 

@@ -1,7 +1,7 @@
+import { LinkPageContext } from '@/context/link-page-context';
 import { useDeleteLink } from '@/hooks/mutations';
 import { authClient } from '@/lib/auth-client';
-import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { HiOutlineTrash } from 'react-icons/hi';
 import { toast } from 'sonner';
 import {
@@ -18,16 +18,13 @@ import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 export const DeleteLinkButton = ({ linkId, pageId }) => {
-  const searchParams = useSearchParams();
-  const pageIndex = +(searchParams.get('_page') ?? 1);
-  const search = searchParams.get('_search') ?? '';
+  const { selectedPage, keywordLink } = useContext(LinkPageContext);
 
   const [isOpen, setIsOpen] = useState(false);
 
   const { trigger, isMutating } = useDeleteLink({
-    page: pageIndex,
-    search,
-    pageId,
+    search: keywordLink || '',
+    pageId: selectedPage?.id,
   });
 
   const handleDelete = async () => {
