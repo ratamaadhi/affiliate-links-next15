@@ -35,13 +35,17 @@ export const createHomePageUser = async () => {
   }
 };
 
+const findPageBySlug = (slug: string) => {
+  return db.query.page.findFirst({
+    where: eq(pageSchema.slug, slug),
+  });
+};
+
 const generateUniqueSlug = async (title: string): Promise<string> => {
   let slug = slugify(title);
 
   while (true) {
-    const existingPage = await db.query.page.findFirst({
-      where: eq(pageSchema.slug, slug),
-    });
+    const existingPage = await findPageBySlug(slug);
 
     if (!existingPage) return slug;
 
@@ -233,5 +237,15 @@ export const deletePage = async (url, { arg }: { arg: { id: number } }) => {
     return { success: true, message: 'Page deleted successfully' };
   } catch {
     return { success: false, message: 'Failed to delete Page' };
+  }
+};
+
+export const getPageBySlug = async (slug: string) => {
+  try {
+    const pageBySlug = await findPageBySlug(slug);
+
+    return { success: true, data: pageBySlug };
+  } catch {
+    return { success: false, message: 'Failed to get page' };
   }
 };

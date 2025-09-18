@@ -9,39 +9,43 @@ import {
 } from '@/lib/db/schema';
 import { InPagination, SessionUser } from '@/lib/types';
 import { and, asc, count, eq, like, or } from 'drizzle-orm';
-import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
 
-const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 5);
+// Helper function to get authenticated user
+const getAuthenticatedUser = async () => {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const user = session.user as SessionUser;
+  if (!user?.id) {
+    return null;
+  }
+  return user;
+};
 
 export const createLink = async (url, { arg }: { arg: LinkInsert }) => {
   let defaultPageId = arg.pageId;
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    const user = session.user as SessionUser;
-    const username = user.username;
-    const userId = +user?.id;
-
-    if (!userId) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return { success: false, message: 'User not found' };
     }
 
     if (!arg.pageId) {
       const getPageByUsername = await db.query.page.findFirst({
-        where: eq(pageSchema.slug, username),
+        where: eq(pageSchema.slug, user.username),
       });
+      if (!getPageByUsername) {
+        return { success: false, message: 'Default page not found for user' };
+      }
       defaultPageId = getPageByUsername.id;
     }
 
-    // 1. Find the first link to determine the new displayOrder
     const firstLink = await db.query.link.findFirst({
       where: eq(linkSchema.pageId, defaultPageId),
       orderBy: [asc(linkSchema.displayOrder)],
     });
 
-    // 2. Calculate the new displayOrder to place it at the beginning
     const newDisplayOrder = firstLink ? firstLink.displayOrder / 2 : 1;
 
     await db.insert(linkSchema).values({
@@ -49,10 +53,10 @@ export const createLink = async (url, { arg }: { arg: LinkInsert }) => {
       pageId: defaultPageId,
       displayOrder: newDisplayOrder,
     });
-    return { success: true, message: 'Page created successfully' };
+    return { success: true, message: 'Link created successfully' };
   } catch (e) {
     console.error('Failed to create link:', e);
-    return { success: false, message: 'Failed to create page' };
+    return { success: false, message: 'Failed to create link' };
   }
 };
 
@@ -75,33 +79,30 @@ export const getLinks = async (
   let defaultPageId = pageId;
 
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    const user = session.user as SessionUser;
-    const userId = +user?.id;
-    const username = user.username;
-
-    if (!userId) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return { success: false, message: 'User not found' };
     }
 
     if (!pageId) {
       const getPageByUsername = await db.query.page.findFirst({
-        where: eq(pageSchema.slug, username),
+        where: eq(pageSchema.slug, user.username),
       });
+      if (!getPageByUsername) {
+        return { success: false, message: 'Default page not found for user' };
+      }
       defaultPageId = getPageByUsername.id;
     }
 
     const whereCondition = search
       ? and(
-          eq(linkSchema.pageId, pageId ? pageId : defaultPageId),
+          eq(linkSchema.pageId, defaultPageId),
           or(
             like(linkSchema.title, `%${search}%`),
             like(linkSchema.url, `%${search}%`)
           )
         )
-      : eq(linkSchema.pageId, pageId ? pageId : defaultPageId);
+      : eq(linkSchema.pageId, defaultPageId);
 
     const links = await db.query.link.findMany({
       where: whereCondition,
@@ -140,29 +141,24 @@ export const switchIsActiveLink = async (
   { arg }: { arg: { id: number } }
 ) => {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    const user = session.user as SessionUser;
-    const userId = +user?.id;
-
-    if (!userId) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return { success: false, message: 'User not found' };
     }
 
-    const isActive = (
-      await db.query.link.findFirst({
-        where: eq(linkSchema.id, arg.id),
-        with: {
-          page: true,
-        },
-      })
-    ).isActive;
+    const link = await db.query.link.findFirst({
+      where: eq(linkSchema.id, arg.id),
+    });
 
-    await db
-      .update(linkSchema)
-      .set({ isActive: !isActive })
-      .where(eq(linkSchema.id, arg.id));
+    if (link) {
+      // TODO: Add check to ensure user owns the link being modified
+      await db
+        .update(linkSchema)
+        .set({ isActive: !link.isActive })
+        .where(eq(linkSchema.id, arg.id));
+      return { success: true, message: 'Link status updated' };
+    }
+    return { success: false, message: 'Link not found' };
   } catch {
     return { success: false, message: 'Failed to switch active Link' };
   }
@@ -170,15 +166,11 @@ export const switchIsActiveLink = async (
 
 export const deleteLink = async (url, { arg }: { arg: { id: number } }) => {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    const user = session.user as SessionUser;
-    const userId = +user?.id;
-
-    if (!userId) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return { success: false, message: 'User not found' };
     }
+    // TODO: Add check to ensure user owns the link being deleted
     await db.delete(linkSchema).where(eq(linkSchema.id, arg.id));
     return { success: true, message: 'Link deleted successfully' };
   } catch {
@@ -191,16 +183,12 @@ export const updateLinkOrder = async (
   { arg }: { arg: { id: number; displayOrder: number } }
 ) => {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    const user = session.user as SessionUser;
-    const userId = +user?.id;
-
-    if (!userId) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return { success: false, message: 'User not found' };
     }
 
+    // TODO: Add check to ensure user owns the link being modified
     await db
       .update(linkSchema)
       .set({ displayOrder: arg.displayOrder })
@@ -217,23 +205,77 @@ export const updateLink = async (
   url,
   { arg }: { arg: { id: number; values: Partial<LinkInsert> } }
 ) => {
-  const newValues: Partial<LinkInsert> = { ...arg.values };
-
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    const user = session.user as SessionUser;
-    const userId = +user?.id;
-
-    if (!userId) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return { success: false, message: 'User not found' };
     }
 
-    await db.update(linkSchema).set(newValues).where(eq(linkSchema.id, arg.id));
+    // TODO: Add check to ensure user owns the link being modified
+    await db
+      .update(linkSchema)
+      .set({ ...arg.values })
+      .where(eq(linkSchema.id, arg.id));
     return { success: true, message: 'Link updated successfully' };
   } catch (error) {
     console.error('Failed to update link:', error);
     return { success: false, message: 'Failed to update link' };
+  }
+};
+
+export const getLinksForPage = async (
+  params: PaginationParams & { pageId: number } = {
+    page: 1,
+    limit: 5,
+    search: '',
+    pageId: null,
+  }
+) => {
+  const { page, limit = 5, search, pageId } = params;
+  const offset = (page - 1) * limit;
+
+  if (!pageId) {
+    return { success: false, data: { data: [], pagination: {} } };
+  }
+
+  const whereCondition = search
+    ? and(
+        eq(linkSchema.pageId, pageId),
+        or(
+          like(linkSchema.title, `%${search}%`),
+          like(linkSchema.url, `%${search}%`)
+        )
+      )
+    : eq(linkSchema.pageId, pageId);
+
+  try {
+    const links = await db.query.link.findMany({
+      where: whereCondition,
+      orderBy: (links, { asc }) => [asc(links.displayOrder)],
+      limit,
+      offset,
+    });
+    const [totalItems] = await db
+      .select({ count: count() })
+      .from(linkSchema)
+      .where(whereCondition);
+    const totalPages = Math.ceil(Number(totalItems.count) / limit);
+
+    const pagination: InPagination = {
+      totalItems: Number(totalItems.count),
+      itemCount: links.length,
+      itemsPerPage: limit,
+      totalPages,
+      currentPage: page,
+    };
+
+    const data = {
+      data: links,
+      pagination,
+    };
+
+    return { success: true, data: data };
+  } catch {
+    return { success: false, message: 'Failed to get page' };
   }
 };

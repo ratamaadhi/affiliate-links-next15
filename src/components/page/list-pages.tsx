@@ -3,13 +3,23 @@
 import { usePages } from '@/hooks/queries';
 import { useSearchParams } from 'next/navigation';
 
+import {
+  LinkPageContext,
+  LinkPageDispatchContext,
+} from '@/context/link-page-context';
 import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
+import { useContext, useEffect } from 'react';
+import { BorderBeam } from '../ui/border-beam';
 import PaginationWithLink from '../ui/pagination-with-link';
 import { Skeleton } from '../ui/skeleton';
 import { DeletePageButton } from './delete-page-button';
 import { EditPageButton } from './edit-page-button';
 
-export const ListPages = () => {
+export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
+  const { selectedPage } = useContext(LinkPageContext);
+  const dispatch = useContext(LinkPageDispatchContext);
+
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
   const search = searchParams.get('_search') ?? '';
@@ -19,6 +29,28 @@ export const ListPages = () => {
 
   const pages = data?.data || [];
   const pagination = data?.pagination;
+
+  useEffect(() => {
+    const shouldSetDefaultValue = !selectedPage && defaultPageSlug;
+
+    if (shouldSetDefaultValue) {
+      const defaultValue = pages.find((list) => list.slug === defaultPageSlug);
+
+      if (defaultValue) {
+        dispatch({
+          type: 'changed',
+          payload: defaultValue,
+        });
+      }
+    }
+  }, [pages, defaultPageSlug, selectedPage]);
+
+  function handleSelectPage(page) {
+    dispatch({
+      type: 'changed',
+      payload: page,
+    });
+  }
 
   return (
     <div>
@@ -31,7 +63,11 @@ export const ListPages = () => {
             {pages.map((page) => (
               <li
                 key={page.id}
-                className="w-full flex gap-x-1 justify-between items-center px-4 py-2 border rounded-md shadow"
+                className={cn(
+                  'relative w-full flex gap-x-1 justify-between items-center px-4 py-2 border rounded-md shadow cursor-pointer hover:bg-accent/50 hover:shadow-md',
+                  selectedPage?.id === page.id && 'bg-accent/30 shadow-md'
+                )}
+                onClick={() => handleSelectPage(page)}
               >
                 <div className="min-w-0">
                   <h3 className="font-medium truncate">{page.title}</h3>
@@ -44,6 +80,23 @@ export const ListPages = () => {
                     <EditPageButton data={page} />
                     <DeletePageButton pageId={page.id} />
                   </div>
+                )}
+                {selectedPage?.id === page.id && (
+                  <>
+                    <BorderBeam
+                      duration={8}
+                      size={80}
+                      borderWidth={2}
+                      // className="from-transparent via-purple-500 to-transparent"
+                    />
+                    <BorderBeam
+                      duration={8}
+                      delay={4}
+                      size={80}
+                      borderWidth={2}
+                      // className="from-transparent via-blue-500 to-transparent"
+                    />
+                  </>
                 )}
               </li>
             ))}

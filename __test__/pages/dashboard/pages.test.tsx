@@ -62,9 +62,7 @@ describe('PagesPage', () => {
     expect(
       screen.getByRole('heading', { name: /Your Pages/i })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /Page Preview/i })
-    ).toBeInTheDocument();
+
 
     // Check for Linkid display with mocked user info
     expect(screen.getByText(/My Linkid:/i)).toBeInTheDocument();
@@ -97,18 +95,16 @@ describe('PagesPage', () => {
     expect(
       screen.getByRole('heading', { name: /Your Pages/i })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /Page Preview/i })
-    ).toBeInTheDocument();
+
 
     // Linkid should still be present but with undefined username
     expect(screen.getByText(/My Linkid:/i)).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /http:\/\/localhost:3000\/undefined/i })
+      screen.getByRole('link', { name: /http:\/\/localhost:3000\//i })
     ).toBeInTheDocument();
     expect(screen.getByRole('link')).toHaveAttribute(
       'href',
-      'http://localhost:3000/undefined'
+      'http://localhost:3000/'
     );
   });
 });

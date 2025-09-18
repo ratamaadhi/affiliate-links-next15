@@ -9,6 +9,7 @@ import usePagesInfinite from '@/hooks/usePagesInfinite';
 import { cn } from '@/lib/utils';
 import { CheckIcon, ChevronsUpDown, Loader2, SearchIcon } from 'lucide-react';
 import { useCallback, useContext, useEffect, useState } from 'react';
+import { BorderBeam } from '../ui/border-beam';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -75,12 +76,14 @@ function SelectPageInput({ defaultPageSlug }) {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-[200px] justify-between"
+            className="relative w-[200px] justify-between"
           >
             <span className="truncate">
               {selectedPage?.label ? selectedPage?.label : 'Select list...'}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-srink-0" />
+            <BorderBeam duration={4} size={20} />
+            <BorderBeam duration={4} delay={2} size={20} />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0">
