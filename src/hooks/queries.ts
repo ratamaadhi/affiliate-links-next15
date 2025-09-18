@@ -1,4 +1,4 @@
-import { getLinks } from '@/server/links';
+import { getLinks, getLinksForPage } from '@/server/links';
 import { getPageInfinite, getPages, PaginationParams } from '@/server/pages';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
@@ -58,12 +58,12 @@ export function useLinks(
   };
 }
 
-const getKey = ({ index, previousPageData, pageId, limit, search }) => {
+const getKey = ({ index, previousPageData, pageId, limit, search, key }) => {
   // The previous page's data is the raw response from the fetcher
   // We need to check the length of the actual data array inside the response
   if (previousPageData && !previousPageData.data.data.length) return null; // reached the end
 
-  return pageId ? { page: index, limit, search, pageId } : null; // SWR key
+  return pageId ? { page: index, limit, search, pageId, key } : null; // SWR key
 };
 
 export function useLinkInfinite(
@@ -76,9 +76,47 @@ export function useLinkInfinite(
   const { limit = 5, search = '', pageId } = params;
   return useSWRInfinite(
     (prev, data) =>
-      getKey({ index: prev, previousPageData: data, pageId, limit, search }),
+      getKey({
+        index: prev,
+        previousPageData: data,
+        pageId,
+        limit,
+        search,
+        key: 'links',
+      }),
     (arg) =>
       getLinks({
+        page: arg.page + 1,
+        limit: arg.limit,
+        search: arg.search,
+        pageId: arg.pageId,
+      }),
+    {
+      revalidateAll: true,
+    }
+  );
+}
+
+export function useLinkForPageInfinite(
+  params: Omit<PaginationParams, 'page'> & { pageId: number } = {
+    limit: 100,
+    search: '',
+    pageId: null,
+  }
+) {
+  const { limit = 100, search = '', pageId } = params;
+  return useSWRInfinite(
+    (prev, data) =>
+      getKey({
+        index: prev,
+        previousPageData: data,
+        pageId,
+        limit,
+        search,
+        key: 'forPage',
+      }),
+    (arg) =>
+      getLinksForPage({
         page: arg.page + 1,
         limit: arg.limit,
         search: arg.search,

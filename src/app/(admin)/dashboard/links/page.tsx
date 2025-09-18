@@ -1,4 +1,5 @@
 import { CreateLinkButton } from '@/components/link/create-link-button';
+import { DashboardLinksPreview } from '@/components/link/dashboard-links-preview';
 import LinkPageProvider from '@/components/link/link-page-provider';
 import ListLinks from '@/components/link/list-links';
 import SearchLinkInput from '@/components/link/search-link-input';
@@ -52,7 +53,7 @@ async function LinksPage() {
                 </div>
               </div>
             </div>
-            <div className="hidden md:block min-w-[200px] max-w-[460px] mx-auto w-full">
+            <div className="hidden xl:flex min-w-[200px] max-w-[460px] mx-auto w-full h-full flex-col">
               <div className="w-full flex items-center gap-2 mb-4">
                 <div className="flex flex-1 gap-2 xl:w-max w-full rounded-lg px-4 py-2 bg-background shadow border border-muted relative overflow-hidden">
                   <div className="text-nowrap text-sm relative overflow-x-auto no-scrollbar">
@@ -70,8 +71,11 @@ async function LinksPage() {
                   content={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}
                 />
               </div>
-              <div className="w-full h-96 flex gap-2 bg-muted/50 rounded-lg px-4 py-2 shadow border border-muted">
-                <h1 className="text-xl font-bold">Page Preview</h1>
+              <div className="w-full min-h-0 rounded-lg overflow-hidden relative bg-muted-foreground py-3.5">
+                <DashboardLinksPreview
+                  pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}
+                  username={user.username}
+                />
               </div>
             </div>
           </div>
