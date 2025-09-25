@@ -67,9 +67,11 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
                   'relative w-full flex gap-x-1 justify-between items-center px-4 py-2 border rounded-md shadow cursor-pointer hover:bg-accent/50 hover:shadow-md',
                   selectedPage?.id === page.id && 'bg-accent/30 shadow-md'
                 )}
-                onClick={() => handleSelectPage(page)}
               >
-                <div className="min-w-0">
+                <div
+                  className="min-w-0 w-full"
+                  onClick={() => handleSelectPage(page)}
+                >
                   <h3 className="font-medium truncate">{page.title}</h3>
                   <p className="text-sm text-muted-foreground truncate">
                     {page.description || 'No description'}
@@ -78,7 +80,7 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
                 {user && user.username && user.username !== page.slug && (
                   <div className="space-x-2 flex-shrink-0">
                     <EditPageButton data={page} />
-                    <DeletePageButton pageId={page.id} />
+                    <DeletePageButton data={page} />
                   </div>
                 )}
                 {selectedPage?.id === page.id && (

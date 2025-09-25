@@ -17,10 +17,11 @@ import {
 import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
-export const DeletePageButton = ({ pageId }) => {
+export const DeletePageButton = ({ data }) => {
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
   const search = searchParams.get('_search') ?? '';
+  const pageId = data.id;
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -62,7 +63,8 @@ export const DeletePageButton = ({ pageId }) => {
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the page
+            This action cannot be undone. This will permanently delete{' '}
+            <span className="font-semibold italic">{data.title || 'this'}</span>{' '}
             and all its links.
           </AlertDialogDescription>
         </AlertDialogHeader>
