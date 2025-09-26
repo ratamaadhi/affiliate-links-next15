@@ -114,7 +114,6 @@ describe('CreatePageButton', () => {
       expect(mockTrigger).toHaveBeenCalledWith({
         title: 'Test Page',
         description: 'This is a test description.',
-        userId: 123,
       });
     });
 

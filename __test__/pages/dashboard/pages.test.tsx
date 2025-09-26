@@ -19,6 +19,14 @@ jest.mock('@/components/page/search-page-input', () => ({
   __esModule: true,
   default: () => <div data-testid="search-page-input" />,
 }));
+jest.mock('@/components/link/dynamic-page-link', () => ({
+  DynamicPageLink: () => (
+    <div data-testid="dynamic-page-link">
+      <span>My Linkid: </span>
+      <span>Select a page to generate link</span>
+    </div>
+  ),
+}));
 jest.mock('next/link', () => ({
   __esModule: true,
   default: ({
@@ -63,16 +71,12 @@ describe('PagesPage', () => {
       screen.getByRole('heading', { name: /Your Pages/i })
     ).toBeInTheDocument();
 
-
     // Check for Linkid display with mocked user info
     expect(screen.getByText(/My Linkid:/i)).toBeInTheDocument();
+    expect(screen.getByTestId('dynamic-page-link')).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /http:\/\/localhost:3000\/testuser/i })
+      screen.getByText('Select a page to generate link')
     ).toBeInTheDocument();
-    expect(screen.getByRole('link')).toHaveAttribute(
-      'href',
-      'http://localhost:3000/testuser'
-    );
 
     // Check if child components are rendered
     expect(screen.getByTestId('create-page-button')).toBeInTheDocument();
@@ -96,15 +100,11 @@ describe('PagesPage', () => {
       screen.getByRole('heading', { name: /Your Pages/i })
     ).toBeInTheDocument();
 
-
     // Linkid should still be present but with undefined username
     expect(screen.getByText(/My Linkid:/i)).toBeInTheDocument();
+    expect(screen.getByTestId('dynamic-page-link')).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /http:\/\/localhost:3000\//i })
+      screen.getByText('Select a page to generate link')
     ).toBeInTheDocument();
-    expect(screen.getByRole('link')).toHaveAttribute(
-      'href',
-      'http://localhost:3000/'
-    );
   });
 });
