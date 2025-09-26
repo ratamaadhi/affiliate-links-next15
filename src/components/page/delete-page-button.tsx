@@ -37,7 +37,7 @@ export const DeletePageButton = ({ data }) => {
       id: pageId,
     });
 
-    if (response.success) {
+    if (response?.success) {
       setIsOpen(false);
     }
   };

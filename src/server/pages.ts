@@ -2,7 +2,11 @@
 
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
-import { PageInsert, page as pageSchema } from '@/lib/db/schema';
+import {
+  link as linkSchema,
+  PageInsert,
+  page as pageSchema,
+} from '@/lib/db/schema';
 import { InPagination, SessionUser } from '@/lib/types';
 import { and, count, eq, like, or } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
@@ -267,6 +271,11 @@ export const deletePage = async (
     if (!userId) {
       return { success: false, message: 'User not found' };
     }
+
+    // First, delete all links associated with this page
+    await db.delete(linkSchema).where(eq(linkSchema.pageId, arg.id));
+
+    // Then delete the page
     await db
       .delete(pageSchema)
       .where(and(eq(pageSchema.id, arg.id), eq(pageSchema.userId, userId)));
