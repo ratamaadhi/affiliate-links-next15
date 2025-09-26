@@ -70,7 +70,7 @@ export const CreatePageButton = ({}) => {
       return;
     }
 
-    const response = await trigger({ ...values, userId: +userId });
+    const response = await trigger({ ...values });
     if (response.success) {
       form.reset();
       setIsOpen(false);

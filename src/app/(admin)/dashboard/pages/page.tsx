@@ -1,12 +1,11 @@
 import { DashboardLinksPreview } from '@/components/link/dashboard-links-preview';
+import { DynamicPageLink } from '@/components/link/dynamic-page-link';
 import LinkPageProvider from '@/components/link/link-page-provider';
 import { CreatePageButton } from '@/components/page/create-page-button';
 import { ListPages } from '@/components/page/list-pages';
 import PageWrapper from '@/components/page/page-wrapper';
 import SearchPageInput from '@/components/page/search-page-input';
-import { CopyButton } from '@/components/ui/shadcn-io/copy-button';
 import { headers } from 'next/headers';
-import Link from 'next/link';
 
 export const metadata = {
   title: 'Pages | Aff-Link',
@@ -44,22 +43,8 @@ export default async function PagesPage() {
               </div>
             </div>
             <div className="hidden md:block min-w-[200px] max-w-[460px] mx-auto w-full">
-              <div className="w-full flex items-center gap-2 mb-4">
-                <div className="flex flex-1 gap-2 xl:w-max w-full rounded-lg px-4 py-2 bg-background shadow border border-muted relative overflow-hidden">
-                  <div className="text-nowrap text-sm relative overflow-x-auto no-scrollbar">
-                    <span className="font-semibold text-foreground/70 sticky left-0 bg-background">
-                      My Linkid:{' '}
-                    </span>
-                    <Link
-                      href={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username || ''}`}
-                      target="_blank"
-                      className="hover:underline"
-                    >{`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username || ''}`}</Link>
-                  </div>
-                </div>
-                <CopyButton
-                  content={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username || ''}`}
-                />
+              <div className="mb-4">
+                <DynamicPageLink />
               </div>
               <div className="w-full min-h-0 rounded-lg overflow-hidden relative bg-muted-foreground py-3.5">
                 <DashboardLinksPreview
