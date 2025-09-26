@@ -1,36 +1,18 @@
 'use client';
 
-import z from 'zod';
 import { Button } from '../ui/button';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
-import { Input } from '../ui/input';
-
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Dialog } from '../ui/dialog';
 import { useUpdatePage } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
+import { PageSelect } from '@/lib/db/schema/page';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useCallback, useState } from 'react';
 import { HiOutlinePencilAlt } from 'react-icons/hi';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { EditPageForm } from './edit-page-form';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 const formSchema = z.object({
   title: z
@@ -43,54 +25,77 @@ const formSchema = z.object({
   description: z.string().max(160).optional(),
 });
 
-export const EditPageButton = ({ data }) => {
+interface EditPageButtonProps {
+  data: PageSelect;
+}
+
+export const EditPageButton = ({ data }: EditPageButtonProps) => {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
   const search = searchParams.get('_search') ?? '';
 
   const [isOpen, setIsOpen] = useState(false);
-
   const { trigger, isMutating } = useUpdatePage({ page: pageIndex, search });
+  const form = useForm<z.infer<typeof formSchema>>();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: data?.title || '',
-      description: data?.description || '',
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && form.formState.isDirty) {
+        if (
+          confirm('You have unsaved changes. Are you sure you want to close?')
+        ) {
+          setIsOpen(false);
+          form.reset();
+        }
+      } else {
+        setIsOpen(open);
+      }
     },
-  });
+    [form]
+  );
 
-  useEffect(() => {
-    if (data) {
-      form.reset({
-        title: data.title,
-        description: data.description || '',
-      });
-    }
-  }, [data, form]);
+  const handleSubmit = useCallback(
+    async (values: z.infer<typeof formSchema>) => {
+      const userId = user?.id;
+      if (!userId) {
+        toast.error('You must be logged in to edit page');
+        return;
+      }
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    const userId = user.id;
-    if (!userId) {
-      toast.error('You must be logged in to edit page');
-      return;
-    }
-    const response = await trigger({
-      id: data.id,
-      values: {
-        ...values,
-        userId: +userId,
-      },
-    });
-    if (response.success) {
-      form.reset();
-      setIsOpen(false);
-    }
-  }
+      try {
+        const response = await trigger({
+          id: data.id,
+          values: {
+            ...values,
+            userId: typeof userId === 'string' ? Number(userId) : userId,
+          },
+        });
+
+        if (response.success) {
+          form.reset({
+            title: data.title,
+            description: data.description || '',
+          });
+          setIsOpen(false);
+          toast.success('Page updated successfully');
+        } else {
+          toast.error(response.message || 'Failed to update page');
+        }
+      } catch (error) {
+        toast.error('An unexpected error occurred');
+        console.error('Update page error:', error);
+      }
+    },
+    [user, trigger, data.id, data.title, data.description, form]
+  );
+
+  const handleCancel = useCallback(() => {
+    form.reset();
+  }, [form]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -98,6 +103,7 @@ export const EditPageButton = ({ data }) => {
             className="size-8"
             onClick={() => setIsOpen(true)}
             disabled={isMutating}
+            aria-label="Edit page"
           >
             <HiOutlinePencilAlt />
           </Button>
@@ -106,73 +112,15 @@ export const EditPageButton = ({ data }) => {
           <p>Edit page</p>
         </TooltipContent>
       </Tooltip>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit page</DialogTitle>
-          <DialogDescription>
-            Make changes to your page here. Click continue when you&apos;re
-            done.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4">
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="My page title"
-                          disabled={isMutating}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="What page is about?"
-                          disabled={isMutating}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button disabled={isMutating} variant="outline">
-                  Cancel
-                </Button>
-              </DialogClose>
-              <Button disabled={isMutating} type="submit">
-                {isMutating ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  'Continue'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
+      <EditPageForm
+        initialData={{
+          title: data.title,
+          description: data.description,
+        }}
+        isMutating={isMutating}
+        onSubmitAction={handleSubmit}
+        onCancelAction={handleCancel}
+      />
     </Dialog>
   );
 };
