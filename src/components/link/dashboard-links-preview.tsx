@@ -37,7 +37,7 @@ export function DashboardLinksPreview({
 
   return (
     <div className="w-full">
-      <div className="relative flex aspect-[9/16] max-h-[120vh] w-[340px] max-w-[394px] origin-top scale-[1] flex-col items-center gap-10 mx-auto">
+      <div className="relative flex aspect-[9/16] max-h-[120vh] w-[340px] origin-top scale-[1] flex-col items-center gap-10 mx-auto">
         <div className="h-full w-full">
           <div className="relative h-full w-full overflow-hidden shadow-[0_121px_49px_#00000005,0_68px_41px_#00000014,0_30px_30px_#00000024,0_8px_17px_#00000029] rounded-[34px] border-4 border-muted-foreground/30">
             <iframe className="w-full h-full" src={fullLink}></iframe>

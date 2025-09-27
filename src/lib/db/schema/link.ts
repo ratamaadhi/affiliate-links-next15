@@ -6,6 +6,7 @@ export const link = sqliteTable('link', {
   id: int().primaryKey({ autoIncrement: true }),
   title: text().notNull(),
   url: text().notNull(),
+  imageUrl: text('image_url'), // Added image URL field
 
   pageId: integer()
     .notNull()

@@ -39,7 +39,6 @@ const formSchema = z.object({
     .min(2, {
       message: 'Title must be at least 2 characters long',
     })
-    .max(50)
     .nonempty('Title is required'),
   url: z.url().nonempty(),
 });

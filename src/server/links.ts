@@ -137,6 +137,49 @@ async function fetchPaginatedLinks(
   };
 }
 
+async function fetchPaginatedActiveLinks(
+  params: PaginationParams & { pageId: number }
+) {
+  const { page = 1, limit = 5, search, pageId } = params;
+  const offset = (page - 1) * limit;
+
+  const whereCondition = search
+    ? and(
+        eq(linkSchema.pageId, pageId),
+        eq(linkSchema.isActive, true),
+        or(
+          like(linkSchema.title, `%${search}%`),
+          like(linkSchema.url, `%${search}%`)
+        )
+      )
+    : and(eq(linkSchema.pageId, pageId), eq(linkSchema.isActive, true));
+
+  const [links, [totalItems]] = await Promise.all([
+    db.query.link.findMany({
+      where: whereCondition,
+      orderBy: (links, { asc }) => [asc(links.displayOrder)],
+      limit,
+      offset,
+    }),
+    db.select({ count: count() }).from(linkSchema).where(whereCondition),
+  ]);
+
+  const totalPages = Math.ceil(Number(totalItems.count) / limit);
+
+  const pagination: InPagination = {
+    totalItems: Number(totalItems.count),
+    itemCount: links.length,
+    itemsPerPage: limit,
+    totalPages,
+    currentPage: page,
+  };
+
+  return {
+    data: links,
+    pagination,
+  };
+}
+
 export const getLinks = async (
   params: PaginationParams & { pageId?: number }
 ) => {
@@ -274,7 +317,7 @@ export const getLinksForPage = async (
   }
 
   try {
-    const data = await fetchPaginatedLinks(params);
+    const data = await fetchPaginatedActiveLinks(params);
     return { success: true, data };
   } catch (error: unknown) {
     const message =

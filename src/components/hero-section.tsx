@@ -129,18 +129,18 @@ export default function HeroSection({ session }) {
                 />
                 <div className="inset-shadow-2xs ring-background dark:inset-shadow-white/20 bg-background relative mx-auto max-w-5xl overflow-hidden rounded-2xl border p-4 shadow-lg shadow-zinc-950/15 ring-1">
                   <Image
-                    className="bg-background aspect-15/8 relative hidden rounded-2xl dark:block"
+                    className="bg-background aspect-[1221/785] relative hidden rounded-2xl dark:block" // orgignal aspect ratio 15/8
                     src="/dark-one.png"
                     alt="app screen"
-                    width="2700"
-                    height="1440"
+                    width="2438"
+                    height="1572"
                   />
                   <Image
-                    className="z-2 border-border/25 aspect-15/8 relative rounded-2xl border dark:hidden"
+                    className="z-2 border-border/25 aspect-[1221/785] relative rounded-2xl border dark:hidden" // orgignal aspect ratio 15/8
                     src="/light-one.png"
                     alt="app screen"
-                    width="2700"
-                    height="1440"
+                    width="2442"
+                    height="1570"
                   />
                 </div>
               </div>
