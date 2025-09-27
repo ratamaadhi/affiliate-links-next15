@@ -10,7 +10,7 @@ This project is a full-stack application for managing affiliate links, built wit
 
 - **Framework**: [Next.js](https://nextjs.org/)
 - **Database**: [Turso](https://turso.tech/) with [Drizzle ORM](https://orm.drizzle.team/)
-- **Authentication**: [NextAuth.js](https://next-auth.js.org/) (likely via `better-auth`)
+- **Authentication**: [BETTER-AUTH](https://www.better-auth.com/)
 - **UI**: [shadcn/ui](https://ui.shadcn.com/) with [Tailwind CSS](https://tailwindcss.com/)
 - **Form Handling**: [React Hook Form](https://react-hook-form.com/) with [Zod](https://zod.dev/) for validation
 - **Data Fetching**: [SWR](https://swr.vercel.app/)
