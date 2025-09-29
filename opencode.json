@@ -1,0 +1,48 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "plan": {
+      "description": "Planning and analysis agent for software architecture and requirements",
+      "mode": "primary",
+      "temperature": 0.1,
+      "tools": {
+        "write": true,
+        "edit": false,
+        "bash": false,
+        "read": true,
+        "glob": true,
+        "grep": true,
+        "webfetch": true
+      },
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "webfetch": "allow"
+      }
+    },
+    "build": {
+      "description": "Main development agent for implementation tasks",
+      "mode": "primary",
+      "temperature": 0.3,
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "glob": true,
+        "grep": true,
+        "patch": true,
+        "webfetch": true
+      },
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "*": "allow",
+          "git push": "ask",
+          "rm -rf": "ask"
+        },
+        "webfetch": "allow"
+      }
+    }
+  }
+}
