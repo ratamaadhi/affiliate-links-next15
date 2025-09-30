@@ -5,6 +5,7 @@ import { page } from './page';
 export const link = sqliteTable('link', {
   id: int().primaryKey({ autoIncrement: true }),
   title: text().notNull(),
+  description: text(),
   url: text().notNull(),
   imageUrl: text('image_url'), // Added image URL field
 

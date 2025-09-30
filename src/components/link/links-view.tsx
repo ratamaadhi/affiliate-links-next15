@@ -123,7 +123,7 @@ export function LinksView({
                     variant="secondary"
                     className={cn(
                       'relative w-full h-16 sm:h-16 text-base sm:text-base rounded-xl bg-background/80 hover:bg-background transition-colors py-2 shadow-sm hover:shadow-md border border-border/50 hover:border-border',
-                      link.imageUrl ? 'sm:px-16 px-14' : 'px-4'
+                      link.imageUrl ? 'sm:px-16 px-15' : 'px-4'
                     )}
                     asChild
                   >
@@ -154,19 +154,6 @@ export function LinksView({
               ) : (
                 <div className="text-center py-8 flex flex-col items-center gap-2">
                   <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                    {/* <svg
-                      className="w-8 h-8 text-muted-foreground"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                      />
-                    </svg> */}
                     <LinkIcon />
                   </div>
                   <p className="text-muted-foreground font-medium">

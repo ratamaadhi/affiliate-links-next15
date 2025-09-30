@@ -51,8 +51,8 @@ export default async function PageView({ params }: Props) {
   }
 
   return (
-    <main className="w-full h-screen bg-gradient-to-br from-background via-background to-muted/20 sm:pt-10 flex flex-col">
-      <div className="flex-1 flex items-center justify-center sm:p-4 md:p-6">
+    <main className="w-full h-screen bg-gradient-to-br from-background via-background to-muted/20 sm:pt-10 sm:pb-12 flex flex-col">
+      <div className="flex-1 flex items-center justify-center sm:p-4 md:p-6 md:pb-16">
         <LinksView pageData={data} />
       </div>
     </main>

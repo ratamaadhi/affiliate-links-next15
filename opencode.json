@@ -43,6 +43,105 @@
         },
         "webfetch": "allow"
       }
+    },
+    "SA-BE": {
+      "description": "Backend development specialist for API and database implementation with Drizzle",
+      "mode": "subagent",
+      "model": "glm-4.5",
+      "temperature": 0.2,
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "glob": true,
+        "grep": true,
+        "patch": true,
+        "webfetch": true
+      },
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "*": "allow",
+          "npm install": "allow",
+          "npx drizzle": "allow",
+          "node": "allow",
+          "git push": "ask"
+        },
+        "webfetch": "allow"
+      }
+    },
+    "SA-FE": {
+      "description": "Frontend development specialist for Next.js and Tailwind CSS implementation",
+      "mode": "subagent",
+      "model": "glm-4.5v",
+      "temperature": 0.2,
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "glob": true,
+        "grep": true,
+        "patch": true,
+        "webfetch": true
+      },
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "*": "allow",
+          "npm install": "allow",
+          "next dev": "allow",
+          "next build": "allow",
+          "git push": "ask"
+        },
+        "webfetch": "allow"
+      }
+    },
+    "SA-QA": {
+      "description": "Quality assurance specialist for testing with Jest and Playwright",
+      "mode": "subagent",
+      "model": "glm-4.5v",
+      "temperature": 0.1,
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "glob": true,
+        "grep": true,
+        "patch": true
+      },
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "*": "allow",
+          "npm test": "allow",
+          "npx jest": "allow",
+          "npx playwright": "allow",
+          "git push": "ask"
+        },
+        "webfetch": "deny"
+      }
+    },
+    "SA-UX": {
+      "description": "UX/UI design specialist for creating design systems and UI specifications",
+      "mode": "subagent",
+      "model": "glm-4.5v",
+      "temperature": 0.4,
+      "tools": {
+        "write": true,
+        "edit": false,
+        "bash": false,
+        "read": true,
+        "glob": true,
+        "webfetch": true
+      },
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "webfetch": "allow"
+      }
     }
   }
 }
