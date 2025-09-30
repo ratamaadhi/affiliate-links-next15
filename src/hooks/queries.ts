@@ -10,7 +10,15 @@ export function usePages(
 
   const { data, error, isLoading, mutate, isValidating } = useSWR(
     `/pages?_page=${page}&_limit=${limit}&_search=${search}`,
-    () => getPages({ page, limit, search })
+    () => getPages({ page, limit, search }),
+    {
+      onError: (error) => {
+        console.error('Error fetching pages:', error);
+      },
+      shouldRetryOnError: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 1000,
+    }
   );
 
   return {
@@ -46,7 +54,15 @@ export function useLinks(
     pageId
       ? `/links?_pageid=${pageId}&_page=${page}&_limit=${limit}&_search=${search}`
       : null,
-    () => getLinks({ page, limit, search, pageId })
+    () => getLinks({ page, limit, search, pageId }),
+    {
+      onError: (error) => {
+        console.error('Error fetching links:', error);
+      },
+      shouldRetryOnError: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 1000,
+    }
   );
 
   return {
@@ -124,6 +140,12 @@ export function useLinkForPageInfinite(
       }),
     {
       revalidateAll: true,
+      onError: (error) => {
+        console.error('Error fetching links for page:', error);
+      },
+      shouldRetryOnError: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 1000,
     }
   );
 }

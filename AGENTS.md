@@ -20,30 +20,26 @@ This project is a full-stack application for managing affiliate links, built wit
 
 ## Build/Lint/Test Commands
 
-- **Install Dependencies**: `yarn install`
+- **Install**: `yarn install`
 - **Build**: `yarn build`
 - **Lint**: `yarn lint`
 - **Format**: `yarn prettier`
-- **Run all tests**: `yarn test`
-- **Run a single test**: `jest <path-to-test-file>` (e.g., `jest __test__/login-form.test.js`)
+- **Test all**: `yarn test`
+- **Single test**: `jest __test__/filename.test.js`
+- **DB commands**: `yarn db:generate`, `yarn db:migrate`, `yarn db:studio`
 
 ## Code Style Guidelines
 
-- **Imports**: Use absolute imports where possible, e.g., `import { Button } from "@/components/ui/button";`
-- **Formatting**: Adhere to Prettier formatting. Run `yarn prettier` to format code.
-- **Types**: Use TypeScript for type safety.
-- **Naming Conventions**:
-  - Components: PascalCase (e.g., `LoginForm`)
-  - variables/functions: camelCase (e.g., `handleSubmit`)
-- **Error Handling**: Implement robust error handling using `try-catch` blocks and display user-friendly messages.
+- **Imports**: Use absolute imports: `import { Button } from "@/components/ui/button"`
+- **Formatting**: Prettier config: single quotes, trailing commas, 2-space tabs
+- **Types**: TypeScript with strict mode disabled, path aliases via `@/*`
+- **Naming**: Components (PascalCase), variables/functions (camelCase)
+- **Error Handling**: Use try-catch with user-friendly messages
 
-## Agent Operational Guidelines
+## Agent Guidelines
 
-This section outlines the core principles for AI agents operating within this repository.
-
-- **Adherence to Conventions**: Rigorously adhere to existing project conventions. Analyze surrounding code, tests, and configuration before making changes.
-- **Library and Framework Usage**: Do not assume a library or framework is available. Verify its established usage within the project before employing it.
-- **Style and Structure Mimicry**: Mimic the style (formatting, naming), structure, framework choices, and architectural patterns of existing code.
-- **Idiomatic Changes**: Ensure changes integrate naturally and idiomatically with the local context.
-- **Verification**: After making code changes, execute project-specific build, linting, and testing commands to ensure code quality and adherence to standards.
-- **Safety**: Before executing commands that modify the file system or codebase, provide a brief explanation of the command's purpose and potential impact.
+- **Conventions**: Analyze existing code patterns before making changes
+- **Libraries**: Verify library usage in project before employing
+- **Style**: Mimic existing formatting, naming, and architectural patterns
+- **Verification**: Run `yarn lint` and `yarn test` after code changes
+- **Safety**: Explain commands before modifying file system

@@ -1,5 +1,5 @@
 import { CreateLinkButton } from '@/components/link/create-link-button';
-import { DashboardLinksPreview } from '@/components/link/dashboard-links-preview';
+import { EnhancedDashboardPreview } from '@/components/link/enhanced-dashboard-preview';
 import { DynamicPageLink } from '@/components/link/dynamic-page-link';
 import LinkPageProvider from '@/components/link/link-page-provider';
 import ListLinks from '@/components/link/list-links';
@@ -57,7 +57,7 @@ async function LinksPage() {
                 <DynamicPageLink />
               </div>
               <div className="w-full min-h-0 rounded-lg overflow-hidden relative bg-muted-foreground py-3.5">
-                <DashboardLinksPreview
+                <EnhancedDashboardPreview
                   pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}
                   username={user?.username || ''}
                 />

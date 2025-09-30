@@ -24,10 +24,12 @@ export function useCreatePage(
   return useSWRmutation('/pages', createPage, {
     onSuccess: () => {
       mutate();
-      toast.success('Pgae created successfully');
+      toast.success('Page created successfully');
     },
-    onError: () => {
-      toast.error('Failed to create page');
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to create page';
+      toast.error(message);
     },
   });
 }
@@ -43,8 +45,10 @@ export function useUpdatePage(
       mutate();
       toast.success('Page updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update page');
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to update page';
+      toast.error(message);
     },
   });
 }
@@ -60,8 +64,10 @@ export function useDeletePage(
       mutate();
       toast.success('Page deleted successfully');
     },
-    onError: () => {
-      toast.error('Failed to deleted page');
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete page';
+      toast.error(message);
     },
   });
 }
@@ -82,8 +88,10 @@ export function useCreateLink(
       mutate();
       toast.success('Link created successfully');
     },
-    onError: () => {
-      toast.error('Failed to create link');
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to create link';
+      toast.error(message);
     },
   });
 }
@@ -104,8 +112,10 @@ export function useSwitchIsActive(
       mutate();
       toast.success('Link updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update link');
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to update link';
+      toast.error(message);
     },
   });
 }
@@ -124,10 +134,12 @@ export function useDeleteLink(
   return useSWRmutation('/links', deleteLink, {
     onSuccess: () => {
       mutate();
-      toast.success('Page deleted successfully');
+      toast.success('Link deleted successfully');
     },
-    onError: () => {
-      toast.error('Failed to deleted page');
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete link';
+      toast.error(message);
     },
   });
 }
@@ -148,8 +160,10 @@ export function useUpdateLinkOrder(
       mutate();
       toast.success('Link order updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update link order');
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to update link order';
+      toast.error(message);
     },
     revalidate: true,
   });
@@ -171,8 +185,10 @@ export function useUpdateLink(
       mutate();
       toast.success('Link updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update link');
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to update link';
+      toast.error(message);
     },
     revalidate: true,
   });

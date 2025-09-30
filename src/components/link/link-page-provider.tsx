@@ -7,7 +7,7 @@ import {
 import { useReducer } from 'react';
 
 const initialLinkPageState = {
-  selectedPage: '',
+  selectedPage: null,
   keywordLink: '',
 };
 
@@ -16,7 +16,7 @@ function linkPageReducer(state, action) {
     case 'changed': {
       return {
         ...state,
-        selectedPage: action.payload,
+        selectedPage: action.payload || null,
       };
     }
     case 'search-link': {

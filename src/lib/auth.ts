@@ -19,7 +19,7 @@ export type UserWithId = Omit<User, 'id'> & {
 export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification: process.env.NODE_ENV === 'production',
     sendResetPassword: async ({ user, url }) => {
       await resend.emails.send({
         from: 'Affiliate Links App <noreply@ratama.space>',

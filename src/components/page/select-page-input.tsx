@@ -52,7 +52,9 @@ function SelectPageInput({ defaultPageSlug }) {
 
   useEffect(() => {
     const shouldSetDefaultValue =
-      !selectedPage && dataToList.length > 0 && defaultPageSlug;
+      (!selectedPage || selectedPage === null) &&
+      dataToList.length > 0 &&
+      defaultPageSlug;
 
     if (shouldSetDefaultValue) {
       const defaultValue = dataToList.find(
@@ -110,7 +112,7 @@ function SelectPageInput({ defaultPageSlug }) {
                     onClick={() => {
                       dispatch({
                         type: 'changed',
-                        payload: ls.value === selectedPage.value ? '' : ls,
+                        payload: ls.value === selectedPage?.value ? null : ls,
                       });
                       setOpen(false);
                     }}
@@ -118,7 +120,7 @@ function SelectPageInput({ defaultPageSlug }) {
                     <CheckIcon
                       className={cn(
                         'mr-2 h-4 w-4 flex-shrink-0',
-                        selectedPage.label === ls.label
+                        selectedPage?.label === ls.label
                           ? 'opacity-100'
                           : 'opacity-0'
                       )}
