@@ -525,9 +525,7 @@ export const CreateLinkButton = () => {
           <span>Add Link</span>
         </Button>
       </DrawerTrigger>
-      <DrawerContent
-        className={cn('max-h-[85vh] flex flex-col', metadata ? 'h-full' : '')}
-      >
+      <DrawerContent className="max-h-[85vh] h-full flex flex-col">
         <DrawerHeader className="text-left">
           <DrawerTitle>Add new Link</DrawerTitle>
           <DrawerDescription>
