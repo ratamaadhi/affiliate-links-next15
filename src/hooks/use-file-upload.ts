@@ -42,6 +42,7 @@ export type FileUploadState = {
 
 export type FileUploadActions = {
   addFiles: (files: FileList | File[]) => void;
+  addFileMetadata: (metadata: FileMetadata) => void;
   removeFile: (id: string) => void;
   clearFiles: () => void;
   clearErrors: () => void;
@@ -98,9 +99,26 @@ export const useFileUpload = (
       if (accept !== '*') {
         const acceptedTypes = accept.split(',').map((type) => type.trim());
         const fileType = file instanceof File ? file.type || '' : file.type;
-        const fileExtension = `.${file instanceof File ? file.name.split('.').pop() : file.name.split('.').pop()}`;
+
+        // For FileMetadata objects (URL-based), skip extension validation if it's a URL without extension
+        let fileExtension = '';
+        if (file instanceof File) {
+          fileExtension = `.${file.name.split('.').pop()}`;
+        } else {
+          // For FileMetadata, only check extension if the name has a dot
+          const nameParts = file.name.split('.');
+          if (nameParts.length > 1) {
+            fileExtension = `.${nameParts.pop()}`;
+          }
+          // If no extension found, assume it's a valid image URL and skip extension validation
+        }
 
         const isAccepted = acceptedTypes.some((type) => {
+          // Skip extension validation for FileMetadata without extensions
+          if (!(file instanceof File) && !fileExtension) {
+            return true; // Accept URLs without extensions
+          }
+
           if (type.startsWith('.')) {
             return fileExtension.toLowerCase() === type.toLowerCase();
           }
@@ -173,104 +191,159 @@ export const useFileUpload = (
       const newFilesArray = Array.from(newFiles);
       const errors: string[] = [];
 
-      // Clear existing errors when new files are uploaded
-      setState((prev) => ({ ...prev, errors: [] }));
+      setState((prev) => {
+        // Clear existing errors when new files are uploaded
+        const newState = { ...prev, errors: [] };
 
-      // In single file mode, clear existing files first
-      if (!multiple) {
-        clearFiles();
-      }
+        // In single file mode, clear existing files first
+        if (!multiple) {
+          // Clean up object URLs before clearing
+          prev.files.forEach((file) => {
+            if (
+              file.preview &&
+              file.file instanceof File &&
+              file.file.type.startsWith('image/')
+            ) {
+              URL.revokeObjectURL(file.preview);
+            }
+          });
 
-      // Check if adding these files would exceed maxFiles (only in multiple mode)
-      if (
-        multiple &&
-        maxFiles !== Infinity &&
-        state.files.length + newFilesArray.length > maxFiles
-      ) {
-        errors.push(`You can only upload a maximum of ${maxFiles} files.`);
-        setState((prev) => ({ ...prev, errors }));
-        return;
-      }
+          if (inputRef.current) {
+            inputRef.current.value = '';
+          }
 
-      const validFiles: FileWithPreview[] = [];
+          newState.files = [];
+        }
 
-      newFilesArray.forEach((file) => {
-        // Only check for duplicates if multiple files are allowed
-        if (multiple) {
-          const isDuplicate = state.files.some(
-            (existingFile) =>
-              existingFile.file.name === file.name &&
-              existingFile.file.size === file.size
-          );
+        // Check if adding these files would exceed maxFiles (only in multiple mode)
+        if (
+          multiple &&
+          maxFiles !== Infinity &&
+          newState.files.length + newFilesArray.length > maxFiles
+        ) {
+          errors.push(`You can only upload a maximum of ${maxFiles} files.`);
+          newState.errors = errors;
+          return newState;
+        }
 
-          // Skip duplicate files silently
-          if (isDuplicate) {
+        const validFiles: FileWithPreview[] = [];
+
+        newFilesArray.forEach((file) => {
+          // Only check for duplicates if multiple files are allowed
+          if (multiple) {
+            const isDuplicate = newState.files.some(
+              (existingFile) =>
+                existingFile.file.name === file.name &&
+                existingFile.file.size === file.size
+            );
+
+            // Skip duplicate files silently
+            if (isDuplicate) {
+              return;
+            }
+          }
+
+          // Check file size
+          if (file.size > maxSize) {
+            errors.push(
+              multiple
+                ? `Some files exceed the maximum size of ${formatBytes(maxSize)}.`
+                : `File exceeds the maximum size of ${formatBytes(maxSize)}.`
+            );
             return;
           }
-        }
 
-        // Check file size
-        if (file.size > maxSize) {
-          errors.push(
-            multiple
-              ? `Some files exceed the maximum size of ${formatBytes(maxSize)}.`
-              : `File exceeds the maximum size of ${formatBytes(maxSize)}.`
-          );
-          return;
-        }
-
-        const error = validateFile(file);
-        if (error) {
-          errors.push(error);
-        } else {
-          validFiles.push({
-            file,
-            id: generateUniqueId(file),
-            preview: createPreview(file),
-          });
-        }
-      });
-
-      // Only update state if we have valid files to add
-      if (validFiles.length > 0) {
-        // Call the onFilesAdded callback with the newly added valid files
-        onFilesAdded?.(validFiles);
-
-        setState((prev) => {
-          const newFiles = !multiple
-            ? validFiles
-            : [...prev.files, ...validFiles];
-          onFilesChange?.(newFiles);
-          return {
-            ...prev,
-            files: newFiles,
-            errors,
-          };
+          const error = validateFile(file);
+          if (error) {
+            errors.push(error);
+          } else {
+            validFiles.push({
+              file,
+              id: generateUniqueId(file),
+              preview: createPreview(file),
+            });
+          }
         });
-      } else if (errors.length > 0) {
-        setState((prev) => ({
-          ...prev,
-          errors,
-        }));
-      }
 
-      // Reset input value after handling files
-      if (inputRef.current) {
-        inputRef.current.value = '';
-      }
+        // Only update state if we have valid files to add
+        if (validFiles.length > 0) {
+          // Call the onFilesAdded callback with the newly added valid files
+          onFilesAdded?.(validFiles);
+
+          const finalFiles = !multiple
+            ? validFiles
+            : [...newState.files, ...validFiles];
+          onFilesChange?.(finalFiles);
+          newState.files = finalFiles;
+        }
+
+        newState.errors = errors;
+
+        // Reset input value after handling files
+        if (inputRef.current) {
+          inputRef.current.value = '';
+        }
+
+        return newState;
+      });
     },
     [
-      state.files,
       maxFiles,
       multiple,
       maxSize,
       validateFile,
       createPreview,
       generateUniqueId,
-      clearFiles,
       onFilesChange,
       onFilesAdded,
     ]
+  );
+
+  const addFileMetadata = useCallback(
+    (metadata: FileMetadata) => {
+      const fileWithPreview: FileWithPreview = {
+        file: metadata,
+        id: metadata.id,
+        preview: metadata.url,
+      };
+
+      setState((prev) => {
+        // In single file mode, clear existing files first
+        if (!multiple) {
+          // Clean up object URLs before clearing
+          prev.files.forEach((file) => {
+            if (
+              file.preview &&
+              file.file instanceof File &&
+              file.file.type.startsWith('image/')
+            ) {
+              URL.revokeObjectURL(file.preview);
+            }
+          });
+
+          if (inputRef.current) {
+            inputRef.current.value = '';
+          }
+
+          const newFiles = [fileWithPreview];
+          onFilesChange?.(newFiles);
+          return {
+            ...prev,
+            files: newFiles,
+            errors: [],
+          };
+        } else {
+          const newFiles = [...prev.files, fileWithPreview];
+          onFilesChange?.(newFiles);
+          return {
+            ...prev,
+            files: newFiles,
+            errors: [],
+          };
+        }
+      });
+    },
+    [multiple, onFilesChange]
   );
 
   const removeFile = useCallback(
@@ -385,6 +458,7 @@ export const useFileUpload = (
     state,
     {
       addFiles,
+      addFileMetadata,
       removeFile,
       clearFiles,
       clearErrors,

@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/form';
 import { LinkPageContext } from '@/context/link-page-context';
 import { useCreateLink } from '@/hooks/mutations';
-import { type FileWithPreview } from '@/hooks/use-file-upload';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
 import { authClient } from '@/lib/auth-client';
@@ -167,22 +167,18 @@ export const CreateLinkButton = () => {
     form.setValue('url', value);
   };
 
-  const handleImageChange = (files: FileWithPreview[]) => {
-    if (files.length > 0) {
-      const file = files[0];
-      if ('file' in file && file.file instanceof File) {
-        // New uploaded file
-        const imageUrl = file.preview || '';
-        setCurrentImageUrl(imageUrl);
-        form.setValue('imageUrl', imageUrl);
-      } else if ('url' in file.file && typeof file.file.url === 'string') {
-        // Existing file
-        const imageUrl = file.file.url;
-        setCurrentImageUrl(imageUrl);
-        form.setValue('imageUrl', imageUrl);
-      }
+  const handleImageChange = (imageUrl: string | null, file?: File) => {
+    if (imageUrl && file) {
+      // New file uploaded manually
+      setCurrentImageUrl(imageUrl);
+      form.setValue('imageUrl', imageUrl);
+      // TODO: Handle file upload to server if needed
+    } else if (imageUrl && !file) {
+      // Image set from metadata or initial load
+      setCurrentImageUrl(imageUrl);
+      form.setValue('imageUrl', imageUrl);
     } else {
-      // File removed - revert to metadata image if available
+      // Image explicitly removed by user - revert to metadata image if available
       const fallbackImage = metadata?.image || '';
       setCurrentImageUrl(fallbackImage);
       form.setValue('imageUrl', fallbackImage);
@@ -303,7 +299,7 @@ export const CreateLinkButton = () => {
                       </label>
                       <FileUpload
                         fileUrl={currentImageUrl}
-                        onFilesChange={handleImageChange}
+                        onImageChange={handleImageChange}
                       />
                       {currentImageUrl !== metadata.image && metadata.image && (
                         <Button

@@ -146,7 +146,7 @@ export function LinksView({
                         </div>
                       )}
                       <div className="w-full line-clamp-2 text-center text-sm leading-tight whitespace-normal break-words font-medium text-foreground">
-                        {link.title.replace(/\s+\d+.*$/, '').trim()}
+                        {link.title}
                       </div>
                     </a>
                   </Button>
