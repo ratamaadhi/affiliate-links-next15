@@ -32,6 +32,7 @@ import { Skeleton } from '../ui/skeleton';
 import { DeleteLinkButton } from './delete-link-button';
 import { EditLinkButton } from './edit-link-button';
 import ToggleLinkActive from './toggle-link-active';
+import { UpdatePositionButton } from './update-position-button';
 
 function DragHandle(props) {
   return (
@@ -141,7 +142,7 @@ function ListLinks() {
         uniqueLinks.push(link);
       }
     }
-    return uniqueLinks;
+    return uniqueLinks.sort((a, b) => a.displayOrder - b.displayOrder);
   }, [data]);
   const [dndLinks, setDndLinks] = React.useState(links);
 
@@ -256,6 +257,7 @@ function ListLinks() {
             {user && (
               <div className="w-full flex justify-between">
                 <div className="flex items-center gap-2 text-muted-foreground/75">
+                  <UpdatePositionButton data={link} />
                   <EditLinkButton data={link} />
                   <Button type="button" variant="ghost" className="h-8">
                     <HiOutlineChartBar />

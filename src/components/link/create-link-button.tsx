@@ -22,8 +22,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { PositionSelector } from '@/components/ui/position-selector';
 import { LinkPageContext } from '@/context/link-page-context';
 import { useCreateLink } from '@/hooks/mutations';
+import { useLinkInfinite } from '@/hooks/queries';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -31,7 +33,7 @@ import { authClient } from '@/lib/auth-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ExternalLink, ImageIcon, Loader2, PlusIcon } from 'lucide-react';
 import Link from 'next/link';
-import { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import FileUpload from '../file-upload';
@@ -44,6 +46,7 @@ const formSchema = z.object({
   url: z.string().url('Please enter a valid URL'),
   imageUrl: z.string().optional(),
   description: z.string().optional(),
+  displayOrder: z.number().min(1, 'Please select a position'),
 });
 
 interface LinkMetadata {
@@ -72,6 +75,22 @@ export const CreateLinkButton = () => {
     pageId: selectedPage?.id,
   });
 
+  const { data: linksData } = useLinkInfinite({
+    pageId: selectedPage?.id,
+    search: '',
+  });
+
+  const existingLinksCount = React.useMemo(() => {
+    if (!linksData) return 0;
+    return linksData.flatMap((page) => page?.data?.data || []).length;
+  }, [linksData]);
+
+  const totalCount = React.useMemo(() => {
+    // Get the total count from the last page of infinite data
+    const lastPage = linksData?.[linksData.length - 1];
+    return lastPage?.data?.pagination?.totalItems || existingLinksCount;
+  }, [linksData, existingLinksCount]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -79,6 +98,7 @@ export const CreateLinkButton = () => {
       url: '',
       imageUrl: '',
       description: '',
+      displayOrder: existingLinksCount + 1,
     },
   });
 
@@ -130,9 +150,6 @@ export const CreateLinkButton = () => {
       const response = await fetch(
         `/api/link-meta?url=${encodeURIComponent(url)}`
       );
-      if (!response.ok) {
-        throw new Error('Failed to fetch metadata');
-      }
       const data = await response.json();
       return data;
     } catch (error) {
@@ -152,6 +169,7 @@ export const CreateLinkButton = () => {
       ...values,
       pageId: selectedPage?.id,
       imageUrl: currentImageUrl ?? values.imageUrl ?? metadata?.image ?? '',
+      displayOrder: values.displayOrder,
     });
     if (response.success) {
       form.reset();
@@ -216,34 +234,43 @@ export const CreateLinkButton = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Step 1: URL Input */}
-            <div className="space-y-2">
-              <FormField
-                control={form.control}
-                name="url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="https://example.com"
-                          value={urlInput}
-                          onChange={(e) => {
-                            handleUrlChange(e.target.value);
-                            field.onChange(e.target.value);
-                          }}
-                          disabled={isMutating}
-                          className="pr-10"
-                        />
-                        {isFetchingMetadata && (
-                          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin" />
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="flex flex-row sm:flex-col gap-4">
+              {metadata && (
+                <PositionSelector
+                  control={form.control}
+                  name="displayOrder"
+                  totalCount={totalCount}
+                />
+              )}
+              <div className="flex-1">
+                <FormField
+                  control={form.control}
+                  name="url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            placeholder="https://example.com"
+                            value={urlInput}
+                            onChange={(e) => {
+                              handleUrlChange(e.target.value);
+                              field.onChange(e.target.value);
+                            }}
+                            disabled={isMutating}
+                            className="pr-10"
+                          />
+                          {isFetchingMetadata && (
+                            <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin" />
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             {/* Step 2: Metadata Preview with Image Management */}
@@ -259,7 +286,7 @@ export const CreateLinkButton = () => {
                   <div className="w-full relative space-y-4 flex flex-col">
                     {/* Link Preview */}
                     <Link
-                      href={metadata.url}
+                      href={metadata.url || '#'}
                       target="_blank"
                       className="w-full flex-1 min-w-0 flex items-start gap-3"
                     >

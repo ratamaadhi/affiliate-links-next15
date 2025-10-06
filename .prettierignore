@@ -4,3 +4,4 @@ dist
 node_modules
 .swc
 local.db*
+src/lib/db/migrations/**

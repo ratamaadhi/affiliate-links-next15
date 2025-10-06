@@ -69,12 +69,31 @@ export const createLink = async (
       defaultPageId = getPageByUsername.id;
     }
 
-    const firstLink = await db.query.link.findFirst({
-      where: eq(linkSchema.pageId, defaultPageId),
-      orderBy: [asc(linkSchema.displayOrder)],
-    });
+    let newDisplayOrder = arg.displayOrder || 1;
 
-    const newDisplayOrder = firstLink ? firstLink.displayOrder / 2 : 1;
+    // If displayOrder is provided, calculate the fractional index
+    if (arg.displayOrder) {
+      const allLinks = await db.query.link.findMany({
+        where: eq(linkSchema.pageId, defaultPageId),
+        orderBy: [asc(linkSchema.displayOrder)],
+      });
+
+      const targetIndex = arg.displayOrder - 1;
+      const prevLink = allLinks[targetIndex - 1];
+      const nextLink = allLinks[targetIndex];
+
+      const prevOrder = prevLink ? prevLink.displayOrder : 0;
+      const nextOrder = nextLink ? nextLink.displayOrder : prevOrder + 2;
+
+      newDisplayOrder = (prevOrder + nextOrder) / 2;
+    } else {
+      // Default behavior if no displayOrder provided
+      const firstLink = await db.query.link.findFirst({
+        where: eq(linkSchema.pageId, defaultPageId),
+        orderBy: [asc(linkSchema.displayOrder)],
+      });
+      newDisplayOrder = firstLink ? firstLink.displayOrder / 2 : 1;
+    }
 
     await db.insert(linkSchema).values({
       ...arg,
@@ -294,11 +313,32 @@ export const updateLink = async (
       return { success: false, message: 'User not found' };
     }
 
-    await verifyLinkOwnership(arg.id, +user.id);
+    const link = await verifyLinkOwnership(arg.id, +user.id);
+
+    let updateValues = { ...arg.values };
+
+    // Handle displayOrder update
+    if (arg.values.displayOrder !== undefined) {
+      const allLinks = await db.query.link.findMany({
+        where: eq(linkSchema.pageId, link.pageId),
+        orderBy: [asc(linkSchema.displayOrder)],
+      });
+
+      const targetIndex = arg.values.displayOrder - 1;
+      const filteredLinks = allLinks.filter((l) => l.id !== arg.id);
+
+      const prevLink = filteredLinks[targetIndex - 1];
+      const nextLink = filteredLinks[targetIndex];
+
+      const prevOrder = prevLink ? prevLink.displayOrder : 0;
+      const nextOrder = nextLink ? nextLink.displayOrder : prevOrder + 2;
+
+      updateValues.displayOrder = (prevOrder + nextOrder) / 2;
+    }
 
     await db
       .update(linkSchema)
-      .set({ ...arg.values })
+      .set(updateValues)
       .where(eq(linkSchema.id, arg.id));
     return { success: true, message: 'Link updated successfully' };
   } catch (error: unknown) {

@@ -21,8 +21,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { PositionSelector } from '@/components/ui/position-selector';
 import { LinkPageContext } from '@/context/link-page-context';
 import { useUpdateLink } from '@/hooks/mutations';
+import { useLinkInfinite } from '@/hooks/queries';
 
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
@@ -35,7 +37,7 @@ import {
   PencilIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useContext, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import FileUpload from '../file-upload';
@@ -63,6 +65,7 @@ const formSchema = z.object({
   url: z.string().url('Please enter a valid URL'),
   imageUrl: z.string().optional(),
   description: z.string().optional(),
+  displayOrder: z.number().min(1, 'Please select a position'),
 });
 
 interface EditLinkButtonProps {
@@ -72,6 +75,7 @@ interface EditLinkButtonProps {
     url?: string;
     description?: string;
     imageUrl?: string;
+    displayOrder?: number;
   };
 }
 
@@ -94,6 +98,29 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
     pageId: selectedPage?.id,
   });
 
+  const { data: linksData } = useLinkInfinite({
+    pageId: selectedPage?.id,
+    search: '',
+  });
+
+  const existingLinks = React.useMemo(() => {
+    if (!linksData) return [];
+    return linksData.flatMap((page) => page?.data?.data || []);
+  }, [linksData]);
+
+  const currentLinkOrder = React.useMemo(() => {
+    const sortedLinks = [...existingLinks].sort(
+      (a, b) => a.displayOrder - b.displayOrder
+    );
+    return sortedLinks.findIndex((link) => link.id === data?.id) + 1;
+  }, [existingLinks, data?.id]);
+
+  const totalCount = React.useMemo(() => {
+    // Get the total count from the last page of infinite data
+    const lastPage = linksData?.[linksData.length - 1];
+    return lastPage?.data?.pagination?.totalItems || existingLinks.length;
+  }, [linksData, existingLinks]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -101,6 +128,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
       url: data?.url || '',
       imageUrl: data?.imageUrl || '',
       description: data?.description || '',
+      displayOrder: currentLinkOrder || 1,
     },
   });
 
@@ -116,6 +144,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
       values: {
         ...values,
         imageUrl: currentImageUrl || values.imageUrl,
+        displayOrder: values.displayOrder,
       },
     });
     if (response.success) {
@@ -214,6 +243,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
       title: data?.title || '',
       description: data?.description || '',
       imageUrl: data?.imageUrl || '',
+      displayOrder: currentLinkOrder || 1,
     });
     setCurrentImageUrl(data?.imageUrl || '');
     setShowNewMetadataPreview(false);
@@ -327,27 +357,36 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* Editable Form Fields */}
               <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>URL</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://example.com"
-                          disabled={isMutating}
-                          {...field}
-                          onBlur={(e) => {
-                            field.onBlur();
-                            handleUrlChange(e.target.value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="flex flex-row gap-4">
+                  <PositionSelector
+                    control={form.control}
+                    name="displayOrder"
+                    totalCount={totalCount}
+                  />
+                  <div className="flex-1">
+                    <FormField
+                      control={form.control}
+                      name="url"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="https://example.com"
+                              disabled={isMutating}
+                              {...field}
+                              onBlur={(e) => {
+                                field.onBlur();
+                                handleUrlChange(e.target.value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
                 {/* New Metadata Accordion */}
                 {showNewMetadataPreview && (
