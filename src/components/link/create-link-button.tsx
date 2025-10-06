@@ -72,14 +72,150 @@ interface LinkMetadata {
   type?: string;
 }
 
+const useLinkMetadata = (url: string) => {
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
+
+  const fetchLinkMetadata = async (url: string) => {
+    try {
+      const response = await fetch(
+        `/api/link-meta?url=${encodeURIComponent(url)}`
+      );
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching metadata:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      if (url && url.trim() !== '') {
+        try {
+          new URL(url);
+          setIsFetchingMetadata(true);
+          try {
+            const metadata = await fetchLinkMetadata(url);
+            setMetadata(metadata);
+          } catch (_error) {
+            console.error('Error fetching metadata:', _error);
+            toast.error('Failed to fetch link metadata. Please try again.');
+          } finally {
+            setIsFetchingMetadata(false);
+          }
+        } catch (_error) {
+          setMetadata(null);
+        }
+      } else {
+        setMetadata(null);
+      }
+    };
+
+    fetchMetadata();
+  }, [url]);
+
+  return { isFetchingMetadata, metadata };
+};
+
+const useLinkForm = (
+  metadata: LinkMetadata | null,
+  existingLinksCount: number
+) => {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: '',
+      url: '',
+      imageUrl: '',
+      description: '',
+      displayOrder: existingLinksCount + 1,
+    },
+  });
+
+  const { setValue } = form;
+
+  useEffect(() => {
+    if (metadata) {
+      setValue('title', metadata.title || '');
+      setValue('description', metadata.description || '');
+      setValue('imageUrl', metadata.image || '');
+    }
+  }, [metadata, setValue]);
+
+  return form;
+};
+
+const LinkMetadataPreview = ({
+  metadata,
+  currentImageUrl,
+  onImageChange,
+}: {
+  metadata: LinkMetadata;
+  currentImageUrl: string;
+  onImageChange: (imageUrl: string | null, file?: File) => void;
+}) => (
+  <div className="w-full relative space-y-4 flex flex-col">
+    <Link
+      href={metadata.url || '#'}
+      target="_blank"
+      className="w-full flex-1 min-w-0 flex items-start gap-3"
+    >
+      {metadata.image && (
+        <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+          <img
+            src={metadata.image}
+            alt={metadata.title || 'Link preview'}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = '/fallback-image.png';
+              e.currentTarget.onerror = null;
+            }}
+          />
+        </div>
+      )}
+      <div className="min-w-0 w-full">
+        <h3 className="font-medium text-sm truncate">
+          {metadata.title || 'No title'}
+        </h3>
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {metadata.description || 'No description'}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <ExternalLink className="h-3 w-3" />
+          <span className="text-xs text-muted-foreground truncate">
+            {metadata.domain}
+          </span>
+        </div>
+      </div>
+    </Link>
+    <div className="space-y-2">
+      <label className="text-sm font-medium flex items-center gap-2">
+        <ImageIcon className="h-4 w-4" />
+        Image {currentImageUrl !== metadata.image && '(Custom)'}
+      </label>
+      <FileUpload fileUrl={currentImageUrl} onImageChange={onImageChange} />
+      {currentImageUrl !== metadata.image && metadata.image && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            onImageChange(metadata.image);
+          }}
+        >
+          Reset to Original
+        </Button>
+      )}
+    </div>
+  </div>
+);
+
 export const CreateLinkButton = () => {
   const { user } = useAuth();
   const { selectedPage, keywordLink } = useContext(LinkPageContext);
-
   const [isOpen, setIsOpen] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
-  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
-  const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
   const [urlInput, setUrlInput] = useState<string>('');
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
 
@@ -99,77 +235,19 @@ export const CreateLinkButton = () => {
   }, [linksData]);
 
   const totalCount = React.useMemo(() => {
-    // Get the total count from the last page of infinite data
     const lastPage = linksData?.[linksData.length - 1];
     return lastPage?.data?.pagination?.totalItems || existingLinksCount;
   }, [linksData, existingLinksCount]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: '',
-      url: '',
-      imageUrl: '',
-      description: '',
-      displayOrder: existingLinksCount + 1,
-    },
-  });
-
   const debouncedUrl = useDebounce(urlInput, 500);
+  const { isFetchingMetadata, metadata } = useLinkMetadata(debouncedUrl);
+  const form = useLinkForm(metadata, existingLinksCount);
 
-  // Fetch metadata when URL changes
-  const { setValue } = form;
   useEffect(() => {
-    const fetchMetadata = async () => {
-      if (debouncedUrl && debouncedUrl.trim() !== '') {
-        // Basic URL validation
-        try {
-          new URL(debouncedUrl);
-          setIsFetchingMetadata(true);
-          try {
-            const metadata = await fetchLinkMetadata(debouncedUrl);
-            if (metadata) {
-              setMetadata(metadata);
-              setValue('title', metadata.title || '');
-              setValue('url', debouncedUrl);
-              setValue('description', metadata.description || '');
-
-              // Set image from metadata
-              const imageUrl = metadata.image || '';
-              setValue('imageUrl', imageUrl);
-              setCurrentImageUrl(imageUrl);
-            }
-          } catch (_error) {
-            console.error('Error fetching metadata:', _error);
-            toast.error('Failed to fetch link metadata. Please try again.');
-          } finally {
-            setIsFetchingMetadata(false);
-          }
-        } catch (_error) {
-          // Invalid URL
-          setMetadata(null);
-        }
-      } else {
-        setMetadata(null);
-        setCurrentImageUrl('');
-      }
-    };
-
-    fetchMetadata();
-  }, [debouncedUrl, setValue]);
-
-  async function fetchLinkMetadata(url: string) {
-    try {
-      const response = await fetch(
-        `/api/link-meta?url=${encodeURIComponent(url)}`
-      );
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error fetching metadata:', error);
-      return null;
+    if (metadata) {
+      form.setValue('url', debouncedUrl);
     }
-  }
+  }, [metadata, debouncedUrl, form.setValue]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const { data: session } = await authClient.getSession();
@@ -186,7 +264,6 @@ export const CreateLinkButton = () => {
     });
     if (response.success) {
       form.reset();
-      setMetadata(null);
       setCurrentImageUrl('');
       setUrlInput('');
       setIsOpen(false);
@@ -200,16 +277,12 @@ export const CreateLinkButton = () => {
 
   const handleImageChange = (imageUrl: string | null, file?: File) => {
     if (imageUrl && file) {
-      // New file uploaded manually
       setCurrentImageUrl(imageUrl);
       form.setValue('imageUrl', imageUrl);
-      // TODO: Handle file upload to server if needed
     } else if (imageUrl && !file) {
-      // Image set from metadata or initial load
       setCurrentImageUrl(imageUrl);
       form.setValue('imageUrl', imageUrl);
     } else {
-      // Image explicitly removed by user - revert to metadata image if available
       const fallbackImage = metadata?.image || '';
       setCurrentImageUrl(fallbackImage);
       form.setValue('imageUrl', fallbackImage);
@@ -219,7 +292,6 @@ export const CreateLinkButton = () => {
   const handleDialogClose = (open: boolean) => {
     setIsOpen(open);
     form.reset();
-    setMetadata(null);
     setCurrentImageUrl('');
     setUrlInput('');
   };
@@ -282,66 +354,11 @@ export const CreateLinkButton = () => {
                 <Skeleton className="h-20 w-full rounded-lg" />
               </div>
             ) : metadata ? (
-              <div className="w-full relative space-y-4 flex flex-col">
-                {/* Link Preview */}
-                <Link
-                  href={metadata.url || '#'}
-                  target="_blank"
-                  className="w-full flex-1 min-w-0 flex items-start gap-3"
-                >
-                  {metadata.image && (
-                    <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-                      <img
-                        src={metadata.image}
-                        alt={metadata.title || 'Link preview'}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = '/fallback-image.png';
-                          e.currentTarget.onerror = null;
-                        }}
-                      />
-                    </div>
-                  )}
-                  <div className="min-w-0 w-full">
-                    <h3 className="font-medium text-sm truncate">
-                      {metadata.title || 'No title'}
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {metadata.description || 'No description'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <ExternalLink className="h-3 w-3" />
-                      <span className="text-xs text-muted-foreground truncate">
-                        {metadata.domain}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-                {/* Image Upload/Replacement */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4" />
-                    Image {currentImageUrl !== metadata.image && '(Custom)'}
-                  </label>
-                  <FileUpload
-                    fileUrl={currentImageUrl}
-                    onImageChange={handleImageChange}
-                  />
-                  {currentImageUrl !== metadata.image && metadata.image && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setCurrentImageUrl(metadata.image);
-                        form.setValue('imageUrl', metadata.image);
-                      }}
-                    >
-                      Reset to Original
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <LinkMetadataPreview
+                metadata={metadata}
+                currentImageUrl={currentImageUrl}
+                onImageChange={handleImageChange}
+              />
             ) : null}
           </>
         )}
@@ -443,7 +460,7 @@ export const CreateLinkButton = () => {
   }
 
   return (
-    <Drawer open={isOpen} onOpenChange={handleDialogClose}>
+    <Drawer open={isOpen} onOpenChange={handleDialogClose} repositionInputs>
       <DrawerTrigger asChild>
         <Button variant="default" size="default" className="w-full gap-2">
           <PlusIcon className="h-4 w-4" />

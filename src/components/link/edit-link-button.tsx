@@ -91,6 +91,233 @@ interface EditLinkButtonProps {
   };
 }
 
+const useEditLinkMetadata = (
+  originalUrl?: string,
+  originalData?: EditLinkButtonProps['data']
+) => {
+  const [newMetadata, setNewMetadata] = useState<NewLinkMetadata | null>(null);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [showNewMetadataPreview, setShowNewMetadataPreview] = useState(false);
+  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
+
+  const fetchLinkMetadata = async (
+    url: string
+  ): Promise<NewLinkMetadata | null> => {
+    try {
+      const response = await fetch(
+        `/api/link-meta?url=${encodeURIComponent(url)}`,
+        { method: 'GET' }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch metadata');
+      }
+
+      const metadata = await response.json();
+
+      if (metadata.error) {
+        throw new Error(metadata.error);
+      }
+
+      return {
+        title: metadata.title || '',
+        description: metadata.description || '',
+        image: metadata.image || '',
+        url: url,
+      };
+    } catch (error) {
+      console.error('Error fetching metadata:', error);
+      return null;
+    }
+  };
+
+  const handleUrlChange = async (newUrl: string) => {
+    if (newUrl && newUrl !== originalUrl) {
+      setIsFetchingMetadata(true);
+      try {
+        const metadata = await fetchLinkMetadata(newUrl);
+        if (
+          metadata &&
+          (metadata.title !== originalData?.title ||
+            metadata.description !== originalData?.description ||
+            metadata.image !== originalData?.imageUrl)
+        ) {
+          setNewMetadata(metadata);
+          setShowNewMetadataPreview(true);
+          setIsAccordionOpen(true);
+        } else {
+          setNewMetadata(null);
+          setShowNewMetadataPreview(false);
+          setIsAccordionOpen(false);
+        }
+      } catch (error) {
+        console.error('Error in handleUrlChange:', error);
+        setNewMetadata(null);
+        setShowNewMetadataPreview(false);
+      } finally {
+        setIsFetchingMetadata(false);
+      }
+    } else {
+      setNewMetadata(null);
+      setShowNewMetadataPreview(false);
+      setIsAccordionOpen(false);
+    }
+  };
+
+  const resetMetadata = () => {
+    setNewMetadata(null);
+    setShowNewMetadataPreview(false);
+    setIsAccordionOpen(false);
+  };
+
+  return {
+    newMetadata,
+    isFetchingMetadata,
+    showNewMetadataPreview,
+    isAccordionOpen,
+    setIsAccordionOpen,
+    handleUrlChange,
+    resetMetadata,
+  };
+};
+
+const useEditLinkForm = (
+  data: EditLinkButtonProps['data'],
+  currentLinkOrder: number
+) => {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: data?.title || '',
+      url: data?.url || '',
+      imageUrl: data?.imageUrl || '',
+      description: data?.description || '',
+      displayOrder: currentLinkOrder || 1,
+    },
+  });
+
+  return form;
+};
+
+const CurrentLinkPreview = ({
+  data,
+}: {
+  data: EditLinkButtonProps['data'];
+}) => (
+  <div className="border rounded-lg p-4 bg-muted/30">
+    <h3 className="text-sm font-medium mb-3 text-muted-foreground">
+      Current Link
+    </h3>
+    <Link
+      href={data?.url || '#'}
+      target="_blank"
+      className="w-full flex items-start gap-3"
+    >
+      {data?.imageUrl && (
+        <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+          <img
+            src={data.imageUrl}
+            alt={data.title || 'Link preview'}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = '/fallback-image.png';
+              e.currentTarget.onerror = null;
+            }}
+          />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <h4 className="font-medium text-sm truncate">
+          {data?.title || 'No title'}
+        </h4>
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {data?.description || 'No description'}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <ExternalLink className="h-3 w-3" />
+          <span className="text-xs text-muted-foreground truncate">
+            {data?.url ? new URL(data.url).hostname : 'No domain'}
+          </span>
+        </div>
+      </div>
+    </Link>
+  </div>
+);
+
+const NewMetadataAccordion = ({
+  newMetadata,
+  isFetchingMetadata,
+  isAccordionOpen,
+  setIsAccordionOpen,
+  onUseNewData,
+}: {
+  newMetadata: NewLinkMetadata | null;
+  isFetchingMetadata: boolean;
+  isAccordionOpen: boolean;
+  setIsAccordionOpen: (open: boolean) => void;
+  onUseNewData: () => void;
+}) => (
+  <Accordion
+    type="single"
+    collapsible
+    value={isAccordionOpen ? 'metadata' : ''}
+    onValueChange={(value) => setIsAccordionOpen(value === 'metadata')}
+    className="border rounded-md"
+  >
+    <AccordionItem value="metadata">
+      <AccordionTrigger className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4" />
+          <span>New Metadata Available</span>
+          {isFetchingMetadata && <Loader2 className="h-4 w-4 animate-spin" />}
+        </div>
+      </AccordionTrigger>
+      <AccordionContent>
+        <div className="space-y-4 px-4">
+          <div>
+            {newMetadata?.image && (
+              <div className="w-full h-32 rounded-lg overflow-hidden mb-3">
+                <img
+                  src={newMetadata.image}
+                  alt={newMetadata.title || 'Link preview'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = '/fallback-image.png';
+                    e.currentTarget.onerror = null;
+                  }}
+                />
+              </div>
+            )}
+            <h4 className="font-semibold text-sm">
+              {newMetadata?.title || 'No title'}
+            </h4>
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
+              {newMetadata?.description || 'No description'}
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <ExternalLink className="h-3 w-3" />
+              <span className="text-xs text-muted-foreground truncate">
+                {newMetadata?.url
+                  ? new URL(newMetadata.url).hostname
+                  : 'No domain'}
+              </span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            onClick={onUseNewData}
+            size="sm"
+            className="w-full"
+            disabled={isFetchingMetadata}
+          >
+            Use This Data
+          </Button>
+        </div>
+      </AccordionContent>
+    </AccordionItem>
+  </Accordion>
+);
+
 export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
   const { user } = useAuth();
   const { selectedPage, keywordLink } = useContext(LinkPageContext);
@@ -100,11 +327,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
   const [currentImageUrl, setCurrentImageUrl] = useState<string>(
     data?.imageUrl || ''
   );
-  const [newMetadata, setNewMetadata] = useState<NewLinkMetadata | null>(null);
-  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
-  const [showNewMetadataPreview, setShowNewMetadataPreview] = useState(false);
   const [hasUsedNewData, setHasUsedNewData] = useState(false);
-  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
 
   const { trigger, isMutating } = useUpdateLink({
     search: keywordLink || '',
@@ -129,21 +352,20 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
   }, [existingLinks, data?.id]);
 
   const totalCount = React.useMemo(() => {
-    // Get the total count from the last page of infinite data
     const lastPage = linksData?.[linksData.length - 1];
     return lastPage?.data?.pagination?.totalItems || existingLinks.length;
   }, [linksData, existingLinks]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: data?.title || '',
-      url: data?.url || '',
-      imageUrl: data?.imageUrl || '',
-      description: data?.description || '',
-      displayOrder: currentLinkOrder || 1,
-    },
-  });
+  const form = useEditLinkForm(data, currentLinkOrder);
+  const {
+    newMetadata,
+    isFetchingMetadata,
+    showNewMetadataPreview,
+    isAccordionOpen,
+    setIsAccordionOpen,
+    handleUrlChange,
+    resetMetadata,
+  } = useEditLinkMetadata(data?.url, data);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const userId = (await authClient.getSession()).data?.user.id;
@@ -167,84 +389,14 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
     }
   }
 
-  const fetchLinkMetadata = async (
-    url: string
-  ): Promise<NewLinkMetadata | null> => {
-    try {
-      const response = await fetch(
-        `/api/link-meta?url=${encodeURIComponent(url)}`,
-        {
-          method: 'GET',
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch metadata');
-      }
-
-      const metadata = await response.json();
-
-      // Check if API returned an error
-      if (metadata.error) {
-        throw new Error(metadata.error);
-      }
-
-      return {
-        title: metadata.title || '',
-        description: metadata.description || '',
-        image: metadata.image || '',
-        url: url,
-      };
-    } catch (error) {
-      console.error('Error fetching metadata:', error);
-      // Don't show toast for every error, just log it
-      return null;
-    }
-  };
-
-  const handleUrlChange = async (newUrl: string) => {
-    if (newUrl && newUrl !== data?.url) {
-      setIsFetchingMetadata(true);
-      try {
-        const metadata = await fetchLinkMetadata(newUrl);
-        if (
-          metadata &&
-          (metadata.title !== data?.title ||
-            metadata.description !== data?.description ||
-            metadata.image !== data?.imageUrl)
-        ) {
-          setNewMetadata(metadata);
-          setShowNewMetadataPreview(true);
-          setIsAccordionOpen(true);
-        } else {
-          setNewMetadata(null);
-          setShowNewMetadataPreview(false);
-          setIsAccordionOpen(false);
-        }
-      } catch (error) {
-        console.error('Error in handleUrlChange:', error);
-        setNewMetadata(null);
-        setShowNewMetadataPreview(false);
-      } finally {
-        setIsFetchingMetadata(false);
-      }
-    } else {
-      setNewMetadata(null);
-      setShowNewMetadataPreview(false);
-      setIsAccordionOpen(false);
-    }
-  };
-
   const handleUseNewData = () => {
     if (newMetadata) {
       form.setValue('title', newMetadata.title);
       form.setValue('description', newMetadata.description);
-      // Use handleImageChange for consistent image handling
       if (newMetadata.image) {
         handleImageChange(newMetadata.image, undefined);
       }
-      setShowNewMetadataPreview(false);
-      setIsAccordionOpen(false);
+      resetMetadata();
       setHasUsedNewData(true);
       toast.success('Link data updated from new URL');
     }
@@ -259,25 +411,19 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
       displayOrder: currentLinkOrder || 1,
     });
     setCurrentImageUrl(data?.imageUrl || '');
-    setShowNewMetadataPreview(false);
-    setNewMetadata(null);
-    setIsAccordionOpen(false);
+    resetMetadata();
     setHasUsedNewData(false);
     toast.success('Reset to original data');
   };
 
   const handleImageChange = (imageUrl: string | null, file?: File) => {
     if (imageUrl && file) {
-      // New file uploaded manually
       setCurrentImageUrl(imageUrl);
       form.setValue('imageUrl', imageUrl);
-      // TODO: Handle file upload to server if needed
     } else if (imageUrl && !file) {
-      // Image set from URL metadata or initial load
       setCurrentImageUrl(imageUrl);
       form.setValue('imageUrl', imageUrl);
     } else {
-      // Image explicitly removed by user
       setCurrentImageUrl('');
       form.setValue('imageUrl', '');
     }
@@ -288,9 +434,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
     if (!open) {
       form.reset();
       setCurrentImageUrl(data?.imageUrl || '');
-      setNewMetadata(null);
-      setShowNewMetadataPreview(false);
-      setIsAccordionOpen(false);
+      resetMetadata();
       setHasUsedNewData(false);
     }
   };
@@ -302,211 +446,110 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
         onSubmit={form.handleSubmit(onSubmit)}
         className={cn('space-y-4', className)}
       >
-        {/* Current Link Preview */}
+        <CurrentLinkPreview data={data} />
+
         <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-muted/30">
-            <h3 className="text-sm font-medium mb-3 text-muted-foreground">
-              Current Link
-            </h3>
-            <Link
-              href={data?.url || '#'}
-              target="_blank"
-              className="w-full flex items-start gap-3"
-            >
-              {data?.imageUrl && (
-                <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-                  <img
-                    src={data.imageUrl}
-                    alt={data.title || 'Link preview'}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = '/fallback-image.png';
-                      e.currentTarget.onerror = null;
-                    }}
-                  />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <h4 className="font-medium text-sm truncate">
-                  {data?.title || 'No title'}
-                </h4>
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {data?.description || 'No description'}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <ExternalLink className="h-3 w-3" />
-                  <span className="text-xs text-muted-foreground truncate">
-                    {data?.url ? new URL(data.url).hostname : 'No domain'}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          </div>
-
-          {/* Editable Form Fields */}
-          <div className="space-y-4">
-            <div className="flex sm:flex-row flex-col gap-4">
-              <PositionSelector
+          <div className="flex sm:flex-row flex-col gap-4">
+            <PositionSelector
+              control={form.control}
+              name="displayOrder"
+              totalCount={totalCount}
+            />
+            <div className="flex-1">
+              <FormField
                 control={form.control}
-                name="displayOrder"
-                totalCount={totalCount}
+                name="url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://example.com"
+                        disabled={isMutating}
+                        {...field}
+                        onBlur={(e) => {
+                          field.onBlur();
+                          handleUrlChange(e.target.value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <div className="flex-1">
-                <FormField
-                  control={form.control}
-                  name="url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>URL</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://example.com"
-                          disabled={isMutating}
-                          {...field}
-                          onBlur={(e) => {
-                            field.onBlur();
-                            handleUrlChange(e.target.value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
-
-            {/* New Metadata Accordion */}
-            {showNewMetadataPreview && (
-              <Accordion
-                type="single"
-                collapsible
-                value={isAccordionOpen ? 'metadata' : ''}
-                onValueChange={(value) =>
-                  setIsAccordionOpen(value === 'metadata')
-                }
-                className="border rounded-md"
-              >
-                <AccordionItem value="metadata">
-                  <AccordionTrigger className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Info className="h-4 w-4" />
-                      <span>New Metadata Available</span>
-                      {isFetchingMetadata && (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      )}
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-4 px-4">
-                      <div>
-                        {newMetadata?.image && (
-                          <div className="w-full h-32 rounded-lg overflow-hidden mb-3">
-                            <img
-                              src={newMetadata.image}
-                              alt={newMetadata.title || 'Link preview'}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = '/fallback-image.png';
-                                e.currentTarget.onerror = null;
-                              }}
-                            />
-                          </div>
-                        )}
-                        <h4 className="font-semibold text-sm">
-                          {newMetadata?.title || 'No title'}
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
-                          {newMetadata?.description || 'No description'}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <ExternalLink className="h-3 w-3" />
-                          <span className="text-xs text-muted-foreground truncate">
-                            {newMetadata?.url
-                              ? new URL(newMetadata.url).hostname
-                              : 'No domain'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <Button
-                        type="button"
-                        onClick={handleUseNewData}
-                        size="sm"
-                        className="w-full"
-                        disabled={isFetchingMetadata}
-                      >
-                        Use This Data
-                      </Button>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            )}
-
-            {/* Image Upload Section */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" />
-                Image {currentImageUrl !== data?.imageUrl && '(Custom)'}
-              </label>
-              <FileUpload
-                fileUrl={currentImageUrl}
-                onImageChange={handleImageChange}
-              />
-              {currentImageUrl !== data?.imageUrl && data?.imageUrl && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setCurrentImageUrl(data?.imageUrl || '');
-                    form.setValue('imageUrl', data?.imageUrl || '');
-                  }}
-                >
-                  Reset to Original
-                </Button>
-              )}
-            </div>
-
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Link title"
-                      disabled={isMutating}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Link description"
-                      disabled={isMutating}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
 
-          {/* Reset to Original Button - Only show after using new data */}
+          {showNewMetadataPreview && (
+            <NewMetadataAccordion
+              newMetadata={newMetadata}
+              isFetchingMetadata={isFetchingMetadata}
+              isAccordionOpen={isAccordionOpen}
+              setIsAccordionOpen={setIsAccordionOpen}
+              onUseNewData={handleUseNewData}
+            />
+          )}
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <ImageIcon className="h-4 w-4" />
+              Image {currentImageUrl !== data?.imageUrl && '(Custom)'}
+            </label>
+            <FileUpload
+              fileUrl={currentImageUrl}
+              onImageChange={handleImageChange}
+            />
+            {currentImageUrl !== data?.imageUrl && data?.imageUrl && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCurrentImageUrl(data?.imageUrl || '');
+                  form.setValue('imageUrl', data?.imageUrl || '');
+                }}
+              >
+                Reset to Original
+              </Button>
+            )}
+          </div>
+
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Link title"
+                    disabled={isMutating}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Link description"
+                    disabled={isMutating}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           {hasUsedNewData && (
             <Card>
               <CardContent>
