@@ -623,7 +623,15 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
   }
 
   return (
-    <Drawer open={isOpen} onOpenChange={handleDialogClose}>
+    <Drawer
+      open={isOpen}
+      onOpenChange={handleDialogClose}
+      snapPoints={
+        showNewMetadataPreview ? ['250px', '450px', '85vh'] : ['250px', '85vh']
+      }
+      activeSnapPoint={showNewMetadataPreview ? 1 : 0}
+      fadeFromIndex={1}
+    >
       <DrawerTrigger asChild>
         <Button
           type="button"

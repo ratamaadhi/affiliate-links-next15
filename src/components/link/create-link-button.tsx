@@ -460,7 +460,14 @@ export const CreateLinkButton = () => {
   }
 
   return (
-    <Drawer open={isOpen} onOpenChange={handleDialogClose} repositionInputs>
+    <Drawer
+      open={isOpen}
+      onOpenChange={handleDialogClose}
+      repositionInputs
+      snapPoints={metadata ? ['200px', '400px', '85vh'] : ['200px', '85vh']}
+      activeSnapPoint={metadata ? 1 : 0}
+      fadeFromIndex={1}
+    >
       <DrawerTrigger asChild>
         <Button variant="default" size="default" className="w-full gap-2">
           <PlusIcon className="h-4 w-4" />
