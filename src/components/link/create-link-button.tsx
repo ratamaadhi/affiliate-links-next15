@@ -234,12 +234,13 @@ export const CreateLinkButton = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Step 1: URL Input */}
-            <div className="flex flex-row sm:flex-col gap-4">
+            <div className="flex sm:flex-row flex-col gap-4">
               {metadata && (
                 <PositionSelector
                   control={form.control}
                   name="displayOrder"
                   totalCount={totalCount}
+                  addNumber={1}
                 />
               )}
               <div className="flex-1">

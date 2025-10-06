@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
+import { Control } from 'react-hook-form';
 import {
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
 } from './form';
 import {
@@ -15,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from './select';
-import { Control } from 'react-hook-form';
 
 interface PositionOption {
   value: number;
@@ -31,6 +31,7 @@ interface PositionSelectorProps {
   totalCount?: number;
   disabled?: boolean;
   className?: string;
+  addNumber?: number;
 }
 
 export const PositionSelector = ({
@@ -42,14 +43,15 @@ export const PositionSelector = ({
   totalCount,
   disabled = false,
   className,
+  addNumber,
 }: PositionSelectorProps) => {
   // Generate options from totalCount if provided, otherwise use options prop
   const finalOptions = React.useMemo(() => {
     if (totalCount !== undefined) {
-      return generatePositionOptions(totalCount);
+      return generatePositionOptions(totalCount, addNumber);
     }
     return options || [];
-  }, [options, totalCount]);
+  }, [options, totalCount, addNumber]);
 
   return (
     <FormField
@@ -86,10 +88,10 @@ export const PositionSelector = ({
 // Helper function to generate position options
 export const generatePositionOptions = (
   count: number,
-  startFrom: number = 1
+  addNumber: number = 0
 ): PositionOption[] => {
   const options = [];
-  for (let i = startFrom; i <= count + startFrom; i++) {
+  for (let i = 1; i <= count + addNumber; i++) {
     options.push({
       value: i,
       label: i,

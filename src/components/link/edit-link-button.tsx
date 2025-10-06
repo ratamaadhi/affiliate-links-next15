@@ -357,7 +357,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* Editable Form Fields */}
               <div className="space-y-4">
-                <div className="flex flex-row gap-4">
+                <div className="flex sm:flex-row flex-col gap-4">
                   <PositionSelector
                     control={form.control}
                     name="displayOrder"
