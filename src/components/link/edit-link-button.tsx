@@ -670,7 +670,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
           <PencilIcon />
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="h-full max-h-[85vh]">
+      <DrawerContent className="h-full max-h-[85vh] flex flex-col">
         <DrawerHeader className="text-left">
           <DrawerTitle>Edit Link</DrawerTitle>
           <DrawerDescription>
