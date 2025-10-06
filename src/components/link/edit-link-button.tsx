@@ -580,7 +580,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                 <span className="text-sm">You have applied new link data</span>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleResetToOriginal}
                   size="sm"
                   disabled={isFetchingMetadata}
@@ -670,14 +670,14 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
           <PencilIcon />
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="max-h-[85vh]">
+      <DrawerContent className="h-full max-h-[85vh]">
         <DrawerHeader className="text-left">
           <DrawerTitle>Edit Link</DrawerTitle>
           <DrawerDescription>
             View current link details and make changes as needed.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="px-4 pb-4 overflow-y-auto max-h-[60vh]">
+        <div className="px-4 pb-4 overflow-y-auto flex-1 min-h-0">
           <Form {...form}>
             <EditLinkForm />
           </Form>

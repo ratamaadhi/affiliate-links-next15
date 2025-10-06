@@ -393,9 +393,6 @@ export const CreateLinkButton = () => {
                           )}
                         </Button>
                       </div>
-                      {isFetchingMetadata && (
-                        <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin" />
-                      )}
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -528,7 +525,7 @@ export const CreateLinkButton = () => {
           <span>Add Link</span>
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="max-h-[85vh]">
+      <DrawerContent className={cn('max-h-[85vh]', metadata ? 'h-full' : '')}>
         <DrawerHeader className="text-left">
           <DrawerTitle>Add new Link</DrawerTitle>
           <DrawerDescription>
