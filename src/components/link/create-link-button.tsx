@@ -39,11 +39,16 @@ import { useLinkInfinite } from '@/hooks/queries';
 
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/hooks/useAuth';
-import { useDebounce } from '@/hooks/useDebounce';
 import { authClient } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ExternalLink, ImageIcon, Loader2, PlusIcon } from 'lucide-react';
+import {
+  ExternalLink,
+  ImageIcon,
+  Loader2,
+  PlusIcon,
+  RefreshCwIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 import React, { useContext, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -216,7 +221,7 @@ export const CreateLinkButton = () => {
   const { selectedPage, keywordLink } = useContext(LinkPageContext);
   const [isOpen, setIsOpen] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
-  const [urlInput, setUrlInput] = useState<string>('');
+
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
 
   const { trigger, isMutating } = useCreateLink({
@@ -239,15 +244,59 @@ export const CreateLinkButton = () => {
     return lastPage?.data?.pagination?.totalItems || existingLinksCount;
   }, [linksData, existingLinksCount]);
 
-  const debouncedUrl = useDebounce(urlInput, 500);
-  const { isFetchingMetadata, metadata } = useLinkMetadata(debouncedUrl);
-  const form = useLinkForm(metadata, existingLinksCount);
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: '',
+      url: '',
+      imageUrl: '',
+      description: '',
+      displayOrder: existingLinksCount + 1,
+    },
+  });
 
-  useEffect(() => {
-    if (metadata) {
-      form.setValue('url', debouncedUrl);
+  const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+
+  const fetchLinkMetadata = async (url: string) => {
+    try {
+      const response = await fetch(
+        `/api/link-meta?url=${encodeURIComponent(url)}`
+      );
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching metadata:', error);
+      return null;
     }
-  }, [metadata, debouncedUrl, form.setValue]);
+  };
+
+  const handleUrlBlur = async (url: string) => {
+    if (url && url.trim() !== '') {
+      try {
+        new URL(url);
+        setIsFetchingMetadata(true);
+        try {
+          const metadata = await fetchLinkMetadata(url);
+          setMetadata(metadata);
+          if (metadata) {
+            form.setValue('title', metadata.title || '');
+            form.setValue('description', metadata.description || '');
+            form.setValue('imageUrl', metadata.image || '');
+          }
+        } catch (_error) {
+          console.error('Error fetching metadata:', _error);
+          toast.error('Failed to fetch link metadata. Please try again.');
+        } finally {
+          setIsFetchingMetadata(false);
+        }
+      } catch (_error) {
+        setMetadata(null);
+      }
+    } else {
+      setMetadata(null);
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const { data: session } = await authClient.getSession();
@@ -265,15 +314,10 @@ export const CreateLinkButton = () => {
     if (response.success) {
       form.reset();
       setCurrentImageUrl('');
-      setUrlInput('');
+      setMetadata(null);
       setIsOpen(false);
     }
   }
-
-  const handleUrlChange = (value: string) => {
-    setUrlInput(value);
-    form.setValue('url', value);
-  };
 
   const handleImageChange = (imageUrl: string | null, file?: File) => {
     if (imageUrl && file) {
@@ -293,7 +337,7 @@ export const CreateLinkButton = () => {
     setIsOpen(open);
     form.reset();
     setCurrentImageUrl('');
-    setUrlInput('');
+    setMetadata(null);
   };
 
   function CreateLinkForm({ className }: React.ComponentProps<'form'>) {
@@ -322,16 +366,33 @@ export const CreateLinkButton = () => {
                   <FormLabel>URL</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input
-                        placeholder="https://example.com"
-                        value={urlInput}
-                        onChange={(e) => {
-                          handleUrlChange(e.target.value);
-                          field.onChange(e.target.value);
-                        }}
-                        disabled={isMutating}
-                        className="pr-10"
-                      />
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          placeholder="https://example.com"
+                          disabled={isMutating}
+                          className="flex-1"
+                          {...field}
+                          onBlur={(e) => {
+                            field.onBlur();
+                            handleUrlBlur(e.target.value);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={
+                            isMutating || !field.value || isFetchingMetadata
+                          }
+                          onClick={() => handleUrlBlur(field.value)}
+                          className="size-9"
+                        >
+                          {isFetchingMetadata ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCwIcon />
+                          )}
+                        </Button>
+                      </div>
                       {isFetchingMetadata && (
                         <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin" />
                       )}

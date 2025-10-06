@@ -48,6 +48,7 @@ import {
   Info,
   Loader2,
   PencilIcon,
+  RefreshCwIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import React, { useContext, useState } from 'react';
@@ -132,8 +133,11 @@ const useEditLinkMetadata = (
     }
   };
 
-  const handleUrlChange = async (newUrl: string) => {
-    if (newUrl && newUrl !== originalUrl) {
+  const handleUrlChange = async (
+    newUrl: string,
+    forceFetch: boolean = false
+  ) => {
+    if ((newUrl && newUrl !== originalUrl) || forceFetch) {
       setIsFetchingMetadata(true);
       try {
         const metadata = await fetchLinkMetadata(newUrl);
@@ -464,15 +468,33 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                   <FormItem>
                     <FormLabel>URL</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="https://example.com"
-                        disabled={isMutating}
-                        {...field}
-                        onBlur={(e) => {
-                          field.onBlur();
-                          handleUrlChange(e.target.value);
-                        }}
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="https://example.com"
+                          disabled={isMutating}
+                          className="flex-1"
+                          {...field}
+                          onBlur={(e) => {
+                            field.onBlur();
+                            handleUrlChange(e.target.value);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={
+                            isMutating || !field.value || isFetchingMetadata
+                          }
+                          onClick={() => handleUrlChange(field.value, true)}
+                          className="size-9"
+                        >
+                          {isFetchingMetadata ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCwIcon />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
