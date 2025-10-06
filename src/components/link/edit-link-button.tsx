@@ -11,6 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '../ui/drawer';
 import { Input } from '../ui/input';
 
 import {
@@ -26,8 +36,10 @@ import { LinkPageContext } from '@/context/link-page-context';
 import { useUpdateLink } from '@/hooks/mutations';
 import { useLinkInfinite } from '@/hooks/queries';
 
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
+import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ExternalLink,
@@ -84,6 +96,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
   const { selectedPage, keywordLink } = useContext(LinkPageContext);
 
   const [isOpen, setIsOpen] = useState(false);
+  const isDesktop = useMediaQuery('(min-width: 768px)');
   const [currentImageUrl, setCurrentImageUrl] = useState<string>(
     data?.imageUrl || ''
   );
@@ -282,36 +295,13 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
     }
   };
 
-  if ((!user || !user.username) && !selectedPage?.id) {
-    return <Skeleton className="h-9 w-full rounded-lg" />;
-  }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            className="size-8"
-            onClick={() => setIsOpen(true)}
-            disabled={isMutating}
-          >
-            <PencilIcon />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          <p>Edit Link</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="max-h-[90vh] overflow-y-auto flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Edit Link</DialogTitle>
-          <DialogDescription>
-            View current link details and make changes as needed.
-          </DialogDescription>
-        </DialogHeader>
-
+  function EditLinkForm({ className }: React.ComponentProps<'form'>) {
+    return (
+      <form
+        id="edit-link-form"
+        onSubmit={form.handleSubmit(onSubmit)}
+        className={cn('space-y-4', className)}
+      >
         {/* Current Link Preview */}
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-muted/30">
@@ -353,218 +343,288 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
             </Link>
           </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Editable Form Fields */}
-              <div className="space-y-4">
-                <div className="flex sm:flex-row flex-col gap-4">
-                  <PositionSelector
-                    control={form.control}
-                    name="displayOrder"
-                    totalCount={totalCount}
-                  />
-                  <div className="flex-1">
-                    <FormField
-                      control={form.control}
-                      name="url"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>URL</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="https://example.com"
-                              disabled={isMutating}
-                              {...field}
-                              onBlur={(e) => {
-                                field.onBlur();
-                                handleUrlChange(e.target.value);
+          {/* Editable Form Fields */}
+          <div className="space-y-4">
+            <div className="flex sm:flex-row flex-col gap-4">
+              <PositionSelector
+                control={form.control}
+                name="displayOrder"
+                totalCount={totalCount}
+              />
+              <div className="flex-1">
+                <FormField
+                  control={form.control}
+                  name="url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com"
+                          disabled={isMutating}
+                          {...field}
+                          onBlur={(e) => {
+                            field.onBlur();
+                            handleUrlChange(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* New Metadata Accordion */}
+            {showNewMetadataPreview && (
+              <Accordion
+                type="single"
+                collapsible
+                value={isAccordionOpen ? 'metadata' : ''}
+                onValueChange={(value) =>
+                  setIsAccordionOpen(value === 'metadata')
+                }
+                className="border rounded-md"
+              >
+                <AccordionItem value="metadata">
+                  <AccordionTrigger className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      <span>New Metadata Available</span>
+                      {isFetchingMetadata && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 px-4">
+                      <div>
+                        {newMetadata?.image && (
+                          <div className="w-full h-32 rounded-lg overflow-hidden mb-3">
+                            <img
+                              src={newMetadata.image}
+                              alt={newMetadata.title || 'Link preview'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/fallback-image.png';
+                                e.currentTarget.onerror = null;
                               }}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* New Metadata Accordion */}
-                {showNewMetadataPreview && (
-                  <Accordion
-                    type="single"
-                    collapsible
-                    value={isAccordionOpen ? 'metadata' : ''}
-                    onValueChange={(value) =>
-                      setIsAccordionOpen(value === 'metadata')
-                    }
-                    className="border rounded-md"
-                  >
-                    <AccordionItem value="metadata">
-                      <AccordionTrigger className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Info className="h-4 w-4" />
-                          <span>New Metadata Available</span>
-                          {isFetchingMetadata && (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          )}
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-4 px-4">
-                          <div>
-                            {newMetadata?.image && (
-                              <div className="w-full h-32 rounded-lg overflow-hidden mb-3">
-                                <img
-                                  src={newMetadata.image}
-                                  alt={newMetadata.title || 'Link preview'}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.src = '/fallback-image.png';
-                                    e.currentTarget.onerror = null;
-                                  }}
-                                />
-                              </div>
-                            )}
-                            <h4 className="font-semibold text-sm">
-                              {newMetadata?.title || 'No title'}
-                            </h4>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
-                              {newMetadata?.description || 'No description'}
-                            </p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <ExternalLink className="h-3 w-3" />
-                              <span className="text-xs text-muted-foreground truncate">
-                                {newMetadata?.url
-                                  ? new URL(newMetadata.url).hostname
-                                  : 'No domain'}
-                              </span>
-                            </div>
                           </div>
-
-                          <Button
-                            type="button"
-                            onClick={handleUseNewData}
-                            size="sm"
-                            className="w-full"
-                            disabled={isFetchingMetadata}
-                          >
-                            Use This Data
-                          </Button>
+                        )}
+                        <h4 className="font-semibold text-sm">
+                          {newMetadata?.title || 'No title'}
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
+                          {newMetadata?.description || 'No description'}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <ExternalLink className="h-3 w-3" />
+                          <span className="text-xs text-muted-foreground truncate">
+                            {newMetadata?.url
+                              ? new URL(newMetadata.url).hostname
+                              : 'No domain'}
+                          </span>
                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                )}
+                      </div>
 
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Link title"
-                          disabled={isMutating}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Link description"
-                          disabled={isMutating}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Image Upload Section */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4" />
-                    Image {currentImageUrl !== data?.imageUrl && '(Custom)'}
-                  </label>
-                  <FileUpload
-                    fileUrl={currentImageUrl}
-                    onImageChange={handleImageChange}
-                  />
-                  {currentImageUrl !== data?.imageUrl && data?.imageUrl && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setCurrentImageUrl(data?.imageUrl || '');
-                        form.setValue('imageUrl', data?.imageUrl || '');
-                      }}
-                    >
-                      Reset to Original
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Reset to Original Button - Only show after using new data */}
-              {hasUsedNewData && (
-                <Card>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        You have applied new link data
-                      </span>
                       <Button
                         type="button"
-                        variant="outline"
-                        onClick={handleResetToOriginal}
+                        onClick={handleUseNewData}
                         size="sm"
+                        className="w-full"
                         disabled={isFetchingMetadata}
                       >
-                        Reset to Original
+                        Use This Data
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
 
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button disabled={isMutating} variant="outline" type="button">
-                    Cancel
-                  </Button>
-                </DialogClose>
+            {/* Image Upload Section */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                Image {currentImageUrl !== data?.imageUrl && '(Custom)'}
+              </label>
+              <FileUpload
+                fileUrl={currentImageUrl}
+                onImageChange={handleImageChange}
+              />
+              {currentImageUrl !== data?.imageUrl && data?.imageUrl && (
                 <Button
-                  disabled={isMutating}
-                  type="submit"
-                  className="min-w-[120px]"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCurrentImageUrl(data?.imageUrl || '');
+                    form.setValue('imageUrl', data?.imageUrl || '');
+                  }}
                 >
-                  {isMutating ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin mr-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
+                  Reset to Original
                 </Button>
-              </DialogFooter>
-            </form>
+              )}
+            </div>
+
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Link title"
+                      disabled={isMutating}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Link description"
+                      disabled={isMutating}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Reset to Original Button - Only show after using new data */}
+          {hasUsedNewData && (
+            <Card>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    You have applied new link data
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleResetToOriginal}
+                    size="sm"
+                    disabled={isFetchingMetadata}
+                  >
+                    Reset to Original
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </form>
+    );
+  }
+
+  if ((!user || !user.username) && !selectedPage?.id) {
+    return <Skeleton className="h-9 w-full rounded-lg" />;
+  }
+
+  if (isDesktop) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleDialogClose}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="size-8"
+              onClick={() => setIsOpen(true)}
+              disabled={isMutating}
+            >
+              <PencilIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Edit Link</p>
+          </TooltipContent>
+        </Tooltip>
+        <DialogContent className="max-h-[90vh] overflow-y-auto flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Edit Link</DialogTitle>
+            <DialogDescription>
+              View current link details and make changes as needed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <EditLinkForm />
+          </Form>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button disabled={isMutating} variant="outline" type="button">
+                Cancel
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Drawer open={isOpen} onOpenChange={handleDialogClose}>
+      <DrawerTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className="size-8"
+          onClick={() => setIsOpen(true)}
+          disabled={isMutating}
+        >
+          <PencilIcon />
+        </Button>
+      </DrawerTrigger>
+      <DrawerContent className="max-h-[85vh]">
+        <DrawerHeader className="text-left">
+          <DrawerTitle>Edit Link</DrawerTitle>
+          <DrawerDescription>
+            View current link details and make changes as needed.
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="px-4 pb-4 overflow-y-auto max-h-[60vh]">
+          <Form {...form}>
+            <EditLinkForm />
           </Form>
         </div>
-      </DialogContent>
-    </Dialog>
+        <DrawerFooter className="pt-2 gap-2">
+          <Button
+            disabled={isMutating}
+            type="submit"
+            form="edit-link-form"
+            className="min-w-[120px]"
+          >
+            {isMutating ? (
+              <>
+                <Loader2 className="size-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
+          <DrawerClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 };
