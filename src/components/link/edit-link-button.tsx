@@ -42,6 +42,7 @@ import { authClient } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  CheckCircle,
   ExternalLink,
   ImageIcon,
   Info,
@@ -59,7 +60,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../ui/accordion';
-import { Card, CardContent } from '../ui/card';
+import { Alert, AlertDescription } from '../ui/alert';
 import { Skeleton } from '../ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
@@ -551,24 +552,21 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
           />
 
           {hasUsedNewData && (
-            <Card>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    You have applied new link data
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleResetToOriginal}
-                    size="sm"
-                    disabled={isFetchingMetadata}
-                  >
-                    Reset to Original
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <Alert className="flex items-center">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription className="flex-1 flex items-center justify-between">
+                <span className="text-sm">You have applied new link data</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResetToOriginal}
+                  size="sm"
+                  disabled={isFetchingMetadata}
+                >
+                  Reset data
+                </Button>
+              </AlertDescription>
+            </Alert>
           )}
         </div>
       </form>
@@ -616,6 +614,21 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                 Cancel
               </Button>
             </DialogClose>
+            <Button
+              disabled={isMutating}
+              type="submit"
+              form="edit-link-form"
+              className="min-w-[120px]"
+            >
+              {isMutating ? (
+                <>
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
