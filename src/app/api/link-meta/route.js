@@ -144,6 +144,11 @@ export async function GET(request) {
 }
 
 async function fetchMetaData(url) {
+  // Handle YouTube URLs with oEmbed API
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    return await fetchYouTubeMetadata(url);
+  }
+
   const html = await fetchHtml(url);
   const dom = new JSDOM(html);
   const meta = dom.window.document.querySelectorAll('meta');
@@ -233,6 +238,65 @@ async function fetchOgUrlMeta(ogUrl) {
     siteName: getMetaFromUrl('og:site_name') || domain,
     type: getMetaFromUrl('og:type') || 'website',
   };
+}
+
+async function fetchYouTubeMetadata(url) {
+  try {
+    // Extract video ID from YouTube URL
+    let videoId = '';
+    if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    } else if (url.includes('youtube.com/watch')) {
+      const urlParams = new URL(url).searchParams;
+      videoId = urlParams.get('v');
+    }
+
+    if (!videoId) {
+      throw new Error('Could not extract YouTube video ID');
+    }
+
+    // Use YouTube oEmbed API
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    const response = await fetch(oembedUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      },
+      timeout: 10000,
+    });
+
+    if (!response.ok) {
+      throw new Error(`YouTube oEmbed API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      title: data.title || '',
+      description: data.author_name || '',
+      image: data.thumbnail_url || '',
+      url: url,
+      domain: 'youtu.be',
+      favicon:
+        'https://www.youtube.com/s/desktop/dae87be3/img/favicon_32x32.png',
+      siteName: 'YouTube',
+      type: 'video',
+    };
+  } catch (error) {
+    console.error('YouTube metadata fetch error:', error);
+    // Fallback to basic metadata
+    return {
+      title: '',
+      description: '',
+      image: '',
+      url: url,
+      domain: 'youtu.be',
+      favicon:
+        'https://www.youtube.com/s/desktop/dae87be3/img/favicon_32x32.png',
+      siteName: 'YouTube',
+      type: 'video',
+    };
+  }
 }
 
 async function fetchHtml(url, retryCount = 0) {
