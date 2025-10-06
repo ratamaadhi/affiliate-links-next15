@@ -535,7 +535,7 @@ export const CreateLinkButton = () => {
             Enter a URL to fetch metadata and create a new link.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="px-4 pb-4 overflow-y-auto max-h-[60vh]">
+        <div className="px-4 pb-4 overflow-y-auto flex-1 min-h-0">
           <Form {...form}>
             <CreateLinkForm />
           </Form>
