@@ -257,6 +257,7 @@ export const CreateLinkButton = () => {
 
   const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [lastFetchedUrl, setLastFetchedUrl] = useState<string>('');
 
   const fetchLinkMetadata = async (url: string) => {
     try {
@@ -275,7 +276,13 @@ export const CreateLinkButton = () => {
     if (url && url.trim() !== '') {
       try {
         new URL(url);
+
+        if (lastFetchedUrl === url) {
+          return;
+        }
+
         setIsFetchingMetadata(true);
+        setLastFetchedUrl(url);
         try {
           const metadata = await fetchLinkMetadata(url);
           setMetadata(metadata);
@@ -283,6 +290,7 @@ export const CreateLinkButton = () => {
             form.setValue('title', metadata.title || '');
             form.setValue('description', metadata.description || '');
             form.setValue('imageUrl', metadata.image || '');
+            setCurrentImageUrl(metadata.image || '');
           }
         } catch (_error) {
           console.error('Error fetching metadata:', _error);
@@ -292,9 +300,11 @@ export const CreateLinkButton = () => {
         }
       } catch (_error) {
         setMetadata(null);
+        setLastFetchedUrl('');
       }
     } else {
       setMetadata(null);
+      setLastFetchedUrl('');
     }
   };
 
@@ -327,9 +337,8 @@ export const CreateLinkButton = () => {
       setCurrentImageUrl(imageUrl);
       form.setValue('imageUrl', imageUrl);
     } else {
-      const fallbackImage = metadata?.image || '';
-      setCurrentImageUrl(fallbackImage);
-      form.setValue('imageUrl', fallbackImage);
+      setCurrentImageUrl('');
+      form.setValue('imageUrl', '');
     }
   };
 
@@ -338,6 +347,7 @@ export const CreateLinkButton = () => {
     form.reset();
     setCurrentImageUrl('');
     setMetadata(null);
+    setLastFetchedUrl('');
   };
 
   function CreateLinkForm({ className }: React.ComponentProps<'form'>) {

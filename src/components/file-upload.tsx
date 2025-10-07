@@ -31,7 +31,6 @@ export default function FileUpload({
       removeFile,
       getInputProps,
       clearFiles,
-      addFileMetadata,
     },
   ] = useFileUpload({
     accept: 'image/svg+xml,image/png,image/jpeg,image/jpg,image/gif',
@@ -76,7 +75,6 @@ export default function FileUpload({
         id: fileUrl,
       };
       setTimeout(() => {
-        addFileMetadata(fileMetadata);
         isUpdatingRef.current = false;
         prevFileUrlRef.current = fileUrl;
       }, 0);
@@ -91,7 +89,7 @@ export default function FileUpload({
     } else {
       prevFileUrlRef.current = fileUrl;
     }
-  }, [fileUrl, clearFiles, addFileMetadata]);
+  }, [fileUrl, clearFiles]);
 
   // Handle image change separately to avoid render-time state updates
   useEffect(() => {
