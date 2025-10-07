@@ -108,7 +108,13 @@ const useEditLinkMetadata = (
     try {
       const response = await fetch(
         `/api/link-meta?url=${encodeURIComponent(url)}`,
-        { method: 'GET' }
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Include cookies for authentication
+        }
       );
 
       if (!response.ok) {

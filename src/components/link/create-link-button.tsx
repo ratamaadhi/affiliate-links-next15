@@ -84,7 +84,14 @@ const useLinkMetadata = (url: string) => {
   const fetchLinkMetadata = async (url: string) => {
     try {
       const response = await fetch(
-        `/api/link-meta?url=${encodeURIComponent(url)}`
+        `/api/link-meta?url=${encodeURIComponent(url)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Include cookies for authentication
+        }
       );
       const data = await response.json();
       return data;
@@ -262,7 +269,14 @@ export const CreateLinkButton = () => {
   const fetchLinkMetadata = async (url: string) => {
     try {
       const response = await fetch(
-        `/api/link-meta?url=${encodeURIComponent(url)}`
+        `/api/link-meta?url=${encodeURIComponent(url)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Include cookies for authentication
+        }
       );
       const data = await response.json();
       return data;

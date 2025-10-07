@@ -1,7 +1,23 @@
-import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { redis } from '@/lib/redis';
+import { NextResponse } from 'next/server';
 
 export async function GET(request) {
+  // Check authentication first
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+
+  if (!session) {
+    return NextResponse.json(
+      {
+        error:
+          'Authentication required. Please log in to access this endpoint.',
+      },
+      { status: 401 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const limit = Number(searchParams.get('limit')) || 10;
 
