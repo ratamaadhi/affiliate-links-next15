@@ -1,4 +1,5 @@
 // app/api/link-meta.sj
+import { auth } from '@/lib/auth';
 import { redis } from '@/lib/redis';
 import { JSDOM } from 'jsdom';
 import { NextResponse } from 'next/server';
@@ -12,7 +13,29 @@ const urlSchema = z.string().url({
   message: 'Invalid URL format',
 });
 
-export async function OPTIONS(_request) {
+export async function OPTIONS(request) {
+  // Check authentication for OPTIONS request as well
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+
+  if (!session) {
+    return NextResponse.json(
+      {
+        error:
+          'Authentication required. Please log in to access this endpoint.',
+      },
+      {
+        status: 401,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
+  }
+
   return NextResponse.json(null, {
     status: 200,
     headers: {
@@ -24,6 +47,28 @@ export async function OPTIONS(_request) {
 }
 
 export async function GET(request) {
+  // Check authentication first
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+
+  if (!session) {
+    return NextResponse.json(
+      {
+        error:
+          'Authentication required. Please log in to access this endpoint.',
+      },
+      {
+        status: 401,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
+  }
+
   const { searchParams } = new URL(request.nextUrl);
 
   const url = searchParams.get('url');
