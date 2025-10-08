@@ -287,7 +287,7 @@ function ListLinks() {
             sensors={sensors}
             id={sortableId}
           >
-            <ul className="absolute inset-0 space-y-3 overflow-y-scroll no-scrollbar">
+            <ul className="absolute inset-0 space-y-3 overflow-y-scroll no-scrollbar pb-18 sm:pb-0">
               <SortableContext
                 items={dataIds}
                 strategy={verticalListSortingStrategy}

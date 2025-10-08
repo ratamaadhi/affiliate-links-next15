@@ -19,11 +19,44 @@ jest.mock('@/components/page/search-page-input', () => ({
   __esModule: true,
   default: () => <div data-testid="search-page-input" />,
 }));
+jest.mock('@/components/page/pages-mobile-dock-provider', () => ({
+  PagesMobileDockProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="pages-mobile-dock-provider">{children}</div>
+  ),
+}));
+jest.mock('@/components/link/mobile-dock', () => ({
+  MobileDock: ({
+    username,
+    pageLink,
+  }: {
+    username: string;
+    pageLink: string;
+  }) => (
+    <div data-testid="mobile-dock">
+      <span data-testid="mobile-dock-username">{username}</span>
+      <span data-testid="mobile-dock-page-link">{pageLink}</span>
+    </div>
+  ),
+}));
 jest.mock('@/components/link/dynamic-page-link', () => ({
   DynamicPageLink: () => (
     <div data-testid="dynamic-page-link">
       <span>My Linkid: </span>
       <span>Select a page to generate link</span>
+    </div>
+  ),
+}));
+jest.mock('@/components/link/enhanced-dashboard-preview', () => ({
+  EnhancedDashboardPreview: ({
+    pageLink,
+    username,
+  }: {
+    pageLink: string;
+    username: string;
+  }) => (
+    <div data-testid="enhanced-dashboard-preview">
+      <span data-testid="preview-page-link">{pageLink}</span>
+      <span data-testid="preview-username">{username}</span>
     </div>
   ),
 }));
@@ -41,6 +74,55 @@ jest.mock('next/link', () => ({
 // Mock next/headers
 jest.mock('next/headers', () => ({
   headers: jest.fn(),
+}));
+
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+  })),
+}));
+
+// Mock hooks
+jest.mock('@/hooks/use-mobile', () => ({
+  useIsMobile: jest.fn(() => false),
+}));
+
+// Mock context
+jest.mock('@/context/link-page-context', () => ({
+  LinkPageContext: {
+    Provider: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="link-page-context-provider">{children}</div>
+    ),
+  },
+  useContext: jest.fn(() => ({
+    selectedPage: { slug: 'test' },
+  })),
+}));
+
+// Mock LinkPageProvider
+jest.mock('@/components/link/link-page-provider', () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="link-page-provider">{children}</div>
+  ),
+}));
+
+jest.mock('@/context/mobile-dock-context', () => ({
+  useMobileDock: jest.fn(() => ({
+    actions: {
+      triggerAdd: jest.fn(),
+      triggerSearch: jest.fn(),
+    },
+    config: {
+      showAddButton: true,
+      showSearchButton: true,
+      addButtonText: 'Add Page',
+      searchButtonText: 'Search Page',
+      addButtonIcon: <div data-testid="add-icon" />,
+      searchButtonIcon: <div data-testid="search-icon" />,
+    },
+  })),
 }));
 
 describe('PagesPage', () => {

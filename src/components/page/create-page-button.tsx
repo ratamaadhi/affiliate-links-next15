@@ -84,7 +84,12 @@ export const CreatePageButton = ({}) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="default" className="w-9 md:w-auto">
+        <Button
+          variant="default"
+          size="default"
+          className="w-9 md:w-auto"
+          data-create-page-button
+        >
           <TbLibraryPlus /> <span className="hidden md:block">{` Page`}</span>
         </Button>
       </DialogTrigger>

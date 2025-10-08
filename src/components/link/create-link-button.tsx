@@ -497,7 +497,12 @@ export const CreateLinkButton = () => {
     return (
       <Dialog open={isOpen} onOpenChange={handleDialogClose}>
         <DialogTrigger asChild>
-          <Button variant="default" size="default" className="w-full gap-2">
+          <Button
+            variant="default"
+            size="default"
+            className="w-full gap-2"
+            data-create-link-button
+          >
             <PlusIcon className="h-4 w-4" />
             <span>Add Link</span>
           </Button>
@@ -544,7 +549,12 @@ export const CreateLinkButton = () => {
   return (
     <Drawer open={isOpen} onOpenChange={handleDialogClose}>
       <DrawerTrigger asChild>
-        <Button variant="default" size="default" className="w-full gap-2">
+        <Button
+          variant="default"
+          size="default"
+          className="w-full gap-2"
+          data-create-link-button
+        >
           <PlusIcon className="h-4 w-4" />
           <span>Add Link</span>
         </Button>

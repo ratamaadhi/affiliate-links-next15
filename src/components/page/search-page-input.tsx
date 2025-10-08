@@ -50,6 +50,7 @@ function SearchPageInput() {
       className="text-sm w-full"
       onChange={handleSearch}
       defaultValue={search}
+      data-search-page-input
     />
   );
 }

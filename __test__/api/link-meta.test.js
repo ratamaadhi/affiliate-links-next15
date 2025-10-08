@@ -59,7 +59,10 @@ describe('Link Meta API', () => {
 
   describe('OPTIONS /api/link-meta', () => {
     it('should handle CORS preflight request for authenticated user', async () => {
-      const request = createMockRequest('http://localhost:3000/api/link-meta', true);
+      const request = createMockRequest(
+        'http://localhost:3000/api/link-meta',
+        true
+      );
       const response = await OPTIONS(request);
 
       expect(response.status).toBe(200);
@@ -93,27 +96,40 @@ describe('Link Meta API', () => {
     });
 
     it('should return 401 for unauthenticated OPTIONS request', async () => {
-      const request = createMockRequest('http://localhost:3000/api/link-meta', false);
+      const request = createMockRequest(
+        'http://localhost:3000/api/link-meta',
+        false
+      );
       const response = await OPTIONS(request);
 
       expect(response.status).toBe(401);
       const data = await response.json();
-      expect(data.error).toBe('Authentication required. Please log in to access this endpoint.');
+      expect(data.error).toBe(
+        'Authentication required. Please log in to access this endpoint.'
+      );
     });
   });
 
   describe('GET /api/link-meta', () => {
     it('should return 401 for unauthenticated request', async () => {
-      const request = createMockRequest('http://localhost:3000/api/link-meta', false);
+      const request = createMockRequest(
+        'http://localhost:3000/api/link-meta',
+        false
+      );
       const response = await GET(request);
 
       expect(response.status).toBe(401);
       const data = await response.json();
-      expect(data.error).toBe('Authentication required. Please log in to access this endpoint.');
+      expect(data.error).toBe(
+        'Authentication required. Please log in to access this endpoint.'
+      );
     });
 
     it('should return 400 if URL parameter is missing', async () => {
-      const request = createMockRequest('http://localhost:3000/api/link-meta', true);
+      const request = createMockRequest(
+        'http://localhost:3000/api/link-meta',
+        true
+      );
       const response = await GET(request);
 
       expect(response.status).toBe(400);
@@ -123,7 +139,8 @@ describe('Link Meta API', () => {
 
     it('should return 400 if URL format is invalid', async () => {
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta?url=invalid-url', true
+        'http://localhost:3000/api/link-meta?url=invalid-url',
+        true
       );
       const response = await GET(request);
 
@@ -142,7 +159,8 @@ describe('Link Meta API', () => {
       redis.get.mockResolvedValue(JSON.stringify(cachedData));
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta?url=https://example.com', true
+        'http://localhost:3000/api/link-meta?url=https://example.com',
+        true
       );
       const response = await GET(request);
 
@@ -179,7 +197,8 @@ describe('Link Meta API', () => {
       redis.get.mockResolvedValue(null);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta?url=https://example.com&refresh=true', true
+        'http://localhost:3000/api/link-meta?url=https://example.com&refresh=true',
+        true
       );
       const response = await GET(request);
 
@@ -199,7 +218,8 @@ describe('Link Meta API', () => {
       redis.incr.mockResolvedValue(11); // Exceeds rate limit
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta?url=https://example.com', true
+        'http://localhost:3000/api/link-meta?url=https://example.com',
+        true
       );
       const response = await GET(request);
 
@@ -216,7 +236,8 @@ describe('Link Meta API', () => {
       redis.incr.mockResolvedValue(1);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta?url=https://example.com', true
+        'http://localhost:3000/api/link-meta?url=https://example.com',
+        true
       );
       const response = await GET(request);
 
@@ -238,7 +259,8 @@ describe('Link Meta API', () => {
       redis.incr.mockResolvedValue(1);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta?url=https://example.com', true
+        'http://localhost:3000/api/link-meta?url=https://example.com',
+        true
       );
       const response = await GET(request);
 
@@ -267,7 +289,8 @@ describe('Link Meta API', () => {
       redis.get.mockResolvedValue(null);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta?url=https://example.com', true
+        'http://localhost:3000/api/link-meta?url=https://example.com',
+        true
       );
       const response = await GET(request);
 
@@ -287,7 +310,8 @@ describe('Link Meta API', () => {
       });
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta?url=https://example.com', true
+        'http://localhost:3000/api/link-meta?url=https://example.com',
+        true
       );
       const response = await GET(request);
 

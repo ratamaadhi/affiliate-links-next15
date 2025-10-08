@@ -49,6 +49,7 @@ function SearchLinkInput() {
       className="text-sm w-full"
       onChange={handleSearch}
       value={search}
+      data-search-input
     />
   );
 }

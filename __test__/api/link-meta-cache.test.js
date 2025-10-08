@@ -55,13 +55,17 @@ describe('Link Meta Cache API', () => {
   describe('GET /api/link-meta/cache', () => {
     it('should return 401 for unauthenticated request', async () => {
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache', 'GET', false
+        'http://localhost:3000/api/link-meta/cache',
+        'GET',
+        false
       );
       const response = await GET_CACHE(request);
 
       expect(response.status).toBe(401);
       const data = await response.json();
-      expect(data.error).toBe('Authentication required. Please log in to access this endpoint.');
+      expect(data.error).toBe(
+        'Authentication required. Please log in to access this endpoint.'
+      );
     });
 
     it('should return cached entries', async () => {
@@ -84,7 +88,9 @@ describe('Link Meta Cache API', () => {
       });
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache', 'GET', true
+        'http://localhost:3000/api/link-meta/cache',
+        'GET',
+        true
       );
       const response = await GET_CACHE(request);
 
@@ -107,7 +113,9 @@ describe('Link Meta Cache API', () => {
       });
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache?limit=2', 'GET', true
+        'http://localhost:3000/api/link-meta/cache?limit=2',
+        'GET',
+        true
       );
       const response = await GET_CACHE(request);
 
@@ -121,7 +129,9 @@ describe('Link Meta Cache API', () => {
       redis.keys.mockResolvedValue([]);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache', 'GET', true
+        'http://localhost:3000/api/link-meta/cache',
+        'GET',
+        true
       );
       const response = await GET_CACHE(request);
 
@@ -135,7 +145,9 @@ describe('Link Meta Cache API', () => {
       redis.keys.mockRejectedValue(new Error('Redis connection error'));
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache', 'GET', true
+        'http://localhost:3000/api/link-meta/cache',
+        'GET',
+        true
       );
       const response = await GET_CACHE(request);
 
@@ -155,7 +167,9 @@ describe('Link Meta Cache API', () => {
       });
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache', 'GET', true
+        'http://localhost:3000/api/link-meta/cache',
+        'GET',
+        true
       );
       const response = await GET_CACHE(request);
 
@@ -173,7 +187,9 @@ describe('Link Meta Cache API', () => {
       redis.get.mockResolvedValue(null);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache', 'GET', true
+        'http://localhost:3000/api/link-meta/cache',
+        'GET',
+        true
       );
       const response = await GET_CACHE(request);
 
@@ -187,13 +203,17 @@ describe('Link Meta Cache API', () => {
   describe('POST /api/link-meta/cache/clear', () => {
     it('should return 401 for unauthenticated request', async () => {
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache/clear', 'POST', false
+        'http://localhost:3000/api/link-meta/cache/clear',
+        'POST',
+        false
       );
       const response = await CLEAR_CACHE(request);
 
       expect(response.status).toBe(401);
       const data = await response.json();
-      expect(data.error).toBe('Authentication required. Please log in to access this endpoint.');
+      expect(data.error).toBe(
+        'Authentication required. Please log in to access this endpoint.'
+      );
     });
 
     it('should clear all cache entries', async () => {
@@ -202,7 +222,9 @@ describe('Link Meta Cache API', () => {
       redis.del.mockResolvedValue(3);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache/clear', 'POST', true
+        'http://localhost:3000/api/link-meta/cache/clear',
+        'POST',
+        true
       );
       const response = await CLEAR_CACHE(request);
 
@@ -217,7 +239,9 @@ describe('Link Meta Cache API', () => {
       redis.keys.mockResolvedValue([]);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache/clear', 'POST', true
+        'http://localhost:3000/api/link-meta/cache/clear',
+        'POST',
+        true
       );
       const response = await CLEAR_CACHE(request);
 
@@ -231,7 +255,9 @@ describe('Link Meta Cache API', () => {
       redis.keys.mockRejectedValue(new Error('Redis connection error'));
 
       const request = createMockRequest(
-        'http://localhost:3000/api/link-meta/cache/clear', 'POST', true
+        'http://localhost:3000/api/link-meta/cache/clear',
+        'POST',
+        true
       );
       const response = await CLEAR_CACHE(request);
 
