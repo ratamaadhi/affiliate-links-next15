@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ErrorState } from '@/components/ui/loading-states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLinkForPageInfinite } from '@/hooks/queries';
+import { useDebounce } from '@/hooks/useDebounce';
 import { page } from '@/lib/db/schema';
 import { cn } from '@/lib/utils';
 import {
@@ -20,6 +21,7 @@ import {
   TrendingUp,
   Video,
 } from 'lucide-react';
+import { SearchLinksView } from './search-links-view';
 
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
@@ -74,7 +76,7 @@ const getLinkCategory = (url: string, title: string) => {
 };
 
 // Enhanced link card component
-const LinkCard = ({ link }: { link: any }) => {
+const LinkCard = ({ link, ...props }: { link: any; [key: string]: any }) => {
   const {
     icon: CategoryIcon,
     category,
@@ -87,6 +89,7 @@ const LinkCard = ({ link }: { link: any }) => {
       target="_blank"
       rel="noopener noreferrer"
       className="block group break-inside-avoid mb-4"
+      {...props}
     >
       <Card className="relative h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 hover:border-border cursor-pointer">
         {/* Animated gradient border */}
@@ -171,7 +174,7 @@ const LinkCard = ({ link }: { link: any }) => {
   );
 };
 
-// Enhanced skeleton loader - compact
+// Enhanced skeleton loader - compact (keep original for backward compatibility)
 const LinkCardSkeleton = () => (
   <Card className="overflow-hidden mb-4 break-inside-avoid">
     {/* Large image skeleton */}
@@ -205,15 +208,67 @@ const LinkCardSkeleton = () => (
   </Card>
 );
 
+// Partial loading skeleton for links only
+const PartialLinksSkeleton = () => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <Skeleton className="h-8 w-32 rounded" />
+      <Skeleton className="h-6 w-20 rounded-full" />
+    </div>
+    <div className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="break-inside-avoid">
+          <LinkCardSkeleton />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 export function LinksView({
   pageData,
 }: {
   pageData: typeof page.$inferSelect | null;
 }) {
+  // State for search functionality
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // Hook for data with search parameter
   const { data, isLoading, error, mutate } = useLinkForPageInfinite({
     pageId: pageData?.id || null,
+    search: debouncedSearchTerm,
   });
 
+  // Handler for search
+  const handleSearch = useCallback((term: string) => {
+    setSearchTerm(term);
+  }, []);
+
+  // Handler for input change (immediate update)
+  const handleInputChange = useCallback((term: string) => {
+    setSearchTerm(term);
+  }, []);
+
+  // Reset loading state when data is loaded and track initial load
+  useEffect(() => {
+    if (!isLoading) {
+      // Mark initial load as complete after first successful load
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
+    }
+  }, [isLoading, isInitialLoad]);
+
+  // Calculate search result count with memoization
+  const searchResultCount = React.useMemo(() => {
+    return debouncedSearchTerm
+      ? data?.flatMap((page) => page?.data?.data || []).length || 0
+      : undefined;
+  }, [data, debouncedSearchTerm]);
+
+  // Process and deduplicate links with memoization
   const links = React.useMemo(() => {
     const allLinks = data ? data.flatMap((page) => page?.data?.data || []) : [];
     const uniqueLinks = [];
@@ -227,7 +282,13 @@ export function LinksView({
     return uniqueLinks;
   }, [data]);
 
-  if (isLoading) {
+  // Filter active links with memoization
+  const activeLinks = React.useMemo(() => {
+    return links?.filter((link) => link.isActive) || [];
+  }, [links]);
+
+  // Initial load - show full page skeleton
+  if (isInitialLoad && isLoading) {
     return (
       <div className="space-y-8">
         {/* Page header skeleton */}
@@ -274,14 +335,11 @@ export function LinksView({
     );
   }
 
-  const activeLinks = links?.filter((link) => link.isActive) || [];
-
   return (
     <ErrorBoundary>
       <div className="space-y-8">
         {/* Enhanced page header */}
         <Card className="overflow-hidden border-border/50">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5" />
           <CardHeader className="relative text-center pb-8">
             <div className="flex flex-col items-center gap-4">
               {/* Avatar */}
@@ -318,6 +376,16 @@ export function LinksView({
           </CardHeader>
         </Card>
 
+        {/* Search component */}
+        <SearchLinksView
+          onSearch={handleSearch}
+          onInputChange={handleInputChange}
+          value={searchTerm}
+          isLoading={isLoading}
+          resultCount={searchResultCount}
+          className="mb-6"
+        />
+
         {/* Links section */}
         {error ? (
           <Card className="border-destructive/50">
@@ -329,10 +397,15 @@ export function LinksView({
               />
             </CardContent>
           </Card>
+        ) : isLoading ? (
+          // Search loading - show only links skeleton
+          <PartialLinksSkeleton />
         ) : activeLinks.length > 0 ? (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Featured Links</h2>
+              <h2 className="text-2xl font-semibold">
+                {debouncedSearchTerm ? 'Search Results' : 'Featured Links'}
+              </h2>
               <Badge variant="outline" className="gap-1">
                 <Star className="w-3 h-3" />
                 {activeLinks.length} Available
@@ -340,14 +413,17 @@ export function LinksView({
             </div>
 
             {/* Masonry grid layout for desktop */}
-            <div className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+            <div
+              className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
+              data-testid="links-container"
+            >
               {activeLinks.map((link, index) => (
                 <div
                   key={link.id}
                   className="animate-in fade-in slide-in-from-bottom-4 duration-500"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <LinkCard link={link} />
+                  <LinkCard link={link} data-testid="link-card" />
                 </div>
               ))}
             </div>
@@ -361,11 +437,14 @@ export function LinksView({
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-2">
-                    No Links Available
+                    {debouncedSearchTerm
+                      ? 'No Results Found'
+                      : 'No Links Available'}
                   </h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    This page doesn&apos;t have any active links yet. Check back
-                    later for updates!
+                    {debouncedSearchTerm
+                      ? `No links found matching "${debouncedSearchTerm}". Try different keywords.`
+                      : `This page doesn't have any active links yet. Check back later for updates!`}
                   </p>
                 </div>
               </div>

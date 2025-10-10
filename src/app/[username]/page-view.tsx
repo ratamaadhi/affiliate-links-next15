@@ -51,13 +51,8 @@ export default async function PageView({ params }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
-      {/* Background decoration - more subtle */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-64 h-64 bg-primary/3 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-accent/3 rounded-full blur-3xl" />
-      </div>
-
+    <main className="relative min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/10 to-primary/10" />
       {/* Main content - more compact */}
       <div className="relative z-10 container mx-auto px-3 py-6 sm:py-8 lg:py-10">
         <div className="max-w-6xl mx-auto">

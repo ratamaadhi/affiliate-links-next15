@@ -79,7 +79,17 @@ const getKey = ({ index, previousPageData, pageId, limit, search, key }) => {
   // We need to check the length of the actual data array inside the response
   if (previousPageData && !previousPageData.data.data.length) return null; // reached the end
 
-  return pageId ? { page: index, limit, search, pageId, key } : null; // SWR key
+  // Return a stable key that includes search term for proper caching
+  // When search changes, this creates a new cache key without re-fetching all pages
+  return pageId
+    ? {
+        page: index,
+        limit,
+        search: search || '', // Ensure search is always a string
+        pageId,
+        key,
+      }
+    : null;
 };
 
 export function useLinkInfinite(
@@ -139,13 +149,19 @@ export function useLinkForPageInfinite(
         pageId: arg.pageId,
       }),
     {
-      revalidateAll: true,
+      revalidateAll: false, // Prevent re-fetching all pages when search changes
+      revalidateFirstPage: false, // Prevent re-fetching first page when search changes
       onError: (error) => {
         console.error('Error fetching links for page:', error);
       },
       shouldRetryOnError: true,
       errorRetryCount: 3,
       errorRetryInterval: 1000,
+      // Optimize for search performance
+      refreshInterval: 0,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 1000, // Prevent duplicate requests within 1 second
     }
   );
 }
