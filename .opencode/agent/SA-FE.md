@@ -1,7 +1,6 @@
 ---
 description: Frontend development specialist for Next.js and Tailwind CSS implementation
 mode: subagent
-model: zai/glm-4.5v
 temperature: 0.2
 tools:
   write: true

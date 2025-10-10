@@ -51,9 +51,18 @@ export default async function PageView({ params }: Props) {
   }
 
   return (
-    <main className="w-full h-screen bg-gradient-to-br from-background via-background to-muted/20 sm:pt-10 sm:pb-12 flex flex-col">
-      <div className="flex-1 flex items-center justify-center sm:p-4 md:p-6 md:pb-16">
-        <LinksView pageData={data} />
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
+      {/* Background decoration - more subtle */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -right-32 w-64 h-64 bg-primary/3 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-accent/3 rounded-full blur-3xl" />
+      </div>
+
+      {/* Main content - more compact */}
+      <div className="relative z-10 container mx-auto px-3 py-6 sm:py-8 lg:py-10">
+        <div className="max-w-6xl mx-auto">
+          <LinksView pageData={data} />
+        </div>
       </div>
     </main>
   );

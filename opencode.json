@@ -47,7 +47,7 @@
     "SA-BE": {
       "description": "Backend development specialist for API and database implementation with Drizzle",
       "mode": "subagent",
-      "model": "glm-4.5",
+      "model": "zai-coding-plan/glm-4.6",
       "temperature": 0.2,
       "tools": {
         "write": true,
@@ -74,7 +74,7 @@
     "SA-FE": {
       "description": "Frontend development specialist for Next.js and Tailwind CSS implementation",
       "mode": "subagent",
-      "model": "glm-4.5v",
+      "model": "zai-coding-plan/glm-4.6",
       "temperature": 0.2,
       "tools": {
         "write": true,
@@ -101,7 +101,7 @@
     "SA-QA": {
       "description": "Quality assurance specialist for testing with Jest and Playwright",
       "mode": "subagent",
-      "model": "glm-4.5v",
+      "model": "zai-coding-plan/glm-4.6",
       "temperature": 0.1,
       "tools": {
         "write": true,
@@ -127,7 +127,7 @@
     "SA-UX": {
       "description": "UX/UI design specialist for creating design systems and UI specifications",
       "mode": "subagent",
-      "model": "glm-4.5v",
+      "model": "zai-coding-plan/glm-4.6",
       "temperature": 0.4,
       "tools": {
         "write": true,

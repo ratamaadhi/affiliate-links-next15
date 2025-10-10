@@ -1,7 +1,6 @@
 ---
 description: UX/UI design specialist for creating design systems and UI specifications
 mode: subagent
-model: zai/glm-4.5v
 temperature: 0.4
 tools:
   write: true

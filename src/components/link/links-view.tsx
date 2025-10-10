@@ -8,8 +8,202 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useLinkForPageInfinite } from '@/hooks/queries';
 import { page } from '@/lib/db/schema';
 import { cn } from '@/lib/utils';
-import { LinkIcon } from 'lucide-react';
-import { Button } from '../ui/button';
+import {
+  BookOpen,
+  Clock,
+  Gamepad2,
+  Globe,
+  LinkIcon,
+  Music,
+  ShoppingBag,
+  Star,
+  TrendingUp,
+  Video,
+} from 'lucide-react';
+
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Badge } from '../ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../ui/card';
+
+// Link category detection and icon mapping
+const getLinkCategory = (url: string, title: string) => {
+  try {
+    const domain = new URL(url).hostname.toLowerCase();
+
+    if (domain.includes('youtube') || domain.includes('youtu.be'))
+      return { icon: Video, category: 'Video', color: 'bg-red-500' };
+    if (
+      domain.includes('amazon') ||
+      domain.includes('shop') ||
+      title.toLowerCase().includes('shop')
+    )
+      return {
+        icon: ShoppingBag,
+        category: 'Shopping',
+        color: 'bg-orange-500',
+      };
+    if (
+      domain.includes('spotify') ||
+      domain.includes('music') ||
+      title.toLowerCase().includes('music')
+    )
+      return { icon: Music, category: 'Music', color: 'bg-green-500' };
+    if (
+      domain.includes('github') ||
+      domain.includes('code') ||
+      title.toLowerCase().includes('code')
+    )
+      return { icon: BookOpen, category: 'Code', color: 'bg-blue-500' };
+    if (
+      domain.includes('steam') ||
+      domain.includes('game') ||
+      title.toLowerCase().includes('game')
+    )
+      return { icon: Gamepad2, category: 'Gaming', color: 'bg-purple-500' };
+  } catch {
+    // Invalid URL, fallback to default
+  }
+
+  return { icon: Globe, category: 'Website', color: 'bg-gray-500' };
+};
+
+// Enhanced link card component
+const LinkCard = ({ link }: { link: any }) => {
+  const {
+    icon: CategoryIcon,
+    category,
+    color,
+  } = getLinkCategory(link.url, link.title);
+
+  return (
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block group break-inside-avoid mb-4"
+    >
+      <Card className="relative h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 hover:border-border cursor-pointer">
+        {/* Animated gradient border */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+        {/* Large image at top - 16:9 aspect ratio, 120px height */}
+        <div className="relative h-32 overflow-hidden">
+          {link.imageUrl ? (
+            <img
+              src={link.imageUrl}
+              alt={link.title.replace(/\s+\d+.*$/, '').trim()}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget
+                  .nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          {/* Fallback gradient with category icon */}
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center justify-center',
+              link.imageUrl ? 'hidden' : 'flex',
+              color,
+              'bg-opacity-10'
+            )}
+          >
+            <CategoryIcon
+              className={cn('w-12 h-12', color.replace('bg-', 'text-'))}
+            />
+          </div>
+        </div>
+
+        {/* Content section */}
+        <div className="p-4">
+          {/* Category badges */}
+          <div className="flex items-center gap-1 mb-2">
+            <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+              {category}
+            </Badge>
+            {link.clickCount > 10 && (
+              <Badge
+                variant="default"
+                className="text-xs gap-0.5 px-1.5 py-0.5"
+              >
+                <TrendingUp className="w-2.5 h-2.5" />
+                Popular
+              </Badge>
+            )}
+          </div>
+
+          {/* Title */}
+          <h3 className="text-base font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+            {link.title}
+          </h3>
+
+          {/* Description */}
+          {link.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+              {link.description}
+            </p>
+          )}
+
+          {/* Link metadata */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-0.5">
+              <Clock className="w-2.5 h-2.5" />
+              <span>{new Date(link.updatedAt).toLocaleDateString()}</span>
+            </div>
+            {link.clickCount > 0 && (
+              <div className="flex items-center gap-0.5">
+                <TrendingUp className="w-2.5 h-2.5" />
+                <span>{link.clickCount}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+    </a>
+  );
+};
+
+// Enhanced skeleton loader - compact
+const LinkCardSkeleton = () => (
+  <Card className="overflow-hidden mb-4 break-inside-avoid">
+    {/* Large image skeleton */}
+    <div className="h-32 bg-muted">
+      <Skeleton className="w-full h-full" />
+    </div>
+
+    {/* Content skeleton */}
+    <div className="p-4 space-y-3">
+      {/* Category badges */}
+      <div className="flex gap-1.5">
+        <Skeleton className="h-4 w-12 rounded-full" />
+        <Skeleton className="h-4 w-12 rounded-full" />
+      </div>
+
+      {/* Title */}
+      <Skeleton className="h-5 w-3/4 rounded" />
+
+      {/* Description */}
+      <div className="space-y-1">
+        <Skeleton className="h-3.5 w-full rounded" />
+        <Skeleton className="h-3.5 w-2/3 rounded" />
+      </div>
+
+      {/* Metadata */}
+      <div className="flex justify-between">
+        <Skeleton className="h-3 w-16 rounded" />
+        <Skeleton className="h-3 w-12 rounded" />
+      </div>
+    </div>
+  </Card>
+);
 
 export function LinksView({
   pageData,
@@ -35,27 +229,27 @@ export function LinksView({
 
   if (isLoading) {
     return (
-      <div className="w-full h-full flex flex-col">
-        <div className="relative flex-1 h-full w-full max-w-md mx-auto overflow-hidden border-muted-foreground/30 sm:rounded-[34px] sm:border-4 rounded-none sm:shadow-[0_121px_49px_#00000005,0_68px_41px_#00000014,0_30px_30px_#00000024,0_8px_17px_#00000029] sm:border-muted-foreground/30 border-0 shadow-none">
-          <main className="relative h-full w-full flex flex-col bg-gradient-to-t from-accent to-background sm:px-3.5 px-2">
-            <div className="flex flex-col items-center pt-8 pb-4 text-center border-b border-border">
-              <Skeleton className="h-6 w-32 rounded" />
-              <Skeleton className="h-4 w-48 rounded mt-1" />
+      <div className="space-y-8">
+        {/* Page header skeleton */}
+        <Card className="overflow-hidden">
+          <CardHeader className="text-center pb-6">
+            <div className="flex flex-col items-center gap-4">
+              <Skeleton className="w-20 h-20 rounded-full" />
+              <div className="space-y-2 w-full">
+                <Skeleton className="h-8 w-48 mx-auto rounded" />
+                <Skeleton className="h-4 w-64 mx-auto rounded" />
+              </div>
             </div>
-            <div
-              className="flex flex-col gap-3 flex-1 overflow-y-scroll no-scrollbar pt-6 pb-8 px-1 min-h-0"
-              data-testid="skeleton-loader"
-            >
-              {Array.from({ length: 8 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 w-full h-16"
-                >
-                  <Skeleton className="flex-1 h-16 rounded-xl" />
-                </div>
-              ))}
+          </CardHeader>
+        </Card>
+
+        {/* Links grid skeleton - masonry */}
+        <div className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="break-inside-avoid">
+              <LinkCardSkeleton />
             </div>
-          </main>
+          ))}
         </div>
       </div>
     );
@@ -63,110 +257,121 @@ export function LinksView({
 
   if (!pageData) {
     return (
-      <div className="w-full h-full flex flex-col">
-        <div className="relative flex-1 h-full w-full max-w-md mx-auto overflow-hidden border-muted-foreground/30 sm:rounded-[34px] sm:border-4 rounded-none sm:shadow-[0_121px_49px_#00000005,0_68px_41px_#00000014,0_30px_30px_#00000024,0_8px_17px_#00000029] sm:border-muted-foreground/30 border-0 shadow-none">
-          <main className="relative h-full w-full flex flex-col bg-gradient-to-t from-accent to-background sm:px-3.5 px-2">
-            <div className="flex flex-col justify-center items-center text-center gap-3.5 flex-1 overflow-y-scroll no-scrollbar py-8 min-h-0">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-muted-foreground"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.468-.884-6.08-2.33m-.708 3.565C7.246 17.116 9.5 18 12 18s4.754-.884 6.58-2.33m.708-3.565C18.468 10.884 16.34 10 14 10H8m6 2v4m0-6V6"
-                  />
-                </svg>
-              </div>
-              <p className="font-semibold text-lg">No Page Selected or Found</p>
-              <p className="text-sm text-muted-foreground max-w-xs">
-                Select a page to see its preview.
-              </p>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Card className="max-w-md w-full text-center">
+          <CardHeader>
+            <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <LinkIcon className="w-8 h-8 text-muted-foreground" />
             </div>
-          </main>
-        </div>
+            <CardTitle className="text-2xl">Page Not Found</CardTitle>
+            <CardDescription>
+              The page you&apos;re looking for doesn&apos;t exist or has been
+              removed.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
+  const activeLinks = links?.filter((link) => link.isActive) || [];
+
   return (
     <ErrorBoundary>
-      <div className="w-full h-full flex flex-col">
-        <div className="relative flex-1 h-full w-full max-w-md mx-auto overflow-hidden border-muted-foreground/30 sm:rounded-[34px] sm:border-4 rounded-none sm:shadow-[0_121px_49px_#00000005,0_68px_41px_#00000014,0_30px_30px_#00000024,0_8px_17px_#00000029] sm:border-muted-foreground/30 border-0 shadow-none">
-          {/* real page content  */}
-          <main className="relative h-full w-full sm:px-3.5 px-2 flex flex-col bg-gradient-to-t from-accent to-background overflow-y-scroll no-scrollbar min-h-0">
-            <div className="flex flex-col items-center pt-8 pb-4 text-center border-b border-border">
-              <h1 className="font-bold text-xl w-full line-clamp-1 text-foreground">
-                {pageData.title}
-              </h1>
-              {pageData.description && (
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {pageData.description}
-                </p>
-              )}
+      <div className="space-y-8">
+        {/* Enhanced page header */}
+        <Card className="overflow-hidden border-border/50">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5" />
+          <CardHeader className="relative text-center pb-8">
+            <div className="flex flex-col items-center gap-4">
+              {/* Avatar */}
+              <Avatar className="w-20 h-20 border-4 border-background shadow-lg">
+                <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                  {pageData.title?.charAt(0)?.toUpperCase() || 'P'}
+                </AvatarFallback>
+              </Avatar>
+
+              {/* Title and description */}
+              <div className="space-y-2">
+                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  {pageData.title}
+                </CardTitle>
+                {pageData.description && (
+                  <CardDescription className="text-lg max-w-2xl mx-auto leading-relaxed">
+                    {pageData.description}
+                  </CardDescription>
+                )}
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <LinkIcon className="w-4 h-4" />
+                  <span>{activeLinks.length} Links</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Active</span>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col gap-3 flex-1 pt-6 pb-8 px-1">
-              {error ? (
-                <ErrorState
-                  title="Failed to load links"
-                  description="There was an error loading the links. Please try again."
-                  onRetry={() => mutate()}
-                />
-              ) : links && links.filter((link) => link.isActive).length > 0 ? (
-                links.map((link) => (
-                  <Button
-                    key={link.id}
-                    variant="secondary"
-                    className={cn(
-                      'relative w-full h-16 sm:h-16 text-base sm:text-base rounded-xl bg-background/80 hover:bg-background transition-colors py-2 shadow-sm hover:shadow-md border border-border/50 hover:border-border',
-                      link.imageUrl ? 'sm:px-16 px-15' : 'px-4'
-                    )}
-                    asChild
-                  >
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 w-full"
-                    >
-                      {link.imageUrl && (
-                        <div className="flex-shrink-0 w-12 h-12 sm:w-12 sm:h-12 absolute left-2 top-1/2 -translate-y-1/2">
-                          <img
-                            src={link.imageUrl}
-                            alt={link.title.replace(/\s+\d+.*$/, '').trim()}
-                            className="object-cover rounded-md w-full h-full border border-border shadow-sm"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      )}
-                      <div className="w-full line-clamp-2 text-center text-sm leading-tight whitespace-normal break-words font-medium text-foreground">
-                        {link.title}
-                      </div>
-                    </a>
-                  </Button>
-                ))
-              ) : (
-                <div className="text-center py-8 flex flex-col items-center gap-2">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                    <LinkIcon />
-                  </div>
-                  <p className="text-muted-foreground font-medium">
-                    No active links to display.
-                  </p>
-                  <p className="text-sm text-muted-foreground/70">
-                    Add some links to get started!
+          </CardHeader>
+        </Card>
+
+        {/* Links section */}
+        {error ? (
+          <Card className="border-destructive/50">
+            <CardContent className="pt-6">
+              <ErrorState
+                title="Failed to load links"
+                description="There was an error loading the links. Please try again."
+                onRetry={() => mutate()}
+              />
+            </CardContent>
+          </Card>
+        ) : activeLinks.length > 0 ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">Featured Links</h2>
+              <Badge variant="outline" className="gap-1">
+                <Star className="w-3 h-3" />
+                {activeLinks.length} Available
+              </Badge>
+            </div>
+
+            {/* Masonry grid layout for desktop */}
+            <div className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+              {activeLinks.map((link, index) => (
+                <div
+                  key={link.id}
+                  className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <LinkCard link={link} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Card className="border-dashed">
+            <CardContent className="pt-12 pb-12">
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                  <LinkIcon className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">
+                    No Links Available
+                  </h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    This page doesn&apos;t have any active links yet. Check back
+                    later for updates!
                   </p>
                 </div>
-              )}
-            </div>
-          </main>
-        </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </ErrorBoundary>
   );

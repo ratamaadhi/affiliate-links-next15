@@ -1,7 +1,6 @@
 ---
 description: Backend development specialist for API and database implementation with Drizzle
 mode: subagent
-model: zai/glm-4.5
 temperature: 0.2
 tools:
   write: true

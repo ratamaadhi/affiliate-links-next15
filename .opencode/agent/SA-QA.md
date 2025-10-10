@@ -1,7 +1,6 @@
 ---
 description: Quality assurance specialist for testing with Jest and Playwright
 mode: subagent
-model: zai/glm-4.5v
 temperature: 0.1
 tools:
   write: true

@@ -70,7 +70,13 @@ describe('LinksView', () => {
 
     render(<LinksView pageData={mockPageData} />);
 
-    expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
+    // Check for skeleton cards by looking for the h-32 height class (image skeleton)
+    const imageSkeletons = document.querySelectorAll('.h-32');
+    expect(imageSkeletons.length).toBeGreaterThan(0);
+
+    // Check for skeleton elements by looking for the animate-pulse class
+    const pulseElements = document.querySelectorAll('.animate-pulse');
+    expect(pulseElements.length).toBeGreaterThan(0);
   });
 
   it('renders no page selected message when pageData is null', () => {
@@ -81,9 +87,11 @@ describe('LinksView', () => {
 
     render(<LinksView pageData={null} />);
 
-    expect(screen.getByText('No Page Selected or Found')).toBeInTheDocument();
+    expect(screen.getByText('Page Not Found')).toBeInTheDocument();
     expect(
-      screen.getByText('Select a page to see its preview.')
+      screen.getByText(
+        "The page you're looking for doesn't exist or has been removed."
+      )
     ).toBeInTheDocument();
   });
 
@@ -134,7 +142,12 @@ describe('LinksView', () => {
 
     render(<LinksView pageData={mockPageData} />);
 
-    expect(screen.getByText('No active links to display.')).toBeInTheDocument();
+    expect(screen.getByText('No Links Available')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This page doesn't have any active links yet. Check back later for updates!"
+      )
+    ).toBeInTheDocument();
   });
 
   it('handles empty links array', () => {
@@ -145,7 +158,12 @@ describe('LinksView', () => {
 
     render(<LinksView pageData={mockPageData} />);
 
-    expect(screen.getByText('No active links to display.')).toBeInTheDocument();
+    expect(screen.getByText('No Links Available')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This page doesn't have any active links yet. Check back later for updates!"
+      )
+    ).toBeInTheDocument();
   });
 
   it('removes duplicate links based on ID', () => {

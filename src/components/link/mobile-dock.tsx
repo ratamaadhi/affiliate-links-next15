@@ -107,7 +107,7 @@ export function MobileDock({ username, pageLink }: MobileDockProps) {
                 </Button>
               </DockIcon>
             </DrawerTrigger>
-            <DrawerContent className="data-[vaul-drawer-direction=top]:max-h-screen data-[vaul-drawer-direction=bottom]:max-h-screen h-screen">
+            <DrawerContent className="data-[vaul-drawer-direction=top]:max-h-[90vh] data-[vaul-drawer-direction=bottom]:max-h-[90vh] h-[90vh]">
               <DrawerTitle className="sr-only">Page Preview</DrawerTitle>
               <div className="w-full pt-2">
                 <EnhancedDashboardPreview
