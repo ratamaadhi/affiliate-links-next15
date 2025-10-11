@@ -22,6 +22,7 @@ import {
   Video,
 } from 'lucide-react';
 import { SearchLinksView } from './search-links-view';
+import { FloatingPageMenu } from './floating-page-menu';
 
 import useInfiniteScroll from '@/hooks/useInfiniteScroll';
 import { Avatar, AvatarFallback } from '../ui/avatar';
@@ -228,8 +229,12 @@ const PartialLinksSkeleton = () => (
 
 export function LinksView({
   pageData,
+  username,
+  currentSlug,
 }: {
   pageData: typeof page.$inferSelect | null;
+  username?: string;
+  currentSlug?: string;
 }) {
   // State for search functionality
   const [searchTerm, setSearchTerm] = useState('');
@@ -496,6 +501,11 @@ export function LinksView({
           </Card>
         )}
       </div>
+
+      {/* Floating Page Menu */}
+      {username && (
+        <FloatingPageMenu username={username} currentSlug={currentSlug} />
+      )}
     </ErrorBoundary>
   );
 }

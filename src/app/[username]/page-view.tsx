@@ -56,7 +56,11 @@ export default async function PageView({ params }: Props) {
       {/* Main content - more compact */}
       <div className="relative z-10 container mx-auto px-3 py-6 sm:py-8 lg:py-10">
         <div className="max-w-6xl mx-auto">
-          <LinksView pageData={data} />
+          <LinksView
+            pageData={data}
+            username={awaitedParams.username}
+            currentSlug={awaitedParams.slug}
+          />
         </div>
       </div>
     </main>
