@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { SearchHighlight } from '@/components/ui/search-highlight';
 import { ExternalLink, FileText, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,12 +25,14 @@ interface PageListItemProps {
   };
   username: string;
   isCurrentPage?: boolean;
+  searchTerm?: string;
 }
 
 export function PageListItem({
   page,
   username,
   isCurrentPage = false,
+  searchTerm = '',
 }: PageListItemProps) {
   const router = useRouter();
 
@@ -54,11 +57,14 @@ export function PageListItem({
             </Avatar>
             <div className="flex-1 min-w-0">
               <CardTitle className="text-base font-semibold truncate">
-                {page.title}
+                <SearchHighlight text={page.title} searchTerm={searchTerm} />
               </CardTitle>
               {page.description && (
                 <CardDescription className="text-sm line-clamp-2 mt-1">
-                  {page.description}
+                  <SearchHighlight
+                    text={page.description}
+                    searchTerm={searchTerm}
+                  />
                 </CardDescription>
               )}
             </div>

@@ -109,12 +109,37 @@ jest.mock('@/components/ui/button', () => ({
   ),
 }));
 
+jest.mock('@/components/ui/search-input', () => ({
+  SearchInput: ({ value, onChange, onClear, isLoading, placeholder }: any) => (
+    <div data-testid="search-input">
+      <input
+        data-testid="search-input-field"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label="Search pages"
+      />
+      {isLoading && <span data-testid="search-loading">Loading...</span>}
+      {value && (
+        <button
+          data-testid="search-clear"
+          onClick={onClear}
+          aria-label="Clear search"
+        >
+          Clear
+        </button>
+      )}
+    </div>
+  ),
+}));
+
 jest.mock('@/components/link/page-list-item', () => ({
-  PageListItem: ({ page, username, isCurrentPage }: any) => (
+  PageListItem: ({ page, username, isCurrentPage, searchTerm }: any) => (
     <div
       data-testid="page-list-item"
       data-page-id={page.id}
       data-current={isCurrentPage}
+      data-search-term={searchTerm}
     >
       {page.title}
     </div>
@@ -334,5 +359,198 @@ describe('FloatingPageMenu', () => {
 
     // The usePublicPages hook should not be called with empty username
     expect(usePublicPages).toHaveBeenCalledWith('');
+  });
+
+  describe('Search functionality', () => {
+    const mockData = {
+      user: {
+        id: 1,
+        name: 'Test User',
+        username: 'testuser',
+        displayUsername: 'testuser',
+        image: null,
+      },
+      pages: [
+        {
+          id: 1,
+          title: 'React Tutorial',
+          description: 'Learn React basics',
+          slug: 'react-tutorial',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        {
+          id: 2,
+          title: 'Next.js Guide',
+          description: 'Advanced Next.js concepts',
+          slug: 'nextjs-guide',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        {
+          id: 3,
+          title: 'TypeScript Tips',
+          description: 'TypeScript best practices',
+          slug: 'typescript-tips',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      (usePublicPages as jest.Mock).mockReturnValue({
+        data: mockData,
+        isLoading: false,
+        error: null,
+        mutate: mockMutate,
+      });
+    });
+
+    it('should render search input in drawer', () => {
+      render(<FloatingPageMenu username="testuser" />);
+
+      const floatingButton = screen.getByLabelText('Open page menu');
+      fireEvent.click(floatingButton);
+
+      expect(screen.getByTestId('search-input')).toBeInTheDocument();
+      expect(screen.getByTestId('search-input-field')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Search pages...')
+      ).toBeInTheDocument();
+    });
+
+    it('should filter pages based on search term', async () => {
+      render(<FloatingPageMenu username="testuser" />);
+
+      const floatingButton = screen.getByLabelText('Open page menu');
+      fireEvent.click(floatingButton);
+
+      // Initially should show all pages
+      expect(screen.getAllByTestId('page-list-item')).toHaveLength(3);
+
+      // Type search term
+      const searchInput = screen.getByTestId('search-input-field');
+      fireEvent.change(searchInput, { target: { value: 'React' } });
+
+      // Wait for debounce (mocked as immediate in test)
+      await waitFor(() => {
+        const pageItems = screen.getAllByTestId('page-list-item');
+        expect(pageItems).toHaveLength(1);
+        expect(pageItems[0]).toHaveAttribute('data-page-id', '1');
+        expect(pageItems[0]).toHaveAttribute('data-search-term', 'React');
+      });
+    });
+
+    it('should filter pages by description', async () => {
+      render(<FloatingPageMenu username="testuser" />);
+
+      const floatingButton = screen.getByLabelText('Open page menu');
+      fireEvent.click(floatingButton);
+
+      // Type search term that matches description
+      const searchInput = screen.getByTestId('search-input-field');
+      fireEvent.change(searchInput, { target: { value: 'TypeScript' } });
+
+      await waitFor(() => {
+        const pageItems = screen.getAllByTestId('page-list-item');
+        expect(pageItems).toHaveLength(1);
+        expect(pageItems[0]).toHaveAttribute('data-page-id', '3');
+      });
+    });
+
+    it('should show empty state when no results found', async () => {
+      render(<FloatingPageMenu username="testuser" />);
+
+      const floatingButton = screen.getByLabelText('Open page menu');
+      fireEvent.click(floatingButton);
+
+      // Type search term with no results
+      const searchInput = screen.getByTestId('search-input-field');
+      fireEvent.change(searchInput, { target: { value: 'Nonexistent' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('No results found')).toBeInTheDocument();
+        expect(
+          screen.getByText(/No pages match "Nonexistent"/)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('should clear search when clear button is clicked', async () => {
+      render(<FloatingPageMenu username="testuser" />);
+
+      const floatingButton = screen.getByLabelText('Open page menu');
+      fireEvent.click(floatingButton);
+
+      // Type search term
+      const searchInput = screen.getByTestId('search-input-field');
+      fireEvent.change(searchInput, { target: { value: 'React' } });
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('page-list-item')).toHaveLength(1);
+      });
+
+      // Click clear button
+      const clearButton = screen.getByTestId('search-clear');
+      fireEvent.click(clearButton);
+
+      await waitFor(() => {
+        expect(searchInput).toHaveValue('');
+        expect(screen.getAllByTestId('page-list-item')).toHaveLength(3);
+      });
+    });
+
+    it('should update pages count badge when searching', async () => {
+      render(<FloatingPageMenu username="testuser" />);
+
+      const floatingButton = screen.getByLabelText('Open page menu');
+      fireEvent.click(floatingButton);
+
+      // Initially should show total count
+      expect(screen.getByTestId('badge')).toHaveTextContent('3 pages');
+
+      // Type search term
+      const searchInput = screen.getByTestId('search-input-field');
+      fireEvent.change(searchInput, { target: { value: 'React' } });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('badge')).toHaveTextContent('1 of 3 pages');
+      });
+    });
+
+    it('should not filter with search term less than 2 characters', async () => {
+      render(<FloatingPageMenu username="testuser" />);
+
+      const floatingButton = screen.getByLabelText('Open page menu');
+      fireEvent.click(floatingButton);
+
+      // Type single character
+      const searchInput = screen.getByTestId('search-input-field');
+      fireEvent.change(searchInput, { target: { value: 'R' } });
+
+      // Should still show all pages
+      await waitFor(() => {
+        expect(screen.getAllByTestId('page-list-item')).toHaveLength(3);
+        expect(screen.getByTestId('badge')).toHaveTextContent('3 pages');
+      });
+    });
+
+    it('should be case insensitive', async () => {
+      render(<FloatingPageMenu username="testuser" />);
+
+      const floatingButton = screen.getByLabelText('Open page menu');
+      fireEvent.click(floatingButton);
+
+      // Type lowercase search term
+      const searchInput = screen.getByTestId('search-input-field');
+      fireEvent.change(searchInput, { target: { value: 'react' } });
+
+      await waitFor(() => {
+        const pageItems = screen.getAllByTestId('page-list-item');
+        expect(pageItems).toHaveLength(1);
+        expect(pageItems[0]).toHaveAttribute('data-page-id', '1');
+      });
+    });
   });
 });

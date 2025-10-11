@@ -12,10 +12,13 @@ import {
 } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SearchInput } from '@/components/ui/search-input';
+import { EmptySearchState } from '@/components/ui/empty-search-state';
 import { usePublicPages } from '@/hooks/use-public-pages';
+import { useDebounce } from '@/hooks/useDebounce';
 import { FileText, Menu, User, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PageListItem } from './page-list-item';
 
 interface FloatingPageMenuProps {
@@ -28,13 +31,46 @@ export function FloatingPageMenu({
   currentSlug,
 }: FloatingPageMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
   const { data, isLoading, error } = usePublicPages(username);
 
+  // Debounce search term with 300ms delay
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Filter pages based on search term
+  const filteredPages = useMemo(() => {
+    if (
+      !data?.pages ||
+      !debouncedSearchTerm ||
+      debouncedSearchTerm.length < 2
+    ) {
+      return data?.pages || [];
+    }
+
+    const searchLower = debouncedSearchTerm.toLowerCase();
+
+    return data.pages.filter(
+      (page) =>
+        page.title.toLowerCase().includes(searchLower) ||
+        page.description?.toLowerCase().includes(searchLower)
+    );
+  }, [data?.pages, debouncedSearchTerm]);
+
+  // Search states
+  const isSearching = debouncedSearchTerm !== searchTerm;
+  const hasSearchTerm = debouncedSearchTerm.length >= 2;
+  const hasResults = filteredPages.length > 0;
+  const showEmptyState = hasSearchTerm && !hasResults && !isLoading;
+
   const handleNavigate = (slug: string) => {
     router.push(`/${username}/${slug}`);
     setIsOpen(false);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
   };
 
   return (
@@ -52,7 +88,7 @@ export function FloatingPageMenu({
         <DrawerContent className="max-h-[85vh]">
           <div className="mx-auto w-full max-w-lg">
             <DrawerHeader className="text-left pb-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <DrawerTitle
                   className="text-xl font-semibold"
                   data-testid="drawer-title"
@@ -68,6 +104,16 @@ export function FloatingPageMenu({
                   <X className="w-4 h-4" />
                 </Button>
               </div>
+
+              {/* Search Input */}
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                onClear={handleClearSearch}
+                isLoading={isSearching}
+                placeholder="Search pages..."
+                className="w-full"
+              />
             </DrawerHeader>
 
             <ScrollArea className="px-4 pb-4 h-[60vh]">
@@ -128,19 +174,25 @@ export function FloatingPageMenu({
                     </div>
                     <Badge variant="secondary" className="gap-1">
                       <FileText className="w-3 h-3" />
-                      {data.pages.length} pages
+                      {hasSearchTerm
+                        ? `${filteredPages.length} of ${data.pages.length}`
+                        : data.pages.length}{' '}
+                      pages
                     </Badge>
                   </div>
 
-                  {/* Pages list */}
-                  {data.pages.length > 0 ? (
+                  {/* Search Results */}
+                  {showEmptyState ? (
+                    <EmptySearchState searchTerm={debouncedSearchTerm} />
+                  ) : hasResults ? (
                     <div className="space-y-3" data-testid="page-list">
-                      {data.pages.map((page) => (
+                      {filteredPages.map((page) => (
                         <PageListItem
                           key={page.id}
                           page={page}
                           username={username}
                           isCurrentPage={page.slug === currentSlug}
+                          searchTerm={hasSearchTerm ? debouncedSearchTerm : ''}
                         />
                       ))}
                     </div>
