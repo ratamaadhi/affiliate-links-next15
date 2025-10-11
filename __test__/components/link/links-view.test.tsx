@@ -130,13 +130,10 @@ describe('LinksView', () => {
   });
 
   it('renders no active links message when there are no active links', () => {
-    const inactiveLinks = mockLinks.map((link) => ({
-      ...link,
-      isActive: false,
-    }));
-
+    // Since the server filters for active links, inactive links would be filtered out
+    // So we mock an empty response to simulate no active links
     (useLinkForPageInfinite as jest.Mock).mockReturnValue({
-      data: [{ data: { data: inactiveLinks } }],
+      data: [{ data: { data: [] } }],
       isLoading: false,
     });
 

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { SearchLinksView } from './search-links-view';
 
+import useInfiniteScroll from '@/hooks/useInfiniteScroll';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import {
@@ -236,10 +237,12 @@ export function LinksView({
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   // Hook for data with search parameter
-  const { data, isLoading, error, mutate } = useLinkForPageInfinite({
-    pageId: pageData?.id || null,
-    search: debouncedSearchTerm,
-  });
+  const { data, isLoading, error, mutate, size, setSize } =
+    useLinkForPageInfinite({
+      pageId: pageData?.id || null,
+      search: debouncedSearchTerm,
+      limit: 8,
+    });
 
   // Handler for search
   const handleSearch = useCallback((term: string) => {
@@ -282,13 +285,22 @@ export function LinksView({
     return uniqueLinks;
   }, [data]);
 
-  // Filter active links with memoization
-  const activeLinks = React.useMemo(() => {
-    return links?.filter((link) => link.isActive) || [];
-  }, [links]);
+  const isLoadingMore =
+    isLoading || (size > 0 && data && typeof data[size - 1] === 'undefined');
+  const isEmpty = data?.[0]?.data.data.length === 0;
+  const isReachingEnd =
+    isEmpty || (data && data[data.length - 1]?.data.data.length < 5);
+
+  const loadMore = useCallback(() => {
+    if (!isLoadingMore && !isReachingEnd) {
+      setSize(size + 1);
+    }
+  }, [isLoadingMore, isReachingEnd, size, setSize]);
+
+  const loaderRef = useInfiniteScroll(!isReachingEnd, loadMore, isLoadingMore);
 
   // Initial load - show full page skeleton
-  if (isInitialLoad && isLoading) {
+  if (isInitialLoad) {
     return (
       <div className="space-y-8">
         {/* Page header skeleton */}
@@ -365,7 +377,13 @@ export function LinksView({
               <div className="flex items-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <LinkIcon className="w-4 h-4" />
-                  <span>{activeLinks.length} Links</span>
+                  <span>
+                    {data &&
+                    data[0]?.data?.pagination &&
+                    'totalItems' in data[0].data.pagination
+                      ? `${(data[0].data.pagination as { totalItems: number }).totalItems} Links`
+                      : '0 Links'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <TrendingUp className="w-4 h-4" />
@@ -375,7 +393,6 @@ export function LinksView({
             </div>
           </CardHeader>
         </Card>
-
         {/* Search component */}
         <SearchLinksView
           onSearch={handleSearch}
@@ -385,9 +402,8 @@ export function LinksView({
           resultCount={searchResultCount}
           className="mb-6"
         />
-
         {/* Links section */}
-        {error ? (
+        {error && (
           <Card className="border-destructive/50">
             <CardContent className="pt-6">
               <ErrorState
@@ -397,10 +413,12 @@ export function LinksView({
               />
             </CardContent>
           </Card>
-        ) : isLoading ? (
+        )}
+        {isInitialLoad && (
           // Search loading - show only links skeleton
           <PartialLinksSkeleton />
-        ) : activeLinks.length > 0 ? (
+        )}
+        {links.length > 0 && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-semibold">
@@ -408,7 +426,7 @@ export function LinksView({
               </h2>
               <Badge variant="outline" className="gap-1">
                 <Star className="w-3 h-3" />
-                {activeLinks.length} Available
+                {links.length} Available
               </Badge>
             </div>
 
@@ -417,7 +435,7 @@ export function LinksView({
               className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
               data-testid="links-container"
             >
-              {activeLinks.map((link, index) => (
+              {links.map((link, index) => (
                 <div
                   key={link.id}
                   className="animate-in fade-in slide-in-from-bottom-4 duration-500"
@@ -427,8 +445,34 @@ export function LinksView({
                 </div>
               ))}
             </div>
+            {!isReachingEnd && !isLoadingMore && (
+              <div
+                ref={loaderRef}
+                className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
+                data-testid="links-container-skeleton"
+              >
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="break-inside-avoid">
+                    <LinkCardSkeleton />
+                  </div>
+                ))}
+              </div>
+            )}
+            {isLoadingMore && (
+              <div
+                className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
+                data-testid="links-container-skeleton"
+              >
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="break-inside-avoid">
+                    <LinkCardSkeleton />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
+        )}
+        {links.length === 0 && (
           <Card className="border-dashed">
             <CardContent className="pt-12 pb-12">
               <div className="text-center space-y-4">

@@ -121,6 +121,7 @@ describe('LinksView Search Performance', () => {
     expect(mockUseLinkForPageInfinite).toHaveBeenCalledWith({
       pageId: 1,
       search: '',
+      limit: 8,
     });
 
     // Re-render with loaded state to simulate initial load completion
@@ -145,6 +146,7 @@ describe('LinksView Search Performance', () => {
     expect(mockUseLinkForPageInfinite).toHaveBeenLastCalledWith({
       pageId: 1,
       search: 'test',
+      limit: 8,
     });
 
     jest.useRealTimers();
