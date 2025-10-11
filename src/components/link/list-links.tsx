@@ -25,7 +25,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
-import React, { useCallback, useContext } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 import { HiOutlineChartBar } from 'react-icons/hi';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
@@ -45,7 +45,7 @@ function DragHandle(props) {
 function LinkSkeleton(props) {
   return (
     <div
-      className="flex h-[102px] items-center pl-0 pr-4 pb-2 pt-3 border rounded-md shadow bg-muted/75"
+      className="flex items-center pl-0 pr-4 py-3 border rounded-md shadow bg-muted/75"
       {...props}
     >
       {/* Drag Handle Skeleton */}
@@ -72,14 +72,19 @@ function LinkSkeleton(props) {
             </div>
           </div>
         </div>
+        {/* Description Skeleton */}
+        <div>
+          <Skeleton className="h-3 w-full mb-1" /> {/* Description line 1 */}
+          <Skeleton className="h-3 w-4/5" /> {/* Description line 2 */}
+        </div>
         {/* Bottom Row Skeleton */}
         <div className="w-full flex justify-between">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-8" /> {/* Edit Button */}
-            <Skeleton className="h-8 w-24" /> {/* Clicks Button */}
+            <Skeleton className="h-5 w-5" /> {/* Edit Button */}
+            <Skeleton className="h-5 w-24" /> {/* Clicks Button */}
           </div>
           <div>
-            <Skeleton className="h-8 w-8" /> {/* Delete Button */}
+            <Skeleton className="h-5 w-5" /> {/* Delete Button */}
           </div>
         </div>
       </div>
@@ -212,6 +217,16 @@ function ListLinks() {
       id: link.id,
     });
 
+    const [isExpanded, setIsExpanded] = useState(false);
+    const hasDescription =
+      link.description && link.description.trim().length > 0;
+    const isLongDescription = hasDescription && link.description.length > 80;
+
+    const displayDescription =
+      isExpanded || !isLongDescription
+        ? link.description
+        : link.description.substring(0, 80) + '...';
+
     return (
       <li
         draggable={true}
@@ -228,13 +243,13 @@ function ListLinks() {
           <DragHandle {...listeners} />
           <div className="flex-1 flex flex-col gap-2 min-w-0">
             <div className="w-full flex items-center">
-              <div className="w-full flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-full flex justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
                   {link.imageUrl && (
                     <img
                       src={link.imageUrl}
                       alt={link.title}
-                      className="w-10 h-10 rounded-md object-cover flex-shrink-0"
+                      className="w-10 h-10 rounded-md object-cover flex-shrink-0 mt-1"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
@@ -247,6 +262,25 @@ function ListLinks() {
                     <p className="text-sm font- text-muted-foreground truncate">
                       {link.url}
                     </p>
+                    {hasDescription && (
+                      <div className="mt-1">
+                        <p
+                          className={`text-xs text-muted-foreground leading-relaxed ${isExpanded || !isLongDescription ? '' : 'line-clamp-1'}`}
+                        >
+                          {displayDescription}
+                        </p>
+                        {isLongDescription && (
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="h-6 p-0 text-xs text-muted-foreground hover:text-foreground mt-1"
+                            onClick={() => setIsExpanded(!isExpanded)}
+                          >
+                            {isExpanded ? 'Show less' : 'Show more'}
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex-shrink-0">

@@ -65,3 +65,4 @@ Testing Best Practices:
 6. Maintain good test coverage
 
 You can use Playwright MCP for visual testing and validation of UI components during testing.
+Use account tamapierce@gmail.com password 281196Ratama! for tesing E2E

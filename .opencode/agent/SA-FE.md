@@ -52,3 +52,4 @@ When implementing UI:
 7. Test across different screen sizes
 
 You can use Playwright MCP for visual testing and validation of implemented UI components.
+Use account tamapierce@gmail.com password 281196Ratama! for tesing E2E.
