@@ -125,6 +125,7 @@ async function fetchPaginatedLinks(
         eq(linkSchema.pageId, pageId),
         or(
           like(linkSchema.title, `%${search}%`),
+          like(linkSchema.description, `%${search}%`),
           like(linkSchema.url, `%${search}%`)
         )
       )
@@ -167,8 +168,9 @@ async function fetchPaginatedActiveLinks(
         eq(linkSchema.pageId, pageId),
         eq(linkSchema.isActive, true),
         or(
+          like(linkSchema.url, `%${search}%`),
           like(linkSchema.title, `%${search}%`),
-          like(linkSchema.url, `%${search}%`)
+          like(linkSchema.description, `%${search}%`)
         )
       )
     : and(eq(linkSchema.pageId, pageId), eq(linkSchema.isActive, true));
