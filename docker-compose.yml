@@ -1,0 +1,91 @@
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio-server
+    restart: unless-stopped
+    ports:
+      - '${MINIO_API_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_SERVER_URL: ${NEXT_PUBLIC_S3_ENDPOINT:-http://localhost:9000}
+      MINIO_REGION: us-east-1
+      MINIO_BROWSER: 'on'
+      MINIO_CORS_ALLOW_ORIGIN: 'http://localhost:3000,http://localhost:3001'
+      MINIO_POLICY_QUERY: 'on'
+    volumes:
+      - minio_data:/data
+      - ./docker-data/minio/policies:/policies:ro
+    command: server --console-address ":9001" /data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 60s
+    networks:
+      - minio-network
+
+  # MinIO Client untuk setup otomatis
+  minio-setup:
+    image: minio/mc:latest
+    container_name: minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
+
+      # Buat bucket jika belum ada
+      /usr/bin/mc mb myminio/affiliate-links --ignore-existing;
+      /usr/bin/mc mb myminio/images --ignore-existing;
+
+      # Buat user untuk aplikasi
+      /usr/bin/mc admin user add myminio affiliate-user ${APP_ACCESS_KEY:-affiliate123};
+
+      # Buat kebijakan kustom untuk aplikasi
+      cat > /tmp/app-policy.json << 'EOF'
+      {
+        \"Version\": \"2012-10-17\",
+        \"Statement\": [
+          {
+            \"Effect\": \"Allow\",
+            \"Action\": [
+              \"s3:GetObject\",
+              \"s3:PutObject\",
+              \"s3:DeleteObject\",
+              \"s3:ListBucket\"
+            ],
+            \"Resource\": [
+              \"arn:aws:s3:::affiliate-links/*\",
+              \"arn:aws:s3:::affiliate-links\"
+            ]
+          }
+        ]
+      }
+      EOF;
+
+      # Tambahkan kebijakan ke MinIO
+      /usr/bin/mc admin policy create myminio app-policy /tmp/app-policy.json;
+
+      # Hubungkan kebijakan ke user
+      /usr/bin/mc admin policy attach myminio app-policy --user affiliate-user;
+
+      # Set images bucket to public untuk development
+      /usr/bin/mc anonymous set public myminio/images;
+
+      echo 'MinIO setup completed successfully!';
+      exit 0;
+      "
+    networks:
+      - minio-network
+
+volumes:
+  minio_data:
+    driver: local
+
+networks:
+  minio-network:
+    driver: bridge
