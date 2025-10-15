@@ -300,7 +300,7 @@ function ListLinks() {
                 </div>
 
                 <div>
-                  <DeleteLinkButton pageId={link.pageId} linkId={link.id} />
+                  <DeleteLinkButton data={link} linkId={link.id} />
                 </div>
               </div>
             )}

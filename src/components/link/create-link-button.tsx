@@ -37,9 +37,13 @@ import { LinkPageContext } from '@/context/link-page-context';
 import { useCreateLink } from '@/hooks/mutations';
 import { useLinkInfinite } from '@/hooks/queries';
 
+import { FileMetadata, FileWithPreview } from '@/hooks/use-file-upload';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
+import { convertImageToWebP, createWebpFile } from '@/lib/image-compression';
+import { sanitizeFileName, uploadFileToS3 } from '@/lib/s3-upload';
+import { convertUrlToFile, validateImageUrl } from '@/lib/url-to-file';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -50,7 +54,7 @@ import {
   RefreshCwIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import FileUpload from '../file-upload';
@@ -77,95 +81,16 @@ interface LinkMetadata {
   type?: string;
 }
 
-const useLinkMetadata = (url: string) => {
-  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
-  const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
-
-  const fetchLinkMetadata = async (url: string) => {
-    try {
-      const response = await fetch(
-        `/api/link-meta?url=${encodeURIComponent(url)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include', // Include cookies for authentication
-        }
-      );
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error fetching metadata:', error);
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    const fetchMetadata = async () => {
-      if (url && url.trim() !== '') {
-        try {
-          new URL(url);
-          setIsFetchingMetadata(true);
-          try {
-            const metadata = await fetchLinkMetadata(url);
-            setMetadata(metadata);
-          } catch (_error) {
-            console.error('Error fetching metadata:', _error);
-            toast.error('Failed to fetch link metadata. Please try again.');
-          } finally {
-            setIsFetchingMetadata(false);
-          }
-        } catch (_error) {
-          setMetadata(null);
-        }
-      } else {
-        setMetadata(null);
-      }
-    };
-
-    fetchMetadata();
-  }, [url]);
-
-  return { isFetchingMetadata, metadata };
-};
-
-const useLinkForm = (
-  metadata: LinkMetadata | null,
-  existingLinksCount: number
-) => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: '',
-      url: '',
-      imageUrl: '',
-      description: '',
-      displayOrder: existingLinksCount + 1,
-    },
-  });
-
-  const { setValue } = form;
-
-  useEffect(() => {
-    if (metadata) {
-      setValue('title', metadata.title || '');
-      setValue('description', metadata.description || '');
-      setValue('imageUrl', metadata.image || '');
-    }
-  }, [metadata, setValue]);
-
-  return form;
-};
-
 const LinkMetadataPreview = ({
   metadata,
-  currentImageUrl,
-  onImageChange,
+  imageFileFromUrl,
+  imageFile,
+  onFilesChange,
 }: {
   metadata: LinkMetadata;
-  currentImageUrl: string;
-  onImageChange: (imageUrl: string | null, file?: File) => void;
+  imageFileFromUrl?: FileWithPreview | null;
+  imageFile?: FileWithPreview | null;
+  onFilesChange: (files?: FileWithPreview[]) => void;
 }) => (
   <div className="w-full relative space-y-4 flex flex-col">
     <Link
@@ -204,16 +129,19 @@ const LinkMetadataPreview = ({
     <div className="space-y-2">
       <label className="text-sm font-medium flex items-center gap-2">
         <ImageIcon className="h-4 w-4" />
-        Image {currentImageUrl !== metadata.image && '(Custom)'}
+        Image {imageFile !== imageFileFromUrl && '(Custom)'}
       </label>
-      <FileUpload fileUrl={currentImageUrl} onImageChange={onImageChange} />
-      {currentImageUrl !== metadata.image && metadata.image && (
+      <FileUpload
+        parentFiles={imageFile ? [imageFile] : []}
+        onFilesChange={onFilesChange}
+      />
+      {imageFile !== imageFileFromUrl && imageFileFromUrl && (
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => {
-            onImageChange(metadata.image);
+            onFilesChange([imageFileFromUrl]);
           }}
         >
           Reset to Original
@@ -230,6 +158,9 @@ export const CreateLinkButton = () => {
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
+  const [imageFileFromUrl, setImageFIleFromUrl] =
+    useState<FileWithPreview | null>();
+  const [imageFile, setImageFile] = useState<FileWithPreview | null>(null);
 
   const { trigger, isMutating } = useCreateLink({
     search: keywordLink || '',
@@ -286,6 +217,57 @@ export const CreateLinkButton = () => {
     }
   };
 
+  const createPreview = useCallback(
+    (file: File | FileMetadata): string | undefined => {
+      if (file instanceof File) {
+        return URL.createObjectURL(file);
+      }
+      return file.url;
+    },
+    []
+  );
+
+  const generateUniqueId = useCallback((file: File | FileMetadata): string => {
+    if (file instanceof File) {
+      return `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    }
+    return file.id;
+  }, []);
+
+  async function imageToWebP(image: File) {
+    const imageBlob = await convertImageToWebP(image, 0.8);
+    const webpFile = createWebpFile(imageBlob, sanitizeFileName(image.name));
+
+    return webpFile;
+  }
+
+  async function imageUrlToPreview(imageUrl: string) {
+    const isValid = await validateImageUrl(imageUrl);
+    if (!isValid) {
+      toast.error('URL does not point to a valid image');
+      return null;
+    }
+
+    const imageFile = await convertUrlToFile(imageUrl, {
+      compressionOptions: {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+      },
+      onProgress: (progress) => {
+        console.log(`Download progress: ${progress}%`);
+      },
+    });
+
+    const webpFile = await imageToWebP(imageFile);
+    const imageWithPreview = {
+      file: webpFile,
+      id: generateUniqueId(webpFile),
+      preview: createPreview(webpFile),
+    };
+
+    return imageWithPreview;
+  }
+
   const handleUrlBlur = async (url: string) => {
     if (url && url.trim() !== '') {
       try {
@@ -303,8 +285,11 @@ export const CreateLinkButton = () => {
           if (metadata) {
             form.setValue('title', metadata.title || '');
             form.setValue('description', metadata.description || '');
-            form.setValue('imageUrl', metadata.image || '');
-            setCurrentImageUrl(metadata.image || '');
+            setCurrentImageUrl(metadata?.image || '');
+            const imageWithPreview = await imageUrlToPreview(metadata.image);
+            form.setValue('imageUrl', imageWithPreview?.preview);
+            setImageFIleFromUrl(imageWithPreview);
+            setImageFile(imageWithPreview);
           }
         } catch (_error) {
           console.error('Error fetching metadata:', _error);
@@ -329,10 +314,25 @@ export const CreateLinkButton = () => {
       return;
     }
 
+    let locationUploadedImage = '';
+    if (imageFile && imageFile.file) {
+      // Check if the file is a File instance (not FileMetadata)
+      if (imageFile.file instanceof File) {
+        const responseUpload = await uploadFileToS3(imageFile.file);
+        if (responseUpload.location) {
+          locationUploadedImage = responseUpload.location;
+        }
+      } else {
+        console.error(
+          'Cannot upload FileMetadata to S3, only File objects are supported'
+        );
+      }
+    }
+
     const response = await trigger({
       ...values,
       pageId: selectedPage?.id,
-      imageUrl: currentImageUrl ?? values.imageUrl ?? metadata?.image ?? '',
+      imageUrl: locationUploadedImage ?? '',
       displayOrder: values.displayOrder,
     });
     if (response.success) {
@@ -343,18 +343,24 @@ export const CreateLinkButton = () => {
     }
   }
 
-  const handleImageChange = (imageUrl: string | null, file?: File) => {
-    if (imageUrl && file) {
-      setCurrentImageUrl(imageUrl);
-      form.setValue('imageUrl', imageUrl);
-    } else if (imageUrl && !file) {
-      setCurrentImageUrl(imageUrl);
-      form.setValue('imageUrl', imageUrl);
-    } else {
-      setCurrentImageUrl('');
-      form.setValue('imageUrl', '');
-    }
-  };
+  const handleImageChange = useCallback((file?: FileWithPreview[]) => {
+    // Use setTimeout to defer state update to avoid updating during render
+    setTimeout(async () => {
+      if (file && file[0]?.file instanceof File) {
+        const webpFile = await imageToWebP(file[0].file);
+        const webpFileWithPreview = {
+          file: webpFile,
+          id: generateUniqueId(webpFile),
+          preview: createPreview(webpFile),
+        };
+        setImageFile(webpFileWithPreview);
+        form.setValue('imageUrl', webpFileWithPreview.preview);
+      } else {
+        setImageFile(null);
+        form.setValue('imageUrl', '');
+      }
+    }, 0);
+  }, []);
 
   const handleDialogClose = (open: boolean) => {
     setIsOpen(open);
@@ -438,8 +444,9 @@ export const CreateLinkButton = () => {
             ) : metadata ? (
               <LinkMetadataPreview
                 metadata={metadata}
-                currentImageUrl={currentImageUrl}
-                onImageChange={handleImageChange}
+                imageFileFromUrl={imageFileFromUrl}
+                imageFile={imageFile}
+                onFilesChange={handleImageChange}
               />
             ) : null}
           </>
