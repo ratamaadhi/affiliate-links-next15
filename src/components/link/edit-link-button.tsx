@@ -36,9 +36,17 @@ import { LinkPageContext } from '@/context/link-page-context';
 import { useUpdateLink } from '@/hooks/mutations';
 import { useLinkInfinite } from '@/hooks/queries';
 
+import { FileMetadata, FileWithPreview } from '@/hooks/use-file-upload';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
+import { convertImageToWebP, createWebpFile } from '@/lib/image-compression';
+import {
+  deleteFileFromS3ByUrlWithOptions,
+  sanitizeFileName,
+  uploadFileToS3,
+} from '@/lib/s3-upload';
+import { convertUrlToFile, validateImageUrl } from '@/lib/url-to-file';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -51,7 +59,7 @@ import {
   RefreshCwIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import React, { useContext, useState } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import FileUpload from '../file-upload';
@@ -335,8 +343,30 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
 
   const [isOpen, setIsOpen] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
-  const [currentImageUrl, setCurrentImageUrl] = useState<string>(
-    data?.imageUrl || ''
+
+  // Create FileWithPreview from existing imageUrl
+  const createFileWithPreviewFromUrl = useCallback(
+    (url: string): FileWithPreview => {
+      return {
+        id: `existing-image-${Date.now()}`,
+        file: {
+          name: 'existing-image.jpg',
+          size: 0, // Unknown for URL
+          type: 'image/jpeg', // Default type
+        } as File,
+        preview: url,
+      };
+    },
+    []
+  );
+
+  const initialImage = data?.imageUrl
+    ? createFileWithPreviewFromUrl(data.imageUrl)
+    : null;
+  const [imageFileFromUrl, setImageFIleFromUrl] =
+    useState<FileWithPreview | null>(initialImage);
+  const [imageFile, setImageFile] = useState<FileWithPreview | null>(
+    initialImage
   );
   const [hasUsedNewData, setHasUsedNewData] = useState(false);
 
@@ -385,27 +415,51 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
       return;
     }
 
+    let locationUploadedImage = imageFileFromUrl.preview;
+    if (imageFile && imageFile.file && imageFile !== imageFileFromUrl) {
+      // Check if the file is a File instance (not FileMetadata)
+      if (imageFile.file instanceof File) {
+        const responseUpload = await uploadFileToS3(imageFile.file);
+        if (responseUpload.location) {
+          locationUploadedImage = responseUpload.location;
+          await deleteFileFromS3ByUrlWithOptions(data?.imageUrl, {
+            validateBucket: false,
+          });
+        }
+      } else {
+        console.error(
+          'Cannot upload FileMetadata to S3, only File objects are supported'
+        );
+      }
+    }
+
     const response = await trigger({
       id: data.id,
       values: {
         ...values,
-        imageUrl: currentImageUrl || values.imageUrl,
+        imageUrl: locationUploadedImage ?? '',
         displayOrder: values.displayOrder,
       },
     });
     if (response.success) {
       form.reset();
-      setCurrentImageUrl('');
+      setImageFile(null);
+      setImageFIleFromUrl(null);
       setIsOpen(false);
     }
   }
 
-  const handleUseNewData = () => {
+  const handleUseNewData = async () => {
     if (newMetadata) {
       form.setValue('title', newMetadata.title);
       form.setValue('description', newMetadata.description);
       if (newMetadata.image) {
-        handleImageChange(newMetadata.image, undefined);
+        const imageWithPreview = await imageUrlToPreview(newMetadata.image);
+        if (imageWithPreview) {
+          // setImageFIleFromUrl(imageWithPreview);
+          setImageFile(imageWithPreview);
+          form.setValue('imageUrl', imageWithPreview.preview);
+        }
       }
       resetMetadata();
       setHasUsedNewData(true);
@@ -421,30 +475,91 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
       imageUrl: data?.imageUrl || '',
       displayOrder: currentLinkOrder || 1,
     });
-    setCurrentImageUrl(data?.imageUrl || '');
     resetMetadata();
     setHasUsedNewData(false);
+    setImageFile(imageFileFromUrl);
     toast.success('Reset to original data');
   };
 
-  const handleImageChange = (imageUrl: string | null, file?: File) => {
-    if (imageUrl && file) {
-      setCurrentImageUrl(imageUrl);
-      form.setValue('imageUrl', imageUrl);
-    } else if (imageUrl && !file) {
-      setCurrentImageUrl(imageUrl);
-      form.setValue('imageUrl', imageUrl);
-    } else {
-      setCurrentImageUrl('');
-      form.setValue('imageUrl', '');
+  const createPreview = useCallback(
+    (file: File | FileMetadata): string | undefined => {
+      if (file instanceof File) {
+        return URL.createObjectURL(file);
+      }
+      return file.url;
+    },
+    []
+  );
+
+  const generateUniqueId = useCallback((file: File | FileMetadata): string => {
+    if (file instanceof File) {
+      return `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     }
-  };
+    return file.id;
+  }, []);
+
+  async function imageToWebP(image: File) {
+    const imageBlob = await convertImageToWebP(image, 0.8);
+    const webpFile = createWebpFile(imageBlob, sanitizeFileName(image.name));
+
+    return webpFile;
+  }
+
+  async function imageUrlToPreview(imageUrl: string) {
+    const isValid = await validateImageUrl(imageUrl);
+    if (!isValid) {
+      toast.error('URL does not point to a valid image');
+      return null;
+    }
+
+    const imageFile = await convertUrlToFile(imageUrl, {
+      compressionOptions: {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+      },
+      onProgress: (progress) => {
+        console.log(`Download progress: ${progress}%`);
+      },
+    });
+
+    const webpFile = await imageToWebP(imageFile);
+    const imageWithPreview = {
+      file: webpFile,
+      id: generateUniqueId(webpFile),
+      preview: createPreview(webpFile),
+    };
+
+    return imageWithPreview;
+  }
+
+  const handleImageChange = useCallback(
+    (file?: FileWithPreview[]) => {
+      // Use setTimeout to defer state update to avoid updating during render
+      setTimeout(async () => {
+        if (file && file[0]?.file instanceof File) {
+          const webpFile = await imageToWebP(file[0].file);
+          const webpFileWithPreview = {
+            file: webpFile,
+            id: generateUniqueId(webpFile),
+            preview: createPreview(webpFile),
+          };
+          setImageFile(webpFileWithPreview);
+          form.setValue('imageUrl', webpFileWithPreview.preview);
+        } else {
+          setImageFile(null);
+          // Jangan reset imageUrl di sini karena akan dihandle oleh logic lain
+        }
+      }, 0);
+    },
+    [createPreview, form, generateUniqueId]
+  );
 
   const handleDialogClose = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
       form.reset();
-      setCurrentImageUrl(data?.imageUrl || '');
+      setImageFile(null);
+      setImageFIleFromUrl(null);
       resetMetadata();
       setHasUsedNewData(false);
     }
@@ -522,20 +637,20 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <ImageIcon className="h-4 w-4" />
-              Image {currentImageUrl !== data?.imageUrl && '(Custom)'}
+              Image {imageFile !== imageFileFromUrl && '(Custom)'}
             </label>
             <FileUpload
-              fileUrl={currentImageUrl}
-              onImageChange={handleImageChange}
+              parentFiles={imageFile ? [imageFile] : []}
+              onFilesChange={handleImageChange}
             />
-            {currentImageUrl !== data?.imageUrl && data?.imageUrl && (
+            {imageFile !== imageFileFromUrl && imageFileFromUrl && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setCurrentImageUrl(data?.imageUrl || '');
-                  form.setValue('imageUrl', data?.imageUrl || '');
+                  setImageFile(imageFileFromUrl);
+                  form.setValue('imageUrl', imageFileFromUrl.preview);
                 }}
               >
                 Reset to Original

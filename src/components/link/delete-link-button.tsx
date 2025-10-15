@@ -1,6 +1,8 @@
 import { LinkPageContext } from '@/context/link-page-context';
 import { useDeleteLink } from '@/hooks/mutations';
 import { authClient } from '@/lib/auth-client';
+import { LinkSelect } from '@/lib/db/schema';
+import { deleteFileFromS3ByUrlWithOptions } from '@/lib/s3-upload';
 import { useContext, useState } from 'react';
 import { HiOutlineTrash } from 'react-icons/hi';
 import { toast } from 'sonner';
@@ -17,7 +19,13 @@ import {
 import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
-export const DeleteLinkButton = ({ linkId, pageId }) => {
+export const DeleteLinkButton = ({
+  linkId,
+  data,
+}: {
+  linkId: number;
+  data: LinkSelect;
+}) => {
   const { selectedPage, keywordLink } = useContext(LinkPageContext);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -32,6 +40,11 @@ export const DeleteLinkButton = ({ linkId, pageId }) => {
     if (!userId) {
       toast.error('You must be logged in to delete a page');
       return;
+    }
+    if (data.imageUrl) {
+      await deleteFileFromS3ByUrlWithOptions(data.imageUrl, {
+        validateBucket: false,
+      });
     }
     const response = await trigger({
       id: linkId,

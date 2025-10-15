@@ -1,6 +1,5 @@
 'use client';
 
-import type React from 'react';
 import {
   useCallback,
   useRef,
@@ -54,7 +53,8 @@ export type FileUploadActions = {
   getInputProps: (
     props?: InputHTMLAttributes<HTMLInputElement>
   ) => InputHTMLAttributes<HTMLInputElement> & {
-    ref: React.Ref<HTMLInputElement>;
+    // Use `any` here to avoid cross-React ref type conflicts across packages
+    ref: any;
   };
 };
 
@@ -161,7 +161,11 @@ export const useFileUpload = (
         errors: [],
       };
 
-      onFilesChange?.(newState.files);
+      // Defer the callback to avoid updating during render
+      setTimeout(() => {
+        onFilesChange?.(newState.files);
+      }, 0);
+
       return newState;
     });
   }, [onFilesChange]);
@@ -240,7 +244,12 @@ export const useFileUpload = (
           const newFiles = !multiple
             ? validFiles
             : [...prev.files, ...validFiles];
-          onFilesChange?.(newFiles);
+
+          // Defer the callback to avoid updating during render
+          setTimeout(() => {
+            onFilesChange?.(newFiles);
+          }, 0);
+
           return {
             ...prev,
             files: newFiles,
@@ -287,7 +296,11 @@ export const useFileUpload = (
         }
 
         const newFiles = prev.files.filter((file) => file.id !== id);
-        onFilesChange?.(newFiles);
+
+        // Defer the callback to avoid updating during render
+        setTimeout(() => {
+          onFilesChange?.(newFiles);
+        }, 0);
 
         return {
           ...prev,
@@ -375,7 +388,8 @@ export const useFileUpload = (
         onChange: handleFileChange,
         accept: props.accept || accept,
         multiple: props.multiple !== undefined ? props.multiple : multiple,
-        ref: inputRef,
+        // Cast to `any` to prevent mismatched React ref type errors across workspaces
+        ref: inputRef as any,
       };
     },
     [accept, multiple, handleFileChange]

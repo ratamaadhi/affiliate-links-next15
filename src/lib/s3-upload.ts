@@ -1,4 +1,8 @@
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -18,6 +22,22 @@ export interface S3UploadResult {
   key: string;
   bucket: string;
   etag?: string;
+}
+
+export interface S3DeleteOptions {
+  bucket?: string;
+  key: string;
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  endpoint?: string;
+  forcePathStyle?: boolean;
+}
+
+export interface S3DeleteResult {
+  success: boolean;
+  key: string;
+  bucket: string;
 }
 
 function sanitizeTagValue(value: string): string {
@@ -214,6 +234,76 @@ export async function uploadToS3(
   }
 }
 
+/**
+ * Delete a file from S3
+ */
+export async function deleteFileFromS3(
+  options: S3DeleteOptions
+): Promise<S3DeleteResult> {
+  const {
+    bucket = process.env.NEXT_PUBLIC_S3_BUCKET,
+    key,
+    region = process.env.NEXT_PUBLIC_S3_REGION || 'us-east-1',
+    accessKeyId = process.env.NEXT_PUBLIC_S3_ACCESS_KEY_ID,
+    secretAccessKey = process.env.NEXT_PUBLIC_S3_SECRET_ACCESS_KEY,
+    endpoint = process.env.NEXT_PUBLIC_S3_ENDPOINT,
+    forcePathStyle = process.env.NEXT_PUBLIC_S3_FORCE_PATH_STYLE === 'true',
+  } = options;
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error(
+      'S3 credentials are required. Please check your NEXT_PUBLIC_S3_* environment variables.'
+    );
+  }
+
+  if (!bucket) {
+    throw new Error(
+      'S3 bucket is required. Please set NEXT_PUBLIC_S3_BUCKET environment variable.'
+    );
+  }
+
+  if (!key) {
+    throw new Error('S3 object key is required for deletion.');
+  }
+
+  // Configure S3 client with optional custom endpoint
+  const clientConfig: any = {
+    region,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+  };
+
+  // Add custom endpoint if provided (for S3-compatible services like MinIO, DigitalOcean Spaces, etc.)
+  if (endpoint) {
+    clientConfig.endpoint = endpoint;
+    clientConfig.forcePathStyle = forcePathStyle;
+  }
+
+  const s3Client = new S3Client(clientConfig);
+
+  try {
+    const deleteCommand = new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+
+    await s3Client.send(deleteCommand);
+
+    return {
+      success: true,
+      key,
+      bucket,
+    };
+  } catch (error) {
+    console.error('S3 delete failed:', error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to delete from S3: ${errorMessage}`);
+  }
+}
+
 export function getS3Config() {
   return {
     bucket: process.env.NEXT_PUBLIC_S3_BUCKET,
@@ -225,7 +315,7 @@ export function getS3Config() {
   };
 }
 
-function sanitizeFileName(fileName: string): string {
+export function sanitizeFileName(fileName: string): string {
   // Remove extension if present
   const nameWithoutExt = fileName.includes('.')
     ? fileName.substring(0, fileName.lastIndexOf('.'))
@@ -255,6 +345,153 @@ export function generateS3Key(
 
   // Create the new key format: original-filename-timestamp-randomString.extension
   return `${prefix}/${sanitizedFileName}-${timestamp}-${randomString}.${extension}`;
+}
+
+/**
+ * Extract S3 key from various URL formats
+ * Supports AWS S3 URLs and custom endpoint URLs
+ */
+export function extractS3KeyFromUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const pathname = urlObj.pathname;
+
+    // Handle AWS S3 URLs: https://bucket.s3.region.amazonaws.com/key
+    if (hostname.includes('.s3.') && hostname.includes('.amazonaws.com')) {
+      // Extract bucket from hostname and get the key from pathname
+      const parts = hostname.split('.');
+      if (parts.length >= 3) {
+        // Remove leading slash from pathname
+        return pathname.startsWith('/') ? pathname.substring(1) : pathname;
+      }
+    }
+
+    // Handle custom endpoint URLs with path style: https://endpoint.com/bucket/key
+    // Handle custom endpoint URLs with virtual host style: https://bucket.endpoint.com/key
+    const pathSegments = pathname
+      .split('/')
+      .filter((segment) => segment.length > 0);
+
+    if (pathSegments.length >= 2) {
+      // Check if first segment is a bucket name (common pattern)
+      // For path style: /bucket/key
+      // For virtual host style: bucket is in hostname, so key starts from first segment
+      return pathSegments.join('/');
+    } else if (pathSegments.length === 1) {
+      // Only key is in the path (bucket is in hostname)
+      return pathSegments[0];
+    }
+
+    // If we can't determine the pattern, return the full pathname without leading slash
+    return pathname.startsWith('/') ? pathname.substring(1) : pathname;
+  } catch (error) {
+    console.error('Failed to extract S3 key from URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Extract bucket and key from S3 URL
+ * Returns both bucket and key for more complete URL parsing
+ */
+export function parseS3Url(
+  url: string
+): { bucket: string | null; key: string | null } | null {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const pathname = urlObj.pathname;
+
+    // Handle AWS S3 URLs: https://bucket.s3.region.amazonaws.com/key
+    if (hostname.includes('.s3.') && hostname.includes('.amazonaws.com')) {
+      const parts = hostname.split('.');
+      const bucket = parts[0];
+      const key = pathname.startsWith('/') ? pathname.substring(1) : pathname;
+
+      return { bucket, key };
+    }
+
+    // Handle custom endpoint URLs with path style: https://endpoint.com/bucket/key
+    const pathSegments = pathname
+      .split('/')
+      .filter((segment) => segment.length > 0);
+
+    if (pathSegments.length >= 2) {
+      // Assume first segment is bucket name
+      const bucket = pathSegments[0];
+      const key = pathSegments.slice(1).join('/');
+
+      return { bucket, key };
+    } else if (pathSegments.length === 1) {
+      // Only key is in the path, bucket might be in hostname
+      const key = pathSegments[0];
+
+      // Try to extract bucket from hostname (virtual host style)
+      const bucketParts = hostname.split('.');
+      const bucket = bucketParts[0];
+
+      return { bucket, key };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Failed to parse S3 URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if S3 URL belongs to our configured bucket
+ * This prevents accidental deletion of files from other buckets
+ */
+export function isUrlFromOurBucket(url: string, ourBucket?: string): boolean {
+  try {
+    const parsed = parseS3Url(url);
+    if (!parsed || !parsed.bucket) {
+      return false;
+    }
+
+    const bucket = ourBucket || process.env.NEXT_PUBLIC_S3_BUCKET;
+    if (!bucket) {
+      console.warn('No bucket configured for validation');
+      return false;
+    }
+
+    return parsed.bucket === bucket;
+  } catch (error) {
+    console.error('Error checking bucket ownership:', error);
+    return false;
+  }
+}
+
+/**
+ * Validate that the URL belongs to our bucket before proceeding with operations
+ * Throws an error if the URL is from a different bucket
+ */
+export function validateUrlFromOurBucket(
+  url: string,
+  ourBucket?: string
+): { bucket: string; key: string } {
+  const parsed = parseS3Url(url);
+
+  if (!parsed || !parsed.bucket || !parsed.key) {
+    throw new Error('Invalid S3 URL format');
+  }
+
+  const bucket = ourBucket || process.env.NEXT_PUBLIC_S3_BUCKET;
+  if (!bucket) {
+    throw new Error('No bucket configured for validation');
+  }
+
+  if (parsed.bucket !== bucket) {
+    throw new Error(
+      `URL is from bucket "${parsed.bucket}" but our configured bucket is "${bucket}". ` +
+        'For security reasons, you can only delete files from your own bucket.'
+    );
+  }
+
+  return { bucket: parsed.bucket, key: parsed.key };
 }
 
 export async function uploadWithRetry(
@@ -299,6 +536,106 @@ export async function uploadFileToS3(
     ...options,
     key: fileKey,
   });
+}
+
+/**
+ * Simplified delete function that uses environment variables by default
+ */
+export async function deleteFileFromS3Simple(
+  key: string,
+  options: Partial<Omit<S3DeleteOptions, 'key'>> = {}
+): Promise<S3DeleteResult> {
+  const s3Config = getS3Config();
+
+  return deleteFileFromS3({
+    ...s3Config,
+    ...options,
+    key,
+  });
+}
+
+/**
+ * Delete file from S3 with retry logic
+ */
+export async function deleteWithRetry(
+  options: S3DeleteOptions,
+  maxRetries = 3
+): Promise<S3DeleteResult> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await deleteFileFromS3(options);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
+
+      // Exponential backoff
+      const delay = Math.pow(2, attempt - 1) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError || new Error('Delete failed after retries');
+}
+
+/**
+ * Delete file from S3 using URL
+ * Automatically extracts the key from the URL and validates it belongs to our bucket
+ */
+export async function deleteFileFromS3ByUrl(
+  url: string,
+  options: Partial<Omit<S3DeleteOptions, 'key'>> = {}
+): Promise<S3DeleteResult> {
+  // Validate that the URL belongs to our bucket for security
+  const validated = validateUrlFromOurBucket(url, options.bucket);
+
+  return deleteFileFromS3({
+    ...options,
+    key: validated.key,
+    bucket: validated.bucket,
+  });
+}
+
+/**
+ * Delete file from S3 using URL with optional validation
+ * Set validateBucket to false if you want to skip bucket validation (not recommended)
+ */
+export async function deleteFileFromS3ByUrlWithOptions(
+  url: string,
+  options: Partial<Omit<S3DeleteOptions, 'key'>> & {
+    validateBucket?: boolean;
+  } = {}
+): Promise<S3DeleteResult> {
+  const { validateBucket = true, ...deleteOptions } = options;
+
+  if (validateBucket) {
+    // Validate that the URL belongs to our bucket for security
+    const validated = validateUrlFromOurBucket(url, deleteOptions.bucket);
+
+    return deleteFileFromS3({
+      ...deleteOptions,
+      key: validated.key,
+      bucket: validated.bucket,
+    });
+  }
+  // else {
+  //   // Skip validation (use with caution)
+  //   const parsed = parseS3Url(url);
+
+  //   if (!parsed || !parsed.key) {
+  //     throw new Error('Could not extract S3 key from URL');
+  //   }
+
+  //   return deleteFileFromS3({
+  //     ...deleteOptions,
+  //     key: parsed.key,
+  //     bucket: deleteOptions.bucket || parsed.bucket || undefined,
+  //   });
+  // }
 }
 
 export interface PresignedUrlOptions {
@@ -412,3 +749,94 @@ export async function getAccessibleUrl(
     throw error;
   }
 }
+
+/*
+ * USAGE EXAMPLES FOR DELETE FUNCTIONS
+ *
+ * // Basic usage with environment variables
+ * try {
+ *   const result = await deleteFileFromS3Simple('uploads/my-file-123456.jpg');
+ *   console.log('File deleted successfully:', result);
+ * } catch (error) {
+ *   console.error('Failed to delete file:', error);
+ * }
+ *
+ * // With custom options
+ * try {
+ *   const result = await deleteFileFromS3({
+ *     key: 'uploads/my-file-123456.jpg',
+ *     bucket: 'my-custom-bucket',
+ *     region: 'us-west-2',
+ *     endpoint: 'https://nyc3.digitaloceanspaces.com',
+ *     forcePathStyle: true
+ *   });
+ *   console.log('File deleted successfully:', result);
+ * } catch (error) {
+ *   console.error('Failed to delete file:', error);
+ * }
+ *
+ * // Delete using URL (automatically extracts key and validates bucket)
+ * try {
+ *   const imageUrl = 'https://my-bucket.s3.us-east-1.amazonaws.com/uploads/my-file-123456.jpg';
+ *   const result = await deleteFileFromS3ByUrl(imageUrl);
+ *   console.log('File deleted successfully:', result);
+ * } catch (error) {
+ *   console.error('Failed to delete file:', error);
+ *   // If URL is from different bucket, you'll get:
+ *   // "URL is from bucket 'other-bucket' but our configured bucket is 'my-bucket'"
+ * }
+ *
+ * // Check if URL belongs to our bucket before deleting
+ * const imageUrl = 'https://my-bucket.s3.us-east-1.amazonaws.com/uploads/my-file-123456.jpg';
+ * if (isUrlFromOurBucket(imageUrl)) {
+ *   await deleteFileFromS3ByUrl(imageUrl);
+ * } else {
+ *   console.warn('URL is not from our bucket, skipping delete');
+ * }
+ *
+ * // Delete using URL with validation options
+ * try {
+ *   const imageUrl = 'https://my-bucket.s3.us-east-1.amazonaws.com/uploads/my-file-123456.jpg';
+ *   const result = await deleteFileFromS3ByUrlWithOptions(imageUrl, {
+ *     validateBucket: true // Default: true
+ *   });
+ *   console.log('File deleted successfully:', result);
+ * } catch (error) {
+ *   console.error('Failed to delete file:', error);
+ * }
+ *
+ * // Skip bucket validation (not recommended, use with caution)
+ * try {
+ *   const imageUrl = 'https://any-bucket.s3.us-east-1.amazonaws.com/uploads/file.jpg';
+ *   const result = await deleteFileFromS3ByUrlWithOptions(imageUrl, {
+ *     validateBucket: false,
+ *     bucket: 'any-bucket' // Must specify bucket when skipping validation
+ *   });
+ *   console.log('File deleted successfully:', result);
+ * } catch (error) {
+ *   console.error('Failed to delete file:', error);
+ * }
+ *
+ * // Extract key from URL manually
+ * const imageUrl = 'https://my-bucket.s3.us-east-1.amazonaws.com/uploads/my-file-123456.jpg';
+ * const key = extractS3KeyFromUrl(imageUrl); // Returns: 'uploads/my-file-123456.jpg'
+ * const parsed = parseS3Url(imageUrl); // Returns: { bucket: 'my-bucket', key: 'uploads/my-file-123456.jpg' }
+ *
+ * // Validate URL belongs to our bucket
+ * try {
+ *   const validated = validateUrlFromOurBucket(imageUrl);
+ *   console.log('Bucket:', validated.bucket, 'Key:', validated.key);
+ * } catch (error) {
+ *   console.error('URL validation failed:', error.message);
+ * }
+ *
+ * // With retry logic
+ * try {
+ *   const result = await deleteWithRetry({
+ *     key: 'uploads/my-file-123456.jpg'
+ *   }, 5); // 5 retries
+ *   console.log('File deleted successfully:', result);
+ * } catch (error) {
+ *   console.error('Failed to delete file after retries:', error);
+ * }
+ */
