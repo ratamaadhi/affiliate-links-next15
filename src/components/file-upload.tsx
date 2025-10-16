@@ -9,12 +9,13 @@ export default function FileUpload({
   parentFiles,
   onFilesChange,
   isMultiple = false,
+  maxSizeMB = 5,
 }: {
   parentFiles?: FileWithPreview[];
   onFilesChange?: (_files: FileWithPreview[]) => void;
   isMultiple?: boolean;
+  maxSizeMB?: number;
 }) {
-  const maxSizeMB = 2;
   const maxSize = maxSizeMB * 1024 * 1024; // 2MB default
 
   const [
@@ -50,8 +51,6 @@ export default function FileUpload({
     },
   });
   const previewUrl = files[0]?.preview || null;
-  console.log('previewUrl', previewUrl);
-  console.log('parentFiles[0].file', parentFiles);
 
   const fileName = files[0]?.file.name || null;
 

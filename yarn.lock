@@ -8390,6 +8390,18 @@ minimist@^1.2.0, minimist@^1.2.6:
   resolved "https://registry.npmjs.org/minimist/-/minimist-1.2.8.tgz"
   integrity sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==
 
+modern-gif@^2.0.4:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/modern-gif/-/modern-gif-2.0.4.tgz#22d9da39ab4a64374d0520eaa9f6a89fc64ab7a3"
+  integrity sha512-q3Nf6X3kpnGwiKLzTzOjsbvM16/kPcfy0JrrC79TmuKLCWiOkwb0ztuVhZnqGCizSr4o84gFOaBeGDVaE/Bcgw==
+  dependencies:
+    modern-palette "^2.0.0"
+
+modern-palette@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/modern-palette/-/modern-palette-2.0.0.tgz#433a8d807ea7e10eae46eb829679adc3b996d547"
+  integrity sha512-wKZcom2QzK6sS6h5RLYHEkd3V3maQLzgkI+ekDCimlk7dfXa63aekZcy+7KS+8JEqIDeY/yV1CAvA7l+7u6QHA==
+
 motion-dom@^12.23.21:
   version "12.23.21"
   resolved "https://registry.yarnpkg.com/motion-dom/-/motion-dom-12.23.21.tgz#1efe2d1bdda31875f0ee56d06f02be7b562a0bdd"
