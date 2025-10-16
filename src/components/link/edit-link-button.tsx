@@ -40,9 +40,13 @@ import { FileMetadata, FileWithPreview } from '@/hooks/use-file-upload';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
-import { convertImageToWebP, createWebpFile } from '@/lib/image-compression';
 import {
-  deleteFileFromS3ByUrlWithOptions,
+  compressGif,
+  convertImageToWebP,
+  createWebpFile,
+} from '@/lib/image-compression';
+import {
+  deleteFileFromS3ByUrl,
   sanitizeFileName,
   uploadFileToS3,
 } from '@/lib/s3-upload';
@@ -59,7 +63,7 @@ import {
   RefreshCwIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import React, { useCallback, useContext, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import FileUpload from '../file-upload';
@@ -255,7 +259,15 @@ const CurrentLinkPreview = ({
         <div className="flex items-center gap-2 mt-1">
           <ExternalLink className="h-3 w-3" />
           <span className="text-xs text-muted-foreground truncate">
-            {data?.url ? new URL(data.url).hostname : 'No domain'}
+            {data?.url
+              ? (() => {
+                  try {
+                    return new URL(data.url).hostname;
+                  } catch {
+                    return 'Invalid URL';
+                  }
+                })()
+              : 'No domain'}
           </span>
         </div>
       </div>
@@ -344,15 +356,14 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
-  // Create FileWithPreview from existing imageUrl
   const createFileWithPreviewFromUrl = useCallback(
     (url: string): FileWithPreview => {
       return {
         id: `existing-image-${Date.now()}`,
         file: {
           name: 'existing-image.jpg',
-          size: 0, // Unknown for URL
-          type: 'image/jpeg', // Default type
+          size: 0,
+          type: 'image/jpeg',
         } as File,
         preview: url,
       };
@@ -360,14 +371,18 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
     []
   );
 
-  const initialImage = data?.imageUrl
-    ? createFileWithPreviewFromUrl(data.imageUrl)
-    : null;
-  const [imageFileFromUrl, setImageFIleFromUrl] =
-    useState<FileWithPreview | null>(initialImage);
+  const initialImageMemo = useMemo(() => {
+    if (data.imageUrl) {
+      return createFileWithPreviewFromUrl(data.imageUrl);
+    } else {
+      return null;
+    }
+  }, [data.imageUrl]);
+
   const [imageFile, setImageFile] = useState<FileWithPreview | null>(
-    initialImage
+    initialImageMemo
   );
+  const [loadCompression, setLoadCompression] = useState(false);
   const [hasUsedNewData, setHasUsedNewData] = useState(false);
 
   const { trigger, isMutating } = useUpdateLink({
@@ -415,21 +430,27 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
       return;
     }
 
-    let locationUploadedImage = imageFileFromUrl.preview;
-    if (imageFile && imageFile.file && imageFile !== imageFileFromUrl) {
-      // Check if the file is a File instance (not FileMetadata)
-      if (imageFile.file instanceof File) {
-        const responseUpload = await uploadFileToS3(imageFile.file);
-        if (responseUpload.location) {
-          locationUploadedImage = responseUpload.location;
-          await deleteFileFromS3ByUrlWithOptions(data?.imageUrl, {
-            validateBucket: false,
-          });
+    let locationUploadedImage = values.imageUrl || '';
+
+    if (data?.imageUrl !== imageFile?.preview) {
+      if (imageFile && imageFile.file instanceof File) {
+        try {
+          const responseUpload = await uploadFileToS3(imageFile.file);
+
+          if (responseUpload.location) {
+            locationUploadedImage = responseUpload.location;
+            if (data?.imageUrl) {
+              await deleteFileFromS3ByUrl(data.imageUrl);
+            }
+          }
+        } catch (uploadError) {
+          console.error('Failed to upload new image:', uploadError);
+          toast.error('Failed to upload new image');
+          return;
         }
-      } else {
-        console.error(
-          'Cannot upload FileMetadata to S3, only File objects are supported'
-        );
+      }
+      if (data?.imageUrl) {
+        await deleteFileFromS3ByUrl(data.imageUrl);
       }
     }
 
@@ -441,11 +462,14 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
         displayOrder: values.displayOrder,
       },
     });
+
     if (response.success) {
       form.reset();
       setImageFile(null);
-      setImageFIleFromUrl(null);
       setIsOpen(false);
+      toast.success('Link updated successfully');
+    } else {
+      toast.error('Failed to update link');
     }
   }
 
@@ -456,7 +480,6 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
       if (newMetadata.image) {
         const imageWithPreview = await imageUrlToPreview(newMetadata.image);
         if (imageWithPreview) {
-          // setImageFIleFromUrl(imageWithPreview);
           setImageFile(imageWithPreview);
           form.setValue('imageUrl', imageWithPreview.preview);
         }
@@ -477,7 +500,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
     });
     resetMetadata();
     setHasUsedNewData(false);
-    setImageFile(imageFileFromUrl);
+    setImageFile(initialImageMemo);
     toast.success('Reset to original data');
   };
 
@@ -534,21 +557,40 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
 
   const handleImageChange = useCallback(
     (file?: FileWithPreview[]) => {
-      // Use setTimeout to defer state update to avoid updating during render
       setTimeout(async () => {
+        setLoadCompression(true);
         if (file && file[0]?.file instanceof File) {
-          const webpFile = await imageToWebP(file[0].file);
-          const webpFileWithPreview = {
-            file: webpFile,
-            id: generateUniqueId(webpFile),
-            preview: createPreview(webpFile),
+          let processedFile = file[0].file;
+
+          if (!file[0].file.type.includes('gif')) {
+            processedFile = await imageToWebP(file[0].file);
+          } else {
+            try {
+              processedFile = await compressGif(file[0].file, {
+                colors: 64,
+                lossy: 200,
+              });
+            } catch (gifError) {
+              console.warn(
+                'GIF compression failed, using original file:',
+                gifError
+              );
+              processedFile = file[0].file;
+            }
+          }
+
+          const fileWithPreview = {
+            file: processedFile,
+            id: generateUniqueId(processedFile),
+            preview: createPreview(processedFile),
           };
-          setImageFile(webpFileWithPreview);
-          form.setValue('imageUrl', webpFileWithPreview.preview);
+          setImageFile(fileWithPreview);
+          form.setValue('imageUrl', fileWithPreview.preview);
         } else {
           setImageFile(null);
-          // Jangan reset imageUrl di sini karena akan dihandle oleh logic lain
+          form.setValue('imageUrl', '');
         }
+        setLoadCompression(false);
       }, 0);
     },
     [createPreview, form, generateUniqueId]
@@ -558,8 +600,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
     setIsOpen(open);
     if (!open) {
       form.reset();
-      setImageFile(null);
-      setImageFIleFromUrl(null);
+      setImageFile(initialImageMemo);
       resetMetadata();
       setHasUsedNewData(false);
     }
@@ -592,7 +633,9 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                       <div className="flex gap-2">
                         <Input
                           placeholder="https://example.com"
-                          disabled={isMutating}
+                          disabled={
+                            isMutating || isFetchingMetadata || loadCompression
+                          }
                           className="flex-1"
                           {...field}
                           onBlur={(e) => {
@@ -604,7 +647,10 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                           type="button"
                           variant="outline"
                           disabled={
-                            isMutating || !field.value || isFetchingMetadata
+                            isMutating ||
+                            !field.value ||
+                            isFetchingMetadata ||
+                            loadCompression
                           }
                           onClick={() => handleUrlChange(field.value, true)}
                           className="size-9"
@@ -637,20 +683,21 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <ImageIcon className="h-4 w-4" />
-              Image {imageFile !== imageFileFromUrl && '(Custom)'}
+              Image {imageFile !== initialImageMemo && '(Custom)'}
             </label>
             <FileUpload
               parentFiles={imageFile ? [imageFile] : []}
               onFilesChange={handleImageChange}
             />
-            {imageFile !== imageFileFromUrl && imageFileFromUrl && (
+            {imageFile !== initialImageMemo && initialImageMemo && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                disabled={isMutating || isFetchingMetadata || loadCompression}
                 onClick={() => {
-                  setImageFile(imageFileFromUrl);
-                  form.setValue('imageUrl', imageFileFromUrl.preview);
+                  setImageFile(initialImageMemo);
+                  form.setValue('imageUrl', initialImageMemo.preview);
                 }}
               >
                 Reset to Original
@@ -753,12 +800,16 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button disabled={isMutating} variant="outline" type="button">
+              <Button
+                disabled={isMutating || loadCompression}
+                variant="outline"
+                type="button"
+              >
                 Cancel
               </Button>
             </DialogClose>
             <Button
-              disabled={isMutating}
+              disabled={isMutating || loadCompression}
               type="submit"
               form="edit-link-form"
               className="min-w-[120px]"
@@ -805,7 +856,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
         </div>
         <DrawerFooter className="pt-2 gap-2">
           <Button
-            disabled={isMutating}
+            disabled={isMutating || loadCompression}
             type="submit"
             form="edit-link-form"
             className="min-w-[120px]"
@@ -820,7 +871,9 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
             )}
           </Button>
           <DrawerClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" disabled={isMutating || loadCompression}>
+              Cancel
+            </Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>

@@ -1,4 +1,5 @@
 import imageCompression from 'browser-image-compression';
+import { decode, decodeFrames, encode } from 'modern-gif';
 
 export interface CompressionOptions {
   maxSizeMB: number;
@@ -6,6 +7,12 @@ export interface CompressionOptions {
   useWebWorker?: boolean;
   onProgress?: (progress: number) => void;
   preserveExif?: boolean;
+}
+
+export interface GifCompressionOptions {
+  quality?: number; // 0-100, higher = better quality
+  colors?: number; // 2-256, number of colors
+  lossy?: number; // 0-200, lossy compression level
 }
 
 export const defaultCompressionOptions: CompressionOptions = {
@@ -133,4 +140,115 @@ export function createWebpFile(webpBlob: Blob, originalFileName: string): File {
   );
 
   return webpFile;
+}
+
+/**
+ * Compress GIF animation using modern-gif library while preserving animation
+ * @param {File} gifFile - GIF file to compress
+ * @param {GifCompressionOptions} options - Compression options
+ * @returns {Promise<File>} Compressed GIF file
+ */
+export async function compressGif(
+  gifFile: File,
+  options: GifCompressionOptions = {}
+): Promise<File> {
+  if (!gifFile.type.includes('gif')) {
+    throw new Error('File is not a GIF');
+  }
+
+  const { colors = 64, lossy = 0 } = options;
+  let finalColors = colors;
+
+  if (lossy > 100) {
+    finalColors = Math.max(16, Math.floor(colors * 0.5));
+  } else if (lossy > 50) {
+    finalColors = Math.max(32, Math.floor(colors * 0.75));
+  }
+
+  try {
+    // Check if file needs compression (skip if already small)
+    const minSizeToCompress = 500 * 1024; // 500KB
+    if (gifFile.size <= minSizeToCompress) {
+      console.log('GIF is small enough, skipping compression');
+      return gifFile;
+    }
+
+    console.log('Compressing GIF with modern-gif:', {
+      originalSize: `${(gifFile.size / 1024).toFixed(2)}KB`,
+      maxColors: finalColors,
+    });
+
+    const arrayBuffer = await gifFile.arrayBuffer();
+
+    // Decode the GIF to get frames
+    const decodedGif = decode(arrayBuffer);
+
+    // Extract frames with compression
+    const frames = decodeFrames(arrayBuffer);
+
+    // Re-encode with reduced colors for compression
+    const compressedArrayBuffer = await encode({
+      width: decodedGif.width,
+      height: decodedGif.height,
+      frames: frames.map((frame) => ({
+        data: frame.data,
+        delay: frame.delay,
+        left: 0,
+        top: 0,
+        width: frame.width,
+        height: frame.height,
+      })),
+      maxColors: finalColors,
+      looped: decodedGif.looped,
+      loopCount: decodedGif.loopCount,
+      format: 'arrayBuffer',
+    });
+
+    const compressedFile = new File([compressedArrayBuffer], gifFile.name, {
+      type: 'image/gif',
+      lastModified: Date.now(),
+    });
+
+    const compressionRatio = getCompressionRatio(
+      gifFile.size,
+      compressedFile.size
+    );
+    console.log('GIF compression completed:', {
+      originalSize: `${(gifFile.size / 1024).toFixed(2)}KB`,
+      compressedSize: `${(compressedFile.size / 1024).toFixed(2)}KB`,
+      compressionRatio: `${compressionRatio}%`,
+    });
+
+    // If compression didn't help much, return original
+    if (compressedFile.size >= gifFile.size * 0.9) {
+      console.log('Compression not effective, using original file');
+      return gifFile;
+    }
+
+    return compressedFile;
+  } catch (error) {
+    console.error('GIF compression failed:', error);
+    // Return original file if compression fails
+    console.warn('Using original GIF file due to compression failure');
+    return gifFile;
+  }
+}
+
+/**
+ * Universal image compression function that handles both regular images and GIFs
+ * @param {File} file - Image file to compress
+ * @param {Partial<CompressionOptions>} imageOptions - Options for regular images
+ * @param {GifCompressionOptions} gifOptions - Options for GIF files
+ * @returns {Promise<File>} Compressed file
+ */
+export async function compressImageUniversal(
+  file: File,
+  imageOptions: Partial<CompressionOptions> = {},
+  gifOptions: GifCompressionOptions = {}
+): Promise<File> {
+  if (file.type.includes('gif')) {
+    return compressGif(file, gifOptions);
+  } else {
+    return compressImage(file, imageOptions);
+  }
 }

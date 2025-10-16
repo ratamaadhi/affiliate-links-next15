@@ -41,7 +41,11 @@ import { FileMetadata, FileWithPreview } from '@/hooks/use-file-upload';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
-import { convertImageToWebP, createWebpFile } from '@/lib/image-compression';
+import {
+  compressGif,
+  convertImageToWebP,
+  createWebpFile,
+} from '@/lib/image-compression';
 import { sanitizeFileName, uploadFileToS3 } from '@/lib/s3-upload';
 import { convertUrlToFile, validateImageUrl } from '@/lib/url-to-file';
 import { cn } from '@/lib/utils';
@@ -81,86 +85,16 @@ interface LinkMetadata {
   type?: string;
 }
 
-const LinkMetadataPreview = ({
-  metadata,
-  imageFileFromUrl,
-  imageFile,
-  onFilesChange,
-}: {
-  metadata: LinkMetadata;
-  imageFileFromUrl?: FileWithPreview | null;
-  imageFile?: FileWithPreview | null;
-  onFilesChange: (files?: FileWithPreview[]) => void;
-}) => (
-  <div className="w-full relative space-y-4 flex flex-col">
-    <Link
-      href={metadata.url || '#'}
-      target="_blank"
-      className="w-full flex-1 min-w-0 flex items-start gap-3"
-    >
-      {metadata.image && (
-        <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-          <img
-            src={metadata.image}
-            alt={metadata.title || 'Link preview'}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '/fallback-image.png';
-              e.currentTarget.onerror = null;
-            }}
-          />
-        </div>
-      )}
-      <div className="min-w-0 w-full">
-        <h3 className="font-medium text-sm truncate">
-          {metadata.title || 'No title'}
-        </h3>
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {metadata.description || 'No description'}
-        </p>
-        <div className="flex items-center gap-2 mt-1">
-          <ExternalLink className="h-3 w-3" />
-          <span className="text-xs text-muted-foreground truncate">
-            {metadata.domain}
-          </span>
-        </div>
-      </div>
-    </Link>
-    <div className="space-y-2">
-      <label className="text-sm font-medium flex items-center gap-2">
-        <ImageIcon className="h-4 w-4" />
-        Image {imageFile !== imageFileFromUrl && '(Custom)'}
-      </label>
-      <FileUpload
-        parentFiles={imageFile ? [imageFile] : []}
-        onFilesChange={onFilesChange}
-      />
-      {imageFile !== imageFileFromUrl && imageFileFromUrl && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            onFilesChange([imageFileFromUrl]);
-          }}
-        >
-          Reset to Original
-        </Button>
-      )}
-    </div>
-  </div>
-);
-
 export const CreateLinkButton = () => {
   const { user } = useAuth();
   const { selectedPage, keywordLink } = useContext(LinkPageContext);
   const [isOpen, setIsOpen] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
-  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const [imageFileFromUrl, setImageFIleFromUrl] =
     useState<FileWithPreview | null>();
   const [imageFile, setImageFile] = useState<FileWithPreview | null>(null);
+  const [loadCompression, setLoadCompression] = useState(false);
 
   const { trigger, isMutating } = useCreateLink({
     search: keywordLink || '',
@@ -268,12 +202,12 @@ export const CreateLinkButton = () => {
     return imageWithPreview;
   }
 
-  const handleUrlBlur = async (url: string) => {
+  const handleUrlBlur = async (url: string, forceFetch: boolean = false) => {
     if (url && url.trim() !== '') {
       try {
         new URL(url);
 
-        if (lastFetchedUrl === url) {
+        if (lastFetchedUrl === url && !forceFetch) {
           return;
         }
 
@@ -285,7 +219,6 @@ export const CreateLinkButton = () => {
           if (metadata) {
             form.setValue('title', metadata.title || '');
             form.setValue('description', metadata.description || '');
-            setCurrentImageUrl(metadata?.image || '');
             const imageWithPreview = await imageUrlToPreview(metadata.image);
             form.setValue('imageUrl', imageWithPreview?.preview);
             setImageFIleFromUrl(imageWithPreview);
@@ -337,35 +270,56 @@ export const CreateLinkButton = () => {
     });
     if (response.success) {
       form.reset();
-      setCurrentImageUrl('');
       setMetadata(null);
       setIsOpen(false);
     }
   }
 
-  const handleImageChange = useCallback((file?: FileWithPreview[]) => {
-    // Use setTimeout to defer state update to avoid updating during render
-    setTimeout(async () => {
-      if (file && file[0]?.file instanceof File) {
-        const webpFile = await imageToWebP(file[0].file);
-        const webpFileWithPreview = {
-          file: webpFile,
-          id: generateUniqueId(webpFile),
-          preview: createPreview(webpFile),
-        };
-        setImageFile(webpFileWithPreview);
-        form.setValue('imageUrl', webpFileWithPreview.preview);
-      } else {
-        setImageFile(null);
-        form.setValue('imageUrl', '');
-      }
-    }, 0);
-  }, []);
+  const handleImageChange = useCallback(
+    (file?: FileWithPreview[]) => {
+      setTimeout(async () => {
+        setLoadCompression(true);
+        if (file && file[0]?.file instanceof File) {
+          let processedFile = file[0].file;
+
+          if (!file[0].file.type.includes('gif')) {
+            processedFile = await imageToWebP(file[0].file);
+          } else {
+            try {
+              processedFile = await compressGif(file[0].file, {
+                colors: 64,
+                lossy: 200,
+              });
+            } catch (gifError) {
+              console.warn(
+                'GIF compression failed, using original file:',
+                gifError
+              );
+              processedFile = file[0].file;
+            }
+          }
+          console.log('processedFile', processedFile);
+
+          const fileWithPreview = {
+            file: processedFile,
+            id: generateUniqueId(processedFile),
+            preview: createPreview(processedFile),
+          };
+          setImageFile(fileWithPreview);
+          form.setValue('imageUrl', fileWithPreview.preview);
+        } else {
+          setImageFile(null);
+          form.setValue('imageUrl', '');
+        }
+        setLoadCompression(false);
+      }, 0);
+    },
+    [createPreview, form, generateUniqueId]
+  );
 
   const handleDialogClose = (open: boolean) => {
     setIsOpen(open);
     form.reset();
-    setCurrentImageUrl('');
     setMetadata(null);
     setLastFetchedUrl('');
   };
@@ -399,7 +353,9 @@ export const CreateLinkButton = () => {
                       <div className="flex gap-2 items-center">
                         <Input
                           placeholder="https://example.com"
-                          disabled={isMutating}
+                          disabled={
+                            isMutating || isFetchingMetadata || loadCompression
+                          }
                           className="flex-1"
                           {...field}
                           onBlur={(e) => {
@@ -411,9 +367,12 @@ export const CreateLinkButton = () => {
                           type="button"
                           variant="outline"
                           disabled={
-                            isMutating || !field.value || isFetchingMetadata
+                            isMutating ||
+                            !field.value ||
+                            isFetchingMetadata ||
+                            loadCompression
                           }
-                          onClick={() => handleUrlBlur(field.value)}
+                          onClick={() => handleUrlBlur(field.value, true)}
                           className="size-9"
                         >
                           {isFetchingMetadata ? (
@@ -442,12 +401,64 @@ export const CreateLinkButton = () => {
                 <Skeleton className="h-20 w-full rounded-lg" />
               </div>
             ) : metadata ? (
-              <LinkMetadataPreview
-                metadata={metadata}
-                imageFileFromUrl={imageFileFromUrl}
-                imageFile={imageFile}
-                onFilesChange={handleImageChange}
-              />
+              <div className="w-full relative space-y-4 flex flex-col">
+                <Link
+                  href={metadata.url || '#'}
+                  target="_blank"
+                  className="w-full flex-1 min-w-0 flex items-start gap-3"
+                >
+                  {metadata.image && (
+                    <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+                      <img
+                        src={metadata.image}
+                        alt={metadata.title || 'Link preview'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '/fallback-image.png';
+                          e.currentTarget.onerror = null;
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="min-w-0 w-full">
+                    <h3 className="font-medium text-sm truncate">
+                      {metadata.title || 'No title'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {metadata.description || 'No description'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <ExternalLink className="h-3 w-3" />
+                      <span className="text-xs text-muted-foreground truncate">
+                        {metadata.domain}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Image {imageFile !== imageFileFromUrl && '(Custom)'}
+                  </label>
+                  <FileUpload
+                    parentFiles={imageFile ? [imageFile] : []}
+                    onFilesChange={handleImageChange}
+                  />
+                  {imageFile !== imageFileFromUrl && imageFileFromUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setImageFile(imageFileFromUrl);
+                        form.setValue('imageUrl', imageFileFromUrl.preview);
+                      }}
+                    >
+                      Reset to Original
+                    </Button>
+                  )}
+                </div>
+              </div>
             ) : null}
           </>
         )}
@@ -528,12 +539,16 @@ export const CreateLinkButton = () => {
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button disabled={isMutating} variant="outline" type="button">
+              <Button
+                disabled={isMutating || loadCompression}
+                variant="outline"
+                type="button"
+              >
                 Cancel
               </Button>
             </DialogClose>
             <Button
-              disabled={isMutating || !metadata}
+              disabled={isMutating || !metadata || loadCompression}
               type="submit"
               form="create-link-form"
               className="min-w-[120px]"
@@ -580,7 +595,7 @@ export const CreateLinkButton = () => {
         </div>
         <DrawerFooter className="pt-2 gap-2">
           <Button
-            disabled={isMutating || !metadata}
+            disabled={isMutating || !metadata || loadCompression}
             type="submit"
             form="create-link-form"
             className="min-w-[120px]"
@@ -595,7 +610,9 @@ export const CreateLinkButton = () => {
             )}
           </Button>
           <DrawerClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" disabled={isMutating || loadCompression}>
+              Cancel
+            </Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>

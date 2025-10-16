@@ -472,26 +472,29 @@ export function isUrlFromOurBucket(url: string, ourBucket?: string): boolean {
 export function validateUrlFromOurBucket(
   url: string,
   ourBucket?: string
-): { bucket: string; key: string } {
+): { bucket: string; key: string; success: boolean } {
   const parsed = parseS3Url(url);
 
   if (!parsed || !parsed.bucket || !parsed.key) {
-    throw new Error('Invalid S3 URL format');
+    console.error('Invalid S3 URL format');
+    return { bucket: null, key: null, success: false };
   }
 
   const bucket = ourBucket || process.env.NEXT_PUBLIC_S3_BUCKET;
   if (!bucket) {
-    throw new Error('No bucket configured for validation');
+    console.error('No bucket configured for validation');
+    return { bucket: parsed.bucket, key: parsed.key, success: false };
   }
 
   if (parsed.bucket !== bucket) {
-    throw new Error(
+    console.error(
       `URL is from bucket "${parsed.bucket}" but our configured bucket is "${bucket}". ` +
         'For security reasons, you can only delete files from your own bucket.'
     );
+    return { bucket: parsed.bucket, key: parsed.key, success: false };
   }
 
-  return { bucket: parsed.bucket, key: parsed.key };
+  return { bucket: parsed.bucket, key: parsed.key, success: true };
 }
 
 export async function uploadWithRetry(
@@ -593,6 +596,14 @@ export async function deleteFileFromS3ByUrl(
   // Validate that the URL belongs to our bucket for security
   const validated = validateUrlFromOurBucket(url, options.bucket);
 
+  if (!validated.success) {
+    return {
+      success: false,
+      bucket: null,
+      key: null,
+    };
+  }
+
   return deleteFileFromS3({
     ...options,
     key: validated.key,
@@ -621,21 +632,20 @@ export async function deleteFileFromS3ByUrlWithOptions(
       key: validated.key,
       bucket: validated.bucket,
     });
+  } else {
+    // Skip validation (use with caution)
+    const parsed = parseS3Url(url);
+
+    if (!parsed || !parsed.key) {
+      throw new Error('Could not extract S3 key from URL');
+    }
+
+    return deleteFileFromS3({
+      ...deleteOptions,
+      key: parsed.key,
+      bucket: deleteOptions.bucket || parsed.bucket || undefined,
+    });
   }
-  // else {
-  //   // Skip validation (use with caution)
-  //   const parsed = parseS3Url(url);
-
-  //   if (!parsed || !parsed.key) {
-  //     throw new Error('Could not extract S3 key from URL');
-  //   }
-
-  //   return deleteFileFromS3({
-  //     ...deleteOptions,
-  //     key: parsed.key,
-  //     bucket: deleteOptions.bucket || parsed.bucket || undefined,
-  //   });
-  // }
 }
 
 export interface PresignedUrlOptions {
