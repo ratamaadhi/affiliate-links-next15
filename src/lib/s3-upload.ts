@@ -1,10 +1,6 @@
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { deleteFileFromS3, generatePresignedUrlAction } from './s3/actions';
 
 export interface S3UploadOptions {
   bucket?: string;
@@ -40,6 +36,16 @@ export interface S3DeleteResult {
   bucket: string;
 }
 
+export const computeSHA256 = async (file: File) => {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return hashHex;
+};
+
 function sanitizeTagValue(value: string): string {
   // Remove or replace characters that might cause issues in S3 tags
   return value
@@ -73,25 +79,25 @@ export async function uploadToS3(
   options: S3UploadOptions
 ): Promise<S3UploadResult> {
   const {
-    bucket = process.env.NEXT_PUBLIC_S3_BUCKET,
+    bucket = process.env.S3_BUCKET,
     key,
-    region = process.env.NEXT_PUBLIC_S3_REGION || 'us-east-1',
-    accessKeyId = process.env.NEXT_PUBLIC_S3_ACCESS_KEY_ID,
-    secretAccessKey = process.env.NEXT_PUBLIC_S3_SECRET_ACCESS_KEY,
-    endpoint = process.env.NEXT_PUBLIC_S3_ENDPOINT,
-    forcePathStyle = process.env.NEXT_PUBLIC_S3_FORCE_PATH_STYLE === 'true',
+    region = process.env.S3_REGION || 'us-east-1',
+    accessKeyId = process.env.S3_ACCESS_KEY_ID,
+    secretAccessKey = process.env.S3_SECRET_ACCESS_KEY,
+    endpoint = process.env.S3_ENDPOINT,
+    forcePathStyle = process.env.S3_FORCE_PATH_STYLE === 'true',
     onProgress,
   } = options;
 
   if (!accessKeyId || !secretAccessKey) {
     throw new Error(
-      'S3 credentials are required. Please check your NEXT_PUBLIC_S3_* environment variables.'
+      'S3 credentials are required. Please check your S3_* environment variables.'
     );
   }
 
   if (!bucket) {
     throw new Error(
-      'S3 bucket is required. Please set NEXT_PUBLIC_S3_BUCKET environment variable.'
+      'S3 bucket is required. Please set S3_BUCKET environment variable.'
     );
   }
 
@@ -234,84 +240,14 @@ export async function uploadToS3(
   }
 }
 
-/**
- * Delete a file from S3
- */
-export async function deleteFileFromS3(
-  options: S3DeleteOptions
-): Promise<S3DeleteResult> {
-  const {
-    bucket = process.env.NEXT_PUBLIC_S3_BUCKET,
-    key,
-    region = process.env.NEXT_PUBLIC_S3_REGION || 'us-east-1',
-    accessKeyId = process.env.NEXT_PUBLIC_S3_ACCESS_KEY_ID,
-    secretAccessKey = process.env.NEXT_PUBLIC_S3_SECRET_ACCESS_KEY,
-    endpoint = process.env.NEXT_PUBLIC_S3_ENDPOINT,
-    forcePathStyle = process.env.NEXT_PUBLIC_S3_FORCE_PATH_STYLE === 'true',
-  } = options;
-
-  if (!accessKeyId || !secretAccessKey) {
-    throw new Error(
-      'S3 credentials are required. Please check your NEXT_PUBLIC_S3_* environment variables.'
-    );
-  }
-
-  if (!bucket) {
-    throw new Error(
-      'S3 bucket is required. Please set NEXT_PUBLIC_S3_BUCKET environment variable.'
-    );
-  }
-
-  if (!key) {
-    throw new Error('S3 object key is required for deletion.');
-  }
-
-  // Configure S3 client with optional custom endpoint
-  const clientConfig: any = {
-    region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-  };
-
-  // Add custom endpoint if provided (for S3-compatible services like MinIO, DigitalOcean Spaces, etc.)
-  if (endpoint) {
-    clientConfig.endpoint = endpoint;
-    clientConfig.forcePathStyle = forcePathStyle;
-  }
-
-  const s3Client = new S3Client(clientConfig);
-
-  try {
-    const deleteCommand = new DeleteObjectCommand({
-      Bucket: bucket,
-      Key: key,
-    });
-
-    await s3Client.send(deleteCommand);
-
-    return {
-      success: true,
-      key,
-      bucket,
-    };
-  } catch (error) {
-    console.error('S3 delete failed:', error);
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
-    throw new Error(`Failed to delete from S3: ${errorMessage}`);
-  }
-}
-
 export function getS3Config() {
   return {
-    bucket: process.env.NEXT_PUBLIC_S3_BUCKET,
-    region: process.env.NEXT_PUBLIC_S3_REGION || 'us-east-1',
-    accessKeyId: process.env.NEXT_PUBLIC_S3_ACCESS_KEY_ID,
-    secretAccessKey: process.env.NEXT_PUBLIC_S3_SECRET_ACCESS_KEY,
-    endpoint: process.env.NEXT_PUBLIC_S3_ENDPOINT,
-    forcePathStyle: process.env.NEXT_PUBLIC_S3_FORCE_PATH_STYLE === 'true',
+    bucket: process.env.S3_BUCKET,
+    region: process.env.S3_REGION || 'us-east-1',
+    accessKeyId: process.env.S3_ACCESS_KEY_ID,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    endpoint: process.env.S3_ENDPOINT,
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
   };
 }
 
@@ -330,21 +266,12 @@ export function sanitizeFileName(fileName: string): string {
     .substring(0, 50); // Limit to 50 characters
 }
 
-export function generateS3Key(
-  file: File,
-  prefix = 'uploads',
-  originalFileName?: string
-): string {
+export function generateS3Key(prefix = 'uploads'): string {
   const timestamp = Date.now();
   const randomString = Math.random().toString(36).substring(2, 8);
-  const fileName = originalFileName || file.name;
-  const extension = fileName?.split('.').pop() || '';
-
-  // Sanitize the filename without extension
-  const sanitizedFileName = sanitizeFileName(fileName);
 
   // Create the new key format: original-filename-timestamp-randomString.extension
-  return `${prefix}/${sanitizedFileName}-${timestamp}-${randomString}.${extension}`;
+  return `${prefix}/${timestamp}-${randomString}`;
 }
 
 /**
@@ -452,7 +379,7 @@ export function isUrlFromOurBucket(url: string, ourBucket?: string): boolean {
       return false;
     }
 
-    const bucket = ourBucket || process.env.NEXT_PUBLIC_S3_BUCKET;
+    const bucket = ourBucket || process.env.S3_BUCKET;
     if (!bucket) {
       console.warn('No bucket configured for validation');
       return false;
@@ -480,7 +407,7 @@ export function validateUrlFromOurBucket(
     return { bucket: null, key: null, success: false };
   }
 
-  const bucket = ourBucket || process.env.NEXT_PUBLIC_S3_BUCKET;
+  const bucket = ourBucket || '';
   if (!bucket) {
     console.error('No bucket configured for validation');
     return { bucket: parsed.bucket, key: parsed.key, success: false };
@@ -532,7 +459,7 @@ export async function uploadFileToS3(
   options: Partial<Omit<S3UploadOptions, 'key'>> = {}
 ): Promise<S3UploadResult> {
   const s3Config = getS3Config();
-  const fileKey = key || generateS3Key(file);
+  const fileKey = key || generateS3Key();
 
   return uploadToS3(file, {
     ...s3Config,
@@ -585,69 +512,6 @@ export async function deleteWithRetry(
   throw lastError || new Error('Delete failed after retries');
 }
 
-/**
- * Delete file from S3 using URL
- * Automatically extracts the key from the URL and validates it belongs to our bucket
- */
-export async function deleteFileFromS3ByUrl(
-  url: string,
-  options: Partial<Omit<S3DeleteOptions, 'key'>> = {}
-): Promise<S3DeleteResult> {
-  // Validate that the URL belongs to our bucket for security
-  const validated = validateUrlFromOurBucket(url, options.bucket);
-
-  if (!validated.success) {
-    return {
-      success: false,
-      bucket: null,
-      key: null,
-    };
-  }
-
-  return deleteFileFromS3({
-    ...options,
-    key: validated.key,
-    bucket: validated.bucket,
-  });
-}
-
-/**
- * Delete file from S3 using URL with optional validation
- * Set validateBucket to false if you want to skip bucket validation (not recommended)
- */
-export async function deleteFileFromS3ByUrlWithOptions(
-  url: string,
-  options: Partial<Omit<S3DeleteOptions, 'key'>> & {
-    validateBucket?: boolean;
-  } = {}
-): Promise<S3DeleteResult> {
-  const { validateBucket = true, ...deleteOptions } = options;
-
-  if (validateBucket) {
-    // Validate that the URL belongs to our bucket for security
-    const validated = validateUrlFromOurBucket(url, deleteOptions.bucket);
-
-    return deleteFileFromS3({
-      ...deleteOptions,
-      key: validated.key,
-      bucket: validated.bucket,
-    });
-  } else {
-    // Skip validation (use with caution)
-    const parsed = parseS3Url(url);
-
-    if (!parsed || !parsed.key) {
-      throw new Error('Could not extract S3 key from URL');
-    }
-
-    return deleteFileFromS3({
-      ...deleteOptions,
-      key: parsed.key,
-      bucket: deleteOptions.bucket || parsed.bucket || undefined,
-    });
-  }
-}
-
 export interface PresignedUrlOptions {
   bucket?: string;
   key: string;
@@ -660,77 +524,13 @@ export interface PresignedUrlOptions {
 }
 
 /**
- * Generate a presigned URL for secure S3 object access
- */
-export async function generatePresignedUrl(
-  options: PresignedUrlOptions
-): Promise<string> {
-  const {
-    bucket = process.env.NEXT_PUBLIC_S3_BUCKET,
-    key,
-    region = process.env.NEXT_PUBLIC_S3_REGION || 'us-east-1',
-    accessKeyId = process.env.NEXT_PUBLIC_S3_ACCESS_KEY_ID,
-    secretAccessKey = process.env.NEXT_PUBLIC_S3_SECRET_ACCESS_KEY,
-    endpoint = process.env.NEXT_PUBLIC_S3_ENDPOINT,
-    forcePathStyle = process.env.NEXT_PUBLIC_S3_FORCE_PATH_STYLE === 'true',
-    expiresIn = 3600,
-  } = options;
-
-  if (!accessKeyId || !secretAccessKey) {
-    throw new Error(
-      'S3 credentials are required. Please check your NEXT_PUBLIC_S3_* environment variables.'
-    );
-  }
-
-  if (!bucket) {
-    throw new Error(
-      'S3 bucket is required. Please set NEXT_PUBLIC_S3_BUCKET environment variable.'
-    );
-  }
-
-  // Configure S3 client
-  const clientConfig: any = {
-    region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-  };
-
-  // Add custom endpoint if provided (for S3-compatible services like MinIO)
-  if (endpoint) {
-    clientConfig.endpoint = endpoint;
-    clientConfig.forcePathStyle = forcePathStyle;
-  }
-
-  const s3Client = new S3Client(clientConfig);
-
-  try {
-    const command = new GetObjectCommand({
-      Bucket: bucket,
-      Key: key,
-    });
-
-    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
-    return signedUrl;
-  } catch (error) {
-    console.error('Failed to generate presigned URL:', error);
-    throw new Error(
-      `Failed to generate presigned URL: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`
-    );
-  }
-}
-
-/**
  * Generate presigned URL using environment variables by default
  */
 export async function generateObjectUrl(
   key: string,
   expiresIn = 3600
 ): Promise<string> {
-  return generatePresignedUrl({ key, expiresIn });
+  return generatePresignedUrlAction({ key, expiresIn });
 }
 
 /**
@@ -743,14 +543,14 @@ export async function getAccessibleUrl(
 ): Promise<string> {
   try {
     // Try to generate presigned URL first
-    return await generatePresignedUrl({ key, expiresIn });
+    return await generatePresignedUrlAction({ key, expiresIn });
   } catch (error) {
     console.warn('Failed to generate presigned URL, using fallback:', error);
 
     // Fallback to direct URL if endpoint is provided
     if (fallbackEndpoint) {
       const baseUrl = fallbackEndpoint.replace(/\/$/, '');
-      const bucket = process.env.NEXT_PUBLIC_S3_BUCKET;
+      const bucket = process.env.S3_BUCKET;
       if (bucket) {
         return `${baseUrl}/${bucket}/${key}`;
       }

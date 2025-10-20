@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"turso dev --db-file local.db\" \"next dev --turbopack\"",
+    "dev": "next dev --turbopack",
+    "dev:local": "concurrently \"turso dev --db-file local.db\" \"next dev --turbopack\"",
     "dev:db": "turso dev --db-file local.db",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

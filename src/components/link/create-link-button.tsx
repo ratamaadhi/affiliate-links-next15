@@ -46,10 +46,16 @@ import {
   convertImageToWebP,
   createWebpFile,
 } from '@/lib/image-compression';
-import { sanitizeFileName, uploadFileToS3 } from '@/lib/s3-upload';
+import {
+  computeSHA256,
+  generateS3Key,
+  sanitizeFileName,
+} from '@/lib/s3-upload';
+import { generatePresignedUrlAction } from '@/lib/s3/actions';
 import { convertUrlToFile, validateImageUrl } from '@/lib/url-to-file';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
+import axios from 'axios';
 import {
   ExternalLink,
   ImageIcon,
@@ -251,9 +257,23 @@ export const CreateLinkButton = () => {
     if (imageFile && imageFile.file) {
       // Check if the file is a File instance (not FileMetadata)
       if (imageFile.file instanceof File) {
-        const responseUpload = await uploadFileToS3(imageFile.file);
-        if (responseUpload.location) {
-          locationUploadedImage = responseUpload.location;
+        const checksum = await computeSHA256(imageFile.file);
+        const key = generateS3Key();
+        const singedUrlResult = await generatePresignedUrlAction({
+          key,
+          expiresIn: 120,
+          checksum,
+          type: imageFile.file.type,
+          size: imageFile.file.size,
+        });
+        const upload = await axios.put(singedUrlResult, imageFile.file, {
+          headers: {
+            'Content-Type': imageFile.file.type,
+          },
+        });
+
+        if (upload.status === 200) {
+          locationUploadedImage = singedUrlResult.split('?')[0];
         }
       } else {
         console.error(

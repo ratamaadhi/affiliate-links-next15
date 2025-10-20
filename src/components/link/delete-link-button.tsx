@@ -2,7 +2,7 @@ import { LinkPageContext } from '@/context/link-page-context';
 import { useDeleteLink } from '@/hooks/mutations';
 import { authClient } from '@/lib/auth-client';
 import { LinkSelect } from '@/lib/db/schema';
-import { deleteFileFromS3ByUrl } from '@/lib/s3-upload';
+import { deleteFileFromS3ByUrlAction } from '@/lib/s3/actions';
 import { useContext, useState } from 'react';
 import { HiOutlineTrash } from 'react-icons/hi';
 import { toast } from 'sonner';
@@ -42,7 +42,7 @@ export const DeleteLinkButton = ({
       return;
     }
     if (data.imageUrl) {
-      await deleteFileFromS3ByUrl(data.imageUrl);
+      await deleteFileFromS3ByUrlAction(data.imageUrl);
     }
     const response = await trigger({
       id: linkId,
