@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Eye, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { DynamicPageLink } from './dynamic-page-link';
 import { EnhancedDashboardPreview } from './enhanced-dashboard-preview';
 
 interface MobileDockProps {
@@ -109,6 +110,9 @@ export function MobileDock({ username, pageLink }: MobileDockProps) {
             </DrawerTrigger>
             <DrawerContent className="data-[vaul-drawer-direction=top]:max-h-[90vh] data-[vaul-drawer-direction=bottom]:max-h-[90vh] h-[90vh]">
               <DrawerTitle className="sr-only">Page Preview</DrawerTitle>
+              <div className="py-2 px-4">
+                <DynamicPageLink />
+              </div>
               <div className="w-full pt-2">
                 <EnhancedDashboardPreview
                   pageLink={pageLink}

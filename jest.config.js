@@ -16,7 +16,7 @@ const config = {
   setupFilesAfterEnv: ['@testing-library/jest-dom', '<rootDir>/jest.setup.js'],
   testMatch: ['<rootDir>/__test__/**/*.{js,jsx,ts,tsx}'],
   transformIgnorePatterns: [
-    'node_modules/(?!nanostores|better-auth|better-call|uncrypto|resend)',
+    'node_modules/(?!nanostores|better-auth|better-call|uncrypto|@better-auth|resend|@dnd-kit|motion|vaul|cmdk)',
   ],
   extensionsToTreatAsEsm: ['.ts', '.tsx', '.jsx'],
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json', 'node', 'mjs'],

@@ -1,5 +1,6 @@
 import PageWrapper from '@/components/page/page-wrapper';
 import { headers } from 'next/headers';
+import Link from 'next/link';
 
 export const metadata = {
   title: 'Dashboard | Aff-Link',
@@ -19,15 +20,15 @@ export default async function DashboardPage() {
       <main className="h-full bg-muted/50 rounded-lg p-2 ">
         <h1 className="text-2xl font-bold mb-2 hidden">Dashboard</h1>
         <div className="flex gap-2 w-max rounded-lg px-4 py-2 bg-background shadow border border-muted">
-          <div className="text-nowrap text-sm">
+          <div className="text-nowrap text-sm relative overflow-x-auto no-scrollbar">
             <span className="font-semibold text-foreground/70">
               My Linkid:{' '}
             </span>
-            <a
+            <Link
               href={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}
               target="_blank"
               className="hover:underline"
-            >{`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}</a>
+            >{`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}</Link>
           </div>
         </div>
       </main>

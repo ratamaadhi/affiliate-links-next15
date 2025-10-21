@@ -65,3 +65,34 @@ jest.mock('next/server', () => ({
     },
   },
 }));
+
+// Mock better-auth client to avoid ES module issues
+jest.mock('better-auth/client', () => ({
+  createAuthClient: jest.fn(() => ({
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    signUp: jest.fn(),
+    getSession: jest.fn(),
+  })),
+  customSessionClient: jest.fn(),
+  usernameClient: jest.fn(),
+}));
+
+// Mock nanostores to avoid ES module issues
+jest.mock('nanostores', () => ({
+  atom: jest.fn(() => ({
+    get: jest.fn(),
+    set: jest.fn(),
+    subscribe: jest.fn(),
+  })),
+}));
+
+// Mock the auth-client module itself
+jest.mock('@/lib/auth-client', () => ({
+  authClient: {
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    signUp: jest.fn(),
+    getSession: jest.fn(),
+  },
+}));
