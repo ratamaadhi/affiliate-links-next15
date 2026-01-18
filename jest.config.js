@@ -14,9 +14,14 @@ const config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   setupFilesAfterEnv: ['@testing-library/jest-dom', '<rootDir>/jest.setup.js'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^uncrypto$': '<rootDir>/node_modules/uncrypto/dist/crypto.web.cjs',
+    '^jose/(.*)$': '<rootDir>/__mocks__/jose.js',
+  },
   testMatch: ['<rootDir>/__test__/**/*.{js,jsx,ts,tsx}'],
   transformIgnorePatterns: [
-    'node_modules/(?!nanostores|better-auth|better-call|uncrypto|@better-auth|resend|@dnd-kit|motion|vaul|cmdk)',
+    'node_modules/(?!nanostores|better-auth|better-call|uncrypto|@better-auth|resend|@dnd-kit|motion|vaul|cmdk|slug|jose|nanoid)',
   ],
   extensionsToTreatAsEsm: ['.ts', '.tsx', '.jsx'],
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json', 'node', 'mjs'],

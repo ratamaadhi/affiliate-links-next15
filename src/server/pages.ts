@@ -12,6 +12,7 @@ import { and, count, eq, like, or } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
 import slugify from 'slug';
+import { createShortLink } from './short-links';
 
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 5);
 
@@ -28,12 +29,20 @@ export const createHomePageUser = async () => {
   const username = user?.username || 'user';
   try {
     const slug = await generateUniqueSlug(username);
-    await db.insert(pageSchema).values({
-      title: `${username}'s Home`,
-      description: `${username}'s Aff-Link `,
-      slug,
-      userId,
-    });
+    const [newPage] = await db
+      .insert(pageSchema)
+      .values({
+        title: `${username}'s Home`,
+        description: `${username}'s Aff-Link `,
+        slug,
+        userId,
+      })
+      .returning();
+
+    if (newPage && newPage.id) {
+      await createShortLink(newPage.id, userId);
+    }
+
     return { success: true, message: 'Page created successfully' };
   } catch (error) {
     console.error('Failed to create home page:', error);
@@ -41,26 +50,32 @@ export const createHomePageUser = async () => {
   }
 };
 
-const findPageBySlug = (slug: string) => {
+// OPTIMIZATION: Uses index on page.slug (created in migration 0011)
+export const findPageBySlug = async (slug: string) => {
   return db.query.page.findFirst({
     where: eq(pageSchema.slug, slug),
   });
 };
 
-const generateUniqueSlug = async (title: string): Promise<string> => {
+export const generateUniqueSlug = async (
+  title: string,
+  excludePageId?: number
+): Promise<string> => {
   let slug = slugify(title);
 
   while (true) {
     const existingPage = await findPageBySlug(slug);
 
-    if (!existingPage) return slug;
+    if (!existingPage || existingPage.id === excludePageId) {
+      return slug;
+    }
 
     const ids = nanoid();
     slug = `${slugify(title)}-${ids}`;
   }
 };
 
-export type PageCreationArgs = Omit<PageInsert, 'slug' | 'userId'>;
+export type PageCreationArgs = Omit<PageInsert, 'userId'>;
 
 export const createPage = async (
   _url: string,
@@ -68,15 +83,50 @@ export const createPage = async (
 ) => {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    const userId = +session?.user?.id;
+    const user = session.user as SessionUser;
+    const userId = +user?.id;
 
     if (!userId) {
       return { success: false, message: 'User not found' };
     }
 
-    const slug = await generateUniqueSlug(arg.title);
-    await db.insert(pageSchema).values({ ...arg, slug, userId });
-    return { success: true, message: 'Page created successfully' };
+    let slug = arg.slug;
+
+    if (!slug) {
+      slug = await generateUniqueSlug(arg.title);
+    } else {
+      const slugFormat = /^[a-z0-9-]+$/;
+      if (!slugFormat.test(slug)) {
+        return {
+          success: false,
+          message:
+            'Slug can only contain lowercase letters, numbers, and hyphens',
+        };
+      }
+
+      const existingPage = await findPageBySlug(slug);
+      if (existingPage) {
+        return {
+          success: false,
+          message: 'Slug already taken. Please try another one.',
+        };
+      }
+    }
+
+    const [newPage] = await db
+      .insert(pageSchema)
+      .values({ ...arg, slug, userId })
+      .returning();
+
+    if (newPage && newPage.id) {
+      await createShortLink(newPage.id, userId);
+    }
+
+    return {
+      success: true,
+      message: 'Page created successfully',
+      data: { slug },
+    };
   } catch (error) {
     console.error('Failed to create page:', error);
     return { success: false, message: 'Failed to create page' };
@@ -120,6 +170,9 @@ export const getPages = async (
 
     const whereCondition = buildPageWhereClause(userId, search);
 
+    // OPTIMIZATION: Uses index on page.userId (created in migration 0011)
+    // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
+    // The Promise.all executes both queries in parallel for better performance
     const [pagesByUser, totalItemsResult] = await Promise.all([
       db.query.page.findMany({
         where: whereCondition,
@@ -170,6 +223,8 @@ export const getPageInfinite = async (
 
     const whereCondition = buildPageWhereClause(userId, search);
 
+    // OPTIMIZATION: Uses index on page.userId (created in migration 0011)
+    // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
     const pagesByUser = await db.query.page.findMany({
       where: whereCondition,
       with: {
@@ -195,6 +250,8 @@ export const getPageById = async (id: number) => {
       return { success: false, message: 'User not found' };
     }
 
+    // OPTIMIZATION: Uses primary key index on page.id and index on page.userId (created in migration 0011)
+    // This query efficiently retrieves a page by ID and verifies ownership
     const pageById = await db.query.page.findFirst({
       where: and(eq(pageSchema.id, id), eq(pageSchema.userId, userId)),
       with: {
@@ -218,6 +275,8 @@ const updatePageValues = async (
   userId: number,
   values: Partial<PageInsert>
 ) => {
+  // OPTIMIZATION: Uses primary key index on page.id and index on page.userId (created in migration 0011)
+  // This update query efficiently updates a page and verifies ownership
   await db
     .update(pageSchema)
     .set(values)
@@ -232,7 +291,9 @@ export const updatePage = async (
 ) => {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    const userId = +session?.user?.id;
+    const user = session.user as SessionUser;
+    const userId = +user?.id;
+    const userUsername = user?.username;
 
     if (!userId) {
       return { success: false, message: 'User not found' };
@@ -240,14 +301,47 @@ export const updatePage = async (
 
     const newValues: Partial<PageInsert> = { ...arg.values };
 
+    if (arg.values.slug) {
+      const slugFormat = /^[a-z0-9-]+$/;
+      if (!slugFormat.test(arg.values.slug)) {
+        return {
+          success: false,
+          message:
+            'Slug can only contain lowercase letters, numbers, and hyphens',
+        };
+      }
+
+      const existingPage = await findPageBySlug(arg.values.slug);
+      if (existingPage && existingPage.id !== arg.id) {
+        return {
+          success: false,
+          message: 'Slug already taken. Please try another one.',
+        };
+      }
+    }
+
     if (arg.values.title) {
+      // OPTIMIZATION: Uses primary key index on page.id and index on page.userId (created in migration 0011)
+      // This query efficiently retrieves the original page title and slug
       const originalPage = await db.query.page.findFirst({
         where: and(eq(pageSchema.id, arg.id), eq(pageSchema.userId, userId)),
-        columns: { title: true },
+        columns: { title: true, slug: true },
       });
 
-      if (originalPage && originalPage.title !== arg.values.title) {
-        newValues.slug = await generateUniqueSlug(arg.values.title);
+      if (originalPage) {
+        // Check if this is the default page (slug matches username)
+        const isDefaultPage = originalPage.slug === userUsername;
+
+        // Only regenerate slug if NOT the default page AND title changed
+        if (!isDefaultPage && originalPage.title !== arg.values.title) {
+          newValues.slug = await generateUniqueSlug(arg.values.title);
+        }
+
+        // If it's the default page, ensure slug is NOT in newValues
+        // This preserves the slug as the username
+        if (isDefaultPage) {
+          delete newValues.slug;
+        }
       }
     }
 
@@ -266,16 +360,35 @@ export const deletePage = async (
     const session = await auth.api.getSession({
       headers: await headers(),
     });
-    const userId = +session?.user?.id;
+    const user = session.user as SessionUser;
+    const userId = +user?.id;
+    const userUsername = user?.username;
 
     if (!userId) {
       return { success: false, message: 'User not found' };
     }
 
+    // Check if the page to delete is the default page
+    const pageToDelete = await db.query.page.findFirst({
+      where: and(eq(pageSchema.id, arg.id), eq(pageSchema.userId, userId)),
+      columns: { slug: true },
+    });
+
+    if (pageToDelete?.slug === userUsername) {
+      return {
+        success: false,
+        message: 'Cannot delete default page. This is your main page.',
+      };
+    }
+
     // First, delete all links associated with this page
+    // OPTIMIZATION: Uses index on link.page_id (created in migration 0011)
+    // This delete query efficiently removes all links for a page
     await db.delete(linkSchema).where(eq(linkSchema.pageId, arg.id));
 
     // Then delete the page
+    // OPTIMIZATION: Uses primary key index on page.id and index on page.userId (created in migration 0011)
+    // This delete query efficiently removes a page and verifies ownership
     await db
       .delete(pageSchema)
       .where(and(eq(pageSchema.id, arg.id), eq(pageSchema.userId, userId)));

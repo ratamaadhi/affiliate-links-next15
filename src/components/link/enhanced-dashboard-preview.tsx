@@ -19,9 +19,32 @@ export function EnhancedDashboardPreview({
   const [retryCount, setRetryCount] = useState(0);
   const { selectedPage } = useContext(LinkPageContext);
 
-  // Handle case where selectedPage is empty string or undefined
-  const slug = selectedPage?.slug === username ? '' : selectedPage?.slug;
+  // Validate username exists to prevent redirect loops
+  const isValidUsername =
+    username && username.length > 0 && username !== 'undefined';
+  const isValidPageLink = pageLink && !pageLink.includes('undefined');
+
+  // Extract page slug properly from selectedPage
+  // selectedPage.slug can be like "username/pagename-randomid" or "pagename-randomid"
+  // We only want the pagename-randomid part (without username prefix)
+  let slug = '';
+  if (selectedPage?.slug) {
+    // If slug contains "/" it means it's in "username/slug" format
+    const parts = selectedPage.slug.split('/');
+    slug = parts.length > 1 ? parts[1] : parts[0];
+
+    // Don't include slug if it's the same as username (user's default page)
+    if (slug === username) {
+      slug = '';
+    }
+  }
+
+  // Construct full link safely
+  // Only append slug if it exists and is not the username
   const fullLink = slug ? `${pageLink}/${slug}` : pageLink;
+
+  // Prevent iframe from loading if username or pageLink is invalid (causes redirect loop)
+  const shouldShowPreview = isValidUsername && isValidPageLink;
 
   const handleIframeLoad = () => {
     console.log('Iframe loaded successfully:', fullLink);
@@ -43,7 +66,7 @@ export function EnhancedDashboardPreview({
 
   // Add timeout to handle cases where iframe never loads
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading && shouldShowPreview) {
       const timeout = setTimeout(() => {
         if (isLoading) {
           console.log('Iframe loading timeout reached for:', fullLink);
@@ -54,9 +77,10 @@ export function EnhancedDashboardPreview({
 
       return () => clearTimeout(timeout);
     }
-  }, [isLoading, fullLink]);
+  }, [isLoading, fullLink, shouldShowPreview]);
 
-  if (!pageLink || !username) {
+  // Show empty state if username is invalid or pageLink is undefined
+  if (!shouldShowPreview) {
     return (
       <div className="w-full flex justify-center items-center">
         <div className="relative flex aspect-[9/16] max-h-[120vh] w-full max-w-[394px] md:w-[340px] origin-top scale-[1] flex-col items-center gap-10 mx-auto">
@@ -68,10 +92,12 @@ export function EnhancedDashboardPreview({
                     <FileQuestion className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <p className="font-semibold text-lg">
-                    No Page Selected or Found
+                    {!username ? 'No Username Set' : 'No Page Selected'}
                   </p>
                   <p className="text-sm text-muted-foreground max-w-xs">
-                    Select a page to see its preview.
+                    {!username
+                      ? 'Please set up your username first to preview pages.'
+                      : 'Select a page to see its preview.'}
                   </p>
                 </div>
               </main>

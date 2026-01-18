@@ -12,6 +12,7 @@ import {
   Settings2,
 } from 'lucide-react';
 import * as React from 'react';
+import { Suspense } from 'react';
 
 import { TbDiamond } from 'react-icons/tb';
 
@@ -51,8 +52,8 @@ const data = {
           url: '/dashboard/links',
         },
         {
-          title: 'Profile',
-          url: '#',
+          title: 'Settings',
+          url: '/dashboard/settings',
         },
       ],
     },
@@ -100,26 +101,9 @@ const data = {
     },
     {
       title: 'Settings',
-      url: '#',
+      url: '/dashboard/settings',
       icon: Settings2,
-      items: [
-        {
-          title: 'General',
-          url: '#',
-        },
-        {
-          title: 'Team',
-          url: '#',
-        },
-        {
-          title: 'Billing',
-          url: '#',
-        },
-        {
-          title: 'Limits',
-          url: '#',
-        },
-      ],
+      items: [],
     },
   ],
   navSecondary: [
@@ -155,32 +139,34 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar variant="inset" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="#">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <TbDiamond className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Aff-link</span>
-                  <span className="truncate text-xs">Enterprise</span>
-                </div>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser />
-      </SidebarFooter>
-    </Sidebar>
+    <Suspense fallback={<div>Loading...</div>}>
+      <Sidebar variant="inset" {...props}>
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <a href="#">
+                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                    <TbDiamond className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">Aff-link</span>
+                    <span className="truncate text-xs">Enterprise</span>
+                  </div>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          <NavMain items={data.navMain} />
+          <NavProjects projects={data.projects} />
+          <NavSecondary items={data.navSecondary} className="mt-auto" />
+        </SidebarContent>
+        <SidebarFooter>
+          <NavUser />
+        </SidebarFooter>
+      </Sidebar>
+    </Suspense>
   );
 }

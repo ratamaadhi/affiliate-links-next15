@@ -37,14 +37,24 @@ describe('EnhancedDashboardPreview', () => {
     expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
   });
 
-  it('shows no page selected message when no pageLink or username', () => {
+  it('shows no username set message when no pageLink or username', () => {
     render(
       <LinkPageContext.Provider value={mockContext}>
         <EnhancedDashboardPreview pageLink="" username="" />
       </LinkPageContext.Provider>
     );
 
-    expect(screen.getByText('No Page Selected or Found')).toBeInTheDocument();
+    expect(screen.getByText('No Username Set')).toBeInTheDocument();
+  });
+
+  it('shows no page selected message when username exists but no page', () => {
+    render(
+      <LinkPageContext.Provider value={mockContext}>
+        <EnhancedDashboardPreview pageLink="" username="testuser" />
+      </LinkPageContext.Provider>
+    );
+
+    expect(screen.getByText('No Page Selected')).toBeInTheDocument();
   });
 
   it('renders iframe with correct attributes when not loading', () => {

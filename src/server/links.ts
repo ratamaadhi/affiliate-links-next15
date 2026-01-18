@@ -6,6 +6,7 @@ import {
   LinkInsert,
   link as linkSchema,
   page as pageSchema,
+  shortLink,
 } from '@/lib/db/schema';
 import { InPagination, SessionUser } from '@/lib/types';
 import { and, asc, count, eq, like, or } from 'drizzle-orm';
@@ -23,6 +24,8 @@ const getAuthenticatedUser = async () => {
   return user;
 };
 
+// OPTIMIZATION: Uses primary key index on link.id and foreign key index on link.page_id
+// The LEFT JOIN is optimized by the foreign key relationship
 const verifyLinkOwnership = async (linkId: number, userId: number) => {
   const [link] = await db
     .select({
@@ -60,6 +63,8 @@ export const createLink = async (
     }
 
     if (!arg.pageId) {
+      // OPTIMIZATION: Uses index on page.slug (created in migration 0011)
+      // This query efficiently retrieves the default page for a user
       const getPageByUsername = await db.query.page.findFirst({
         where: eq(pageSchema.slug, user.username),
       });
@@ -73,6 +78,8 @@ export const createLink = async (
 
     // If displayOrder is provided, calculate the fractional index
     if (arg.displayOrder) {
+      // OPTIMIZATION: Uses composite index on (page_id, display_order) (created in migration 0011)
+      // This query efficiently retrieves all links for a page in display order
       const allLinks = await db.query.link.findMany({
         where: eq(linkSchema.pageId, defaultPageId),
         orderBy: [asc(linkSchema.displayOrder)],
@@ -88,6 +95,8 @@ export const createLink = async (
       newDisplayOrder = (prevOrder + nextOrder) / 2;
     } else {
       // Default behavior if no displayOrder provided
+      // OPTIMIZATION: Uses composite index on (page_id, display_order) (created in migration 0011)
+      // This query efficiently retrieves the first link for a page
       const firstLink = await db.query.link.findFirst({
         where: eq(linkSchema.pageId, defaultPageId),
         orderBy: [asc(linkSchema.displayOrder)],
@@ -131,7 +140,10 @@ async function fetchPaginatedLinks(
       )
     : eq(linkSchema.pageId, pageId);
 
-  const [links, [totalItems]] = await Promise.all([
+  // OPTIMIZATION: Uses composite index on (page_id, display_order) (created in migration 0011)
+  // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
+  // The Promise.all executes all three queries in parallel for better performance
+  const [links, [totalItems], pageShortLink] = await Promise.all([
     db.query.link.findMany({
       where: whereCondition,
       orderBy: (links, { asc }) => [asc(links.displayOrder)],
@@ -139,6 +151,10 @@ async function fetchPaginatedLinks(
       offset,
     }),
     db.select({ count: count() }).from(linkSchema).where(whereCondition),
+    db.query.shortLink.findFirst({
+      where: eq(shortLink.pageId, pageId),
+      columns: { shortCode: true },
+    }),
   ]);
 
   const totalPages = Math.ceil(Number(totalItems.count) / limit);
@@ -151,9 +167,14 @@ async function fetchPaginatedLinks(
     currentPage: page,
   };
 
+  const shortUrl = pageShortLink
+    ? `${process.env.NEXT_PUBLIC_BASE_URL}/s/${pageShortLink.shortCode}`
+    : null;
+
   return {
     data: links,
     pagination,
+    shortUrl,
   };
 }
 
@@ -175,7 +196,10 @@ async function fetchPaginatedActiveLinks(
       )
     : and(eq(linkSchema.pageId, pageId), eq(linkSchema.isActive, true));
 
-  const [links, [totalItems]] = await Promise.all([
+  // OPTIMIZATION: Uses composite index on (page_id, is_active, display_order) (created in migration 0011)
+  // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
+  // The Promise.all executes all three queries in parallel for better performance
+  const [links, [totalItems], pageShortLink] = await Promise.all([
     db.query.link.findMany({
       where: whereCondition,
       orderBy: (links, { asc }) => [asc(links.displayOrder)],
@@ -183,6 +207,10 @@ async function fetchPaginatedActiveLinks(
       offset,
     }),
     db.select({ count: count() }).from(linkSchema).where(whereCondition),
+    db.query.shortLink.findFirst({
+      where: eq(shortLink.pageId, pageId),
+      columns: { shortCode: true },
+    }),
   ]);
 
   const totalPages = Math.ceil(Number(totalItems.count) / limit);
@@ -195,9 +223,14 @@ async function fetchPaginatedActiveLinks(
     currentPage: page,
   };
 
+  const shortUrl = pageShortLink
+    ? `${process.env.NEXT_PUBLIC_BASE_URL}/s/${pageShortLink.shortCode}`
+    : null;
+
   return {
     data: links,
     pagination,
+    shortUrl,
   };
 }
 
@@ -212,6 +245,8 @@ export const getLinks = async (
 
     let resolvedPageId = params.pageId;
     if (!resolvedPageId) {
+      // OPTIMIZATION: Uses index on page.slug (created in migration 0011)
+      // This query efficiently retrieves the default page for a user
       const userDefaultPage = await db.query.page.findFirst({
         where: eq(pageSchema.slug, user.username),
         columns: { id: true },
@@ -321,6 +356,8 @@ export const updateLink = async (
 
     // Handle displayOrder update
     if (arg.values.displayOrder !== undefined) {
+      // OPTIMIZATION: Uses composite index on (page_id, display_order) (created in migration 0011)
+      // This query efficiently retrieves all links for a page in display order
       const allLinks = await db.query.link.findMany({
         where: eq(linkSchema.pageId, link.pageId),
         orderBy: [asc(linkSchema.displayOrder)],
