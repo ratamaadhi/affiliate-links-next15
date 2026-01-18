@@ -10,10 +10,8 @@ function SearchPageInput() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const search = searchParams.get('_search') ?? '';
-  const pageIndex = searchParams.get('_page') ?? '1';
 
-  const [searchTerm, setSearchTerm] = useState(search ?? '');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const setSearchParams = useCallback(
     (term: string) => {
@@ -26,21 +24,26 @@ function SearchPageInput() {
       }
       router.push(`${pathname}?${params.toString()}`);
     },
-    [pageIndex, pathname, router]
+    [pathname, router]
   );
 
-  const debouncedSetSearchTerm = useRef(debounce(setSearchTerm, 500)).current;
+  const debouncedSetSearchTerm = useRef(debounce(setSearchParams, 500)).current;
 
   const handleSearch = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      debouncedSetSearchTerm(event.target.value);
+      const term = event.target.value;
+      setSearchTerm(term);
+      debouncedSetSearchTerm(term);
     },
     [debouncedSetSearchTerm]
   );
 
   useEffect(() => {
-    setSearchParams(searchTerm);
-  }, [searchTerm]);
+    const searchParam = searchParams.get('_search');
+    if (searchParam !== searchTerm) {
+      setSearchTerm(searchParam || '');
+    }
+  }, [searchParams]);
 
   return (
     <Input
@@ -49,7 +52,7 @@ function SearchPageInput() {
       placeholder="Search page"
       className="text-sm w-full"
       onChange={handleSearch}
-      defaultValue={search}
+      value={searchTerm}
       data-search-page-input
     />
   );

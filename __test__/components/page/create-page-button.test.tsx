@@ -6,26 +6,8 @@ import { useCreatePage } from '../../../src/hooks/mutations';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { authClient } from '../../../src/lib/auth-client';
 
-// Mock external modules
-jest.mock('@/hooks/mutations', () => ({
-  useCreatePage: jest.fn(),
-}));
-jest.mock('@/hooks/useAuth', () => ({
-  useAuth: jest.fn(),
-}));
-jest.mock('@/lib/auth-client', () => ({
-  authClient: {
-    getSession: jest.fn(),
-  },
-}));
-jest.mock('sonner', () => ({
-  toast: {
-    error: jest.fn(),
-  },
-}));
-jest.mock('next/navigation', () => ({
-  useSearchParams: jest.fn(),
-}));
+jest.mock('../../../src/hooks/mutations');
+jest.mock('../../../src/hooks/useAuth');
 
 describe('CreatePageButton', () => {
   const mockTrigger = jest.fn();
@@ -53,17 +35,20 @@ describe('CreatePageButton', () => {
     // Dialog is initially closed
     expect(screen.queryByText('Add new page')).not.toBeInTheDocument();
 
-    // Click the button to open the dialog
-    fireEvent.click(screen.getByRole('button', { name: /Page/i }));
+    const button = screen.getByRole('button', { name: /Page/i });
+    button.click();
 
     // Dialog should be open
-    expect(screen.getByText('Add new page')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Add new page')).toBeInTheDocument();
+    });
+
     expect(
       screen.getByText('Create a new page to start collecting links.')
     ).toBeInTheDocument();
 
-    // Click cancel button to close the dialog
-    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+    const cancelButton = screen.getByRole('button', { name: /Cancel/i });
+    cancelButton.click();
 
     // Dialog should be closed
     await waitFor(() => {
@@ -74,13 +59,19 @@ describe('CreatePageButton', () => {
   it('shows validation errors for empty title', async () => {
     render(<CreatePageButton />);
 
-    // Open dialog
-    fireEvent.click(screen.getByRole('button', { name: /Page/i }));
+    const button = screen.getByRole('button', { name: /Page/i });
+    button.click();
 
-    const form = screen.getByRole('form');
+    // Wait for form to be visible
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/My page title/i)).toBeInTheDocument();
+    });
+
+    const form = document.getElementById('create-page-form');
+    expect(form).toBeInTheDocument();
 
     // Submit empty form
-    fireEvent.submit(form);
+    fireEvent.submit(form!);
 
     await waitFor(() => {
       expect(
@@ -89,31 +80,47 @@ describe('CreatePageButton', () => {
     });
     expect(mockTrigger).not.toHaveBeenCalled();
   });
+
   it('creates a page successfully', async () => {
     mockTrigger.mockResolvedValue({ success: true });
 
     render(<CreatePageButton />);
 
-    // Open dialog
-    fireEvent.click(screen.getByRole('button', { name: /Page/i }));
+    const button = screen.getByRole('button', { name: /Page/i });
+    button.click();
 
-    // Fill in the form
-    fireEvent.change(screen.getByLabelText(/Title/i), {
+    // Wait for form to be visible
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/My page title/i)).toBeInTheDocument();
+    });
+
+    // Fill in form
+    fireEvent.change(screen.getByPlaceholderText(/My page title/i), {
       target: { value: 'Test Page' },
     });
-    fireEvent.change(screen.getByLabelText(/Description/i), {
+    fireEvent.change(screen.getByPlaceholderText(/What page is about/i), {
       target: { value: 'This is a test description.' },
     });
 
-    // Submit form
-    const form = screen.getByRole('form');
-    fireEvent.submit(form);
+    // Wait for auto-generated slug
+    await waitFor(
+      () => {
+        const slugInput = screen.getByPlaceholderText(/my-page-url/i);
+        expect(slugInput).toHaveValue('test-page');
+      },
+      { timeout: 1000 }
+    );
+
+    const form = document.getElementById('create-page-form');
+    expect(form).toBeInTheDocument();
+    fireEvent.submit(form!);
 
     // Verify form submission
     await waitFor(() => {
       expect(mockTrigger).toHaveBeenCalledWith({
         title: 'Test Page',
         description: 'This is a test description.',
+        slug: 'test-page',
       });
     });
 
@@ -128,13 +135,28 @@ describe('CreatePageButton', () => {
 
     render(<CreatePageButton />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Page/i })); // Open dialog
+    const button = screen.getByRole('button', { name: /Page/i });
+    button.click(); // Open dialog
 
-    fireEvent.change(screen.getByLabelText(/Title/i), {
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/My page title/i)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText(/My page title/i), {
       target: { value: 'Test Page' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Create/i })); // Submit form
+    // Wait for auto-generated slug
+    await waitFor(
+      () => {
+        const slugInput = screen.getByPlaceholderText(/my-page-url/i);
+        expect(slugInput).toHaveValue('test-page');
+      },
+      { timeout: 1000 }
+    );
+
+    const submitButton = screen.getByRole('button', { name: /Create/i });
+    submitButton.click(); // Submit form
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -152,10 +174,15 @@ describe('CreatePageButton', () => {
 
     render(<CreatePageButton />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Page/i })); // Open dialog
+    const button = screen.getByRole('button', { name: /Page/i });
+    button.click(); // Open dialog
 
-    expect(screen.getByLabelText(/Title/i)).toBeDisabled();
-    expect(screen.getByLabelText(/Description/i)).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/My page title/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByPlaceholderText(/My page title/i)).toBeDisabled();
+    expect(screen.getByPlaceholderText(/What page is about/i)).toBeDisabled();
     expect(screen.getByRole('button', { name: /Cancel/i })).toBeDisabled();
 
     // Find the submit button within the dialog footer and verify it's disabled

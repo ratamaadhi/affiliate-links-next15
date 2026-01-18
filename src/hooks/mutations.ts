@@ -13,7 +13,75 @@ import {
 } from '@/server/pages';
 import { toast } from 'sonner';
 import useSWRmutation from 'swr/mutation';
-import { useLinkInfinite, usePages } from './queries';
+import { useLinkInfinite, usePages, useUserShortLinks } from './queries';
+
+export interface UpdateUsernameParams {
+  username: string;
+}
+
+export async function updateUsername(
+  _url: string,
+  { arg }: { arg: UpdateUsernameParams }
+) {
+  const res = await fetch('/api/user/update-username', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(arg),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(
+      error.message || error.error || 'Failed to update username'
+    );
+  }
+
+  const response = await res.json();
+  return response;
+}
+
+export async function generateShortLink(
+  _url: string,
+  { arg }: { arg: { pageId: number } }
+) {
+  const res = await fetch('/api/short-links/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(arg),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(
+      error.message || error.error || 'Failed to generate short link'
+    );
+  }
+
+  const response = await res.json();
+  return response.data;
+}
+
+export async function deleteShortLink(
+  _url: string,
+  { arg }: { arg: { id: number } }
+) {
+  const res = await fetch(`/api/short-links/${arg.id}`, {
+    method: 'DELETE',
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(
+      error.message || error.error || 'Failed to delete short link'
+    );
+  }
+
+  return { success: true };
+}
 
 export function useCreatePage(
   params: PaginationParams = { page: 1, limit: 5, search: '' }
@@ -24,7 +92,6 @@ export function useCreatePage(
   return useSWRmutation('/pages', createPage, {
     onSuccess: () => {
       mutate();
-      toast.success('Page created successfully');
     },
     onError: (error) => {
       const message =
@@ -165,7 +232,6 @@ export function useUpdateLinkOrder(
         error instanceof Error ? error.message : 'Failed to update link order';
       toast.error(message);
     },
-    revalidate: true,
   });
 }
 
@@ -190,6 +256,53 @@ export function useUpdateLink(
         error instanceof Error ? error.message : 'Failed to update link';
       toast.error(message);
     },
-    revalidate: true,
+  });
+}
+
+export function useUpdateUsername() {
+  return useSWRmutation('/username', updateUsername, {
+    onSuccess: () => {
+      toast.success('Username updated successfully');
+      window.location.href = '/dashboard/settings';
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to update username';
+      toast.error(message);
+    },
+  });
+}
+
+export function useGenerateShortLink(pageId?: number) {
+  const { mutate } = useUserShortLinks(pageId);
+
+  return useSWRmutation('/short-links', generateShortLink, {
+    onSuccess: () => {
+      mutate();
+      toast.success('Short link generated successfully');
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate short link';
+      toast.error(message);
+    },
+  });
+}
+
+export function useDeleteShortLink(pageId?: number) {
+  const { mutate } = useUserShortLinks(pageId);
+
+  return useSWRmutation('/short-links', deleteShortLink, {
+    onSuccess: () => {
+      mutate();
+      toast.success('Short link deleted successfully');
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete short link';
+      toast.error(message);
+    },
   });
 }

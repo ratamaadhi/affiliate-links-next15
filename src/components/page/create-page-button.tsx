@@ -1,6 +1,7 @@
 'use client';
 
 import z from 'zod';
+import slugify from 'slug';
 import { Button } from '../ui/button';
 import {
   Dialog,
@@ -12,6 +13,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../ui/dialog';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '../ui/drawer';
 import { Input } from '../ui/input';
 
 import {
@@ -23,13 +34,15 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useCreatePage } from '@/hooks/mutations';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
+import { useForm, UseFormReturn } from 'react-hook-form';
 import { TbLibraryPlus } from 'react-icons/tb';
 import { toast } from 'sonner';
 
@@ -42,7 +55,254 @@ const formSchema = z.object({
     .max(50)
     .nonempty('Title is required'),
   description: z.string().max(160).optional(),
+  slug: z
+    .string()
+    .min(2, {
+      message: 'Slug must be at least 2 characters long',
+    })
+    .max(100)
+    .regex(/^[a-z0-9-]+$/, {
+      message: 'Slug can only contain lowercase letters, numbers, and hyphens',
+    })
+    .nonempty('Slug is required'),
 });
+
+interface CreatePageFormContentProps {
+  form: UseFormReturn<z.infer<typeof formSchema>>;
+  isMutating: boolean;
+  autoGenerateSlug: boolean;
+  setAutoGenerateSlug: (_value: boolean) => void;
+  slugHighlight: boolean;
+  onSubmit: (_values: z.infer<typeof formSchema>) => Promise<void>;
+}
+
+const CreatePageFormContent = ({
+  form,
+  isMutating,
+  autoGenerateSlug,
+  setAutoGenerateSlug,
+  slugHighlight,
+  onSubmit,
+}: CreatePageFormContentProps) => {
+  return (
+    <form
+      id="create-page-form"
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-4"
+    >
+      <div className="grid gap-4">
+        <div className="grid gap-3">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Title</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="My page title"
+                    disabled={isMutating}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid gap-3">
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="What page is about?"
+                    disabled={isMutating}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid gap-3">
+          <FormField
+            control={form.control}
+            name="slug"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>URL Slug</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="my-page-url"
+                    disabled={isMutating || autoGenerateSlug}
+                    className={`transition-all duration-300 ${slugHighlight ? 'border-amber-500 ring-2 ring-amber-500/20 animate-pulse' : ''}`}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+                <div className="flex items-center space-x-2 mt-1">
+                  <input
+                    type="checkbox"
+                    id="auto-slug"
+                    checked={autoGenerateSlug}
+                    onChange={(e) => setAutoGenerateSlug(e.target.checked)}
+                    className="rounded border-gray-300"
+                    disabled={isMutating}
+                  />
+                  <label
+                    htmlFor="auto-slug"
+                    className="text-sm text-muted-foreground"
+                  >
+                    Auto-generate slug from title
+                  </label>
+                </div>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+    </form>
+  );
+};
+
+interface CreatePageDialogContentProps {
+  form: UseFormReturn<z.infer<typeof formSchema>>;
+  isMutating: boolean;
+  onSubmit: (_values: z.infer<typeof formSchema>) => Promise<void>;
+  user: { username: string };
+  autoGenerateSlug: boolean;
+  setAutoGenerateSlug: (_value: boolean) => void;
+  slugHighlight: boolean;
+}
+
+const CreatePageDialogContent = ({
+  form,
+  isMutating,
+  onSubmit,
+  user,
+  autoGenerateSlug,
+  setAutoGenerateSlug,
+  slugHighlight,
+}: CreatePageDialogContentProps) => {
+  const slugValue = form.watch('slug');
+
+  return (
+    <DialogContent className="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>Add new page</DialogTitle>
+        <DialogDescription>
+          Create a new page to start collecting links.
+        </DialogDescription>
+        <div className="bg-muted p-3 rounded-md space-y-1">
+          <p className="text-sm font-medium">Your page URL:</p>
+          <p className="text-sm text-muted-foreground break-all">
+            {process.env.NEXT_PUBLIC_BASE_URL}/{user.username}/
+            <span className="font-medium">{slugValue || 'your-slug'}</span>
+          </p>
+        </div>
+      </DialogHeader>
+      <Form {...form}>
+        <CreatePageFormContent
+          form={form}
+          isMutating={isMutating}
+          autoGenerateSlug={autoGenerateSlug}
+          setAutoGenerateSlug={setAutoGenerateSlug}
+          slugHighlight={slugHighlight}
+          onSubmit={onSubmit}
+        />
+      </Form>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button disabled={isMutating} variant="outline">
+            Cancel
+          </Button>
+        </DialogClose>
+        <Button disabled={isMutating} type="submit" form="create-page-form">
+          {isMutating ? <Loader2 className="size-4 animate-spin" /> : 'Create'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+};
+
+interface CreatePageDrawerContentProps {
+  form: UseFormReturn<z.infer<typeof formSchema>>;
+  isMutating: boolean;
+  onSubmit: (_values: z.infer<typeof formSchema>) => Promise<void>;
+  user: { username: string };
+  autoGenerateSlug: boolean;
+  setAutoGenerateSlug: (_value: boolean) => void;
+  slugHighlight: boolean;
+}
+
+const CreatePageDrawerContent = ({
+  form,
+  isMutating,
+  onSubmit,
+  user,
+  autoGenerateSlug,
+  setAutoGenerateSlug,
+  slugHighlight,
+}: CreatePageDrawerContentProps) => {
+  const slugValue = form.watch('slug');
+
+  return (
+    <DrawerContent className="max-h-[85vh] h-full flex flex-col">
+      <DrawerHeader className="text-left">
+        <DrawerTitle>Add new page</DrawerTitle>
+        <DrawerDescription>
+          Create a new page to start collecting links.
+        </DrawerDescription>
+        <div className="bg-muted p-3 rounded-md space-y-1 mt-3">
+          <p className="text-sm font-medium">Your page URL:</p>
+          <p className="text-sm text-muted-foreground break-all">
+            {process.env.NEXT_PUBLIC_BASE_URL}/{user.username}/
+            <span className="font-medium">{slugValue || 'your-slug'}</span>
+          </p>
+        </div>
+      </DrawerHeader>
+      <div className="px-4 pb-4 overflow-y-auto flex-1 min-h-0">
+        <Form {...form}>
+          <CreatePageFormContent
+            form={form}
+            isMutating={isMutating}
+            autoGenerateSlug={autoGenerateSlug}
+            setAutoGenerateSlug={setAutoGenerateSlug}
+            slugHighlight={slugHighlight}
+            onSubmit={onSubmit}
+          />
+        </Form>
+      </div>
+      <DrawerFooter className="pt-2 gap-2">
+        <Button
+          disabled={isMutating}
+          type="submit"
+          form="create-page-form"
+          className="min-w-[120px]"
+        >
+          {isMutating ? (
+            <>
+              <Loader2 className="size-4 animate-spin mr-2" />
+              Creating...
+            </>
+          ) : (
+            'Create Page'
+          )}
+        </Button>
+        <DrawerClose asChild>
+          <Button variant="outline" disabled={isMutating}>
+            Cancel
+          </Button>
+        </DrawerClose>
+      </DrawerFooter>
+    </DrawerContent>
+  );
+};
 
 export const CreatePageButton = ({}) => {
   const { user } = useAuth();
@@ -52,6 +312,9 @@ export const CreatePageButton = ({}) => {
   const search = searchParams.get('_search') ?? '';
 
   const [isOpen, setIsOpen] = useState(false);
+  const [autoGenerateSlug, setAutoGenerateSlug] = useState(true);
+  const [slugHighlight, setSlugHighlight] = useState(false);
+  const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const { trigger, isMutating } = useCreatePage({ page: pageIndex, search });
 
@@ -60,8 +323,21 @@ export const CreatePageButton = ({}) => {
     defaultValues: {
       title: '',
       description: '',
+      slug: '',
     },
   });
+
+  const titleValue = form.watch('title');
+  const debouncedTitle = useDebounce(titleValue, 500);
+
+  useEffect(() => {
+    if (autoGenerateSlug && debouncedTitle) {
+      const generatedSlug = slugify(debouncedTitle || '');
+      form.setValue('slug', generatedSlug, {
+        shouldValidate: false,
+      });
+    }
+  }, [autoGenerateSlug, debouncedTitle, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const userId = (await authClient.getSession()).data?.user.id;
@@ -73,17 +349,79 @@ export const CreatePageButton = ({}) => {
     const response = await trigger({ ...values });
     if (response.success) {
       form.reset();
+      setAutoGenerateSlug(true);
       setIsOpen(false);
+      toast.success('Page created successfully!');
+    } else {
+      if (response.message?.toLowerCase().includes('slug')) {
+        try {
+          const res = await fetch('/api/pages/generate-slug', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: values.title }),
+          });
+          const data = await res.json();
+
+          if (data.slug) {
+            form.setValue('slug', data.slug);
+            setSlugHighlight(true);
+            setTimeout(() => setSlugHighlight(false), 2000);
+
+            toast.error(
+              `Slug '${values.slug}' sudah ada. Auto-update ke '${data.slug}'. Silakan submit ulang.`,
+              { duration: 5000 }
+            );
+          }
+        } catch {
+          toast.error(response.message || 'Failed to create page');
+        }
+      } else {
+        toast.error(response.message || 'Failed to create page');
+      }
     }
   }
+
+  const handleDialogClose = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      form.reset();
+      setAutoGenerateSlug(true);
+    }
+  };
 
   if (!user || !user.username) {
     return null;
   }
 
+  if (isDesktop) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleDialogClose}>
+        <DialogTrigger asChild>
+          <Button
+            variant="default"
+            size="default"
+            className="w-9 md:w-auto"
+            data-create-page-button
+          >
+            <TbLibraryPlus /> <span className="hidden md:block">{` Page`}</span>
+          </Button>
+        </DialogTrigger>
+        <CreatePageDialogContent
+          form={form}
+          isMutating={isMutating}
+          onSubmit={onSubmit}
+          user={user}
+          autoGenerateSlug={autoGenerateSlug}
+          setAutoGenerateSlug={setAutoGenerateSlug}
+          slugHighlight={slugHighlight}
+        />
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
+    <Drawer open={isOpen} onOpenChange={handleDialogClose}>
+      <DrawerTrigger asChild>
         <Button
           variant="default"
           size="default"
@@ -92,77 +430,16 @@ export const CreatePageButton = ({}) => {
         >
           <TbLibraryPlus /> <span className="hidden md:block">{` Page`}</span>
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add new page</DialogTitle>
-          <DialogDescription>
-            Create a new page to start collecting links.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            role="form"
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4"
-          >
-            <div className="grid gap-4">
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="My page title"
-                          disabled={isMutating}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="What page is about?"
-                          disabled={isMutating}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button disabled={isMutating} variant="outline">
-                  Cancel
-                </Button>
-              </DialogClose>
-              <Button disabled={isMutating} type="submit">
-                {isMutating ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  'Create'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+      </DrawerTrigger>
+      <CreatePageDrawerContent
+        form={form}
+        isMutating={isMutating}
+        onSubmit={onSubmit}
+        user={user}
+        autoGenerateSlug={autoGenerateSlug}
+        setAutoGenerateSlug={setAutoGenerateSlug}
+        slugHighlight={slugHighlight}
+      />
+    </Drawer>
   );
 };

@@ -1,0 +1,49 @@
+{
+  "agents": {
+    "glm-vision": {
+      "model": "glm-4.6v",
+      "description": "Primary GLM Vision Agent coordinator",
+      "tools": [
+        "read",
+        "write",
+        "edit",
+        "list",
+        "glob",
+        "grep",
+        "bash",
+        "zai-mcp-server_analyze_image"
+      ]
+    },
+    "glm-analyzer": {
+      "model": "glm-4.6v",
+      "description": "GLM Vision analysis specialist",
+      "tools": ["zai-mcp-server_analyze_image", "read", "list", "glob", "grep"]
+    },
+    "glm-planner": {
+      "model": "glm-4.7",
+      "description": "GLM implementation planning specialist",
+      "tools": ["read", "list", "glob", "grep", "bash"]
+    },
+    "glm-implementer": {
+      "model": "glm-4.7",
+      "description": "GLM code generation specialist",
+      "tools": ["write", "edit", "read", "bash", "list", "glob", "grep"]
+    }
+  },
+  "workflows": {
+    "vision-to-code": {
+      "description": "Convert images to functional code",
+      "steps": ["analyze", "plan", "implement", "review"]
+    }
+  },
+  "settings": {
+    "autoBackup": false,
+    "analysisDepth": "detailed",
+    "complexityThreshold": "medium",
+    "qualityChecks": true,
+    "autoCleanup": true,
+    "maxImageSize": "10MB",
+    "supportedFormats": ["png", "jpg", "jpeg", "gif", "bmp", "webp", "svg"],
+    "pureAgentMode": true
+  }
+}

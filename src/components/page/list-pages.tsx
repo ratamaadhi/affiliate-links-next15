@@ -9,7 +9,7 @@ import {
 } from '@/context/link-page-context';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useMemo } from 'react';
 import { BorderBeam } from '../ui/border-beam';
 import PaginationWithLink from '../ui/pagination-with-link';
 import { Skeleton } from '../ui/skeleton';
@@ -27,7 +27,7 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
   const { data, isLoading } = usePages({ page: pageIndex, search });
   const { user } = useAuth();
 
-  const pages = data?.data || [];
+  const pages = useMemo(() => data?.data || [], [data?.data]);
   const pagination = data?.pagination;
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
         });
       }
     }
-  }, [pages, defaultPageSlug, selectedPage]);
+  }, [pages, defaultPageSlug, selectedPage, dispatch]);
 
   function handleSelectPage(page) {
     dispatch({
@@ -77,10 +77,12 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
                     {page.description || 'No description'}
                   </p>
                 </div>
-                {user && user.username && user.username !== page.slug && (
+                {user && user.username && (
                   <div className="space-x-2 flex-shrink-0">
                     <EditPageButton data={page} />
-                    <DeletePageButton data={page} />
+                    {user.username !== page.slug && (
+                      <DeletePageButton data={page} />
+                    )}
                   </div>
                 )}
                 {selectedPage?.id === page.id && (

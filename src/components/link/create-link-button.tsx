@@ -236,7 +236,7 @@ export const CreateLinkButton = () => {
         } finally {
           setIsFetchingMetadata(false);
         }
-      } catch (_error) {
+      } catch {
         setMetadata(null);
         setLastFetchedUrl('');
       }

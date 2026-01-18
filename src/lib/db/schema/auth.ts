@@ -10,6 +10,8 @@ export const user = sqliteTable('user', {
   image: text(),
   username: text().unique(),
   displayUsername: text(),
+  usernameChangeCount: integer().default(0),
+  lastUsernameChangeAt: integer(),
   createdAt: integer().notNull(),
   updatedAt: integer().notNull(),
 });

@@ -3,7 +3,7 @@ import { compressImage, type CompressionOptions } from './image-compression';
 export interface UrlToFileOptions {
   fileName?: string;
   compressionOptions?: Partial<CompressionOptions>;
-  onProgress?: (progress: number) => void;
+  onProgress?: (_progress: number) => void;
 }
 
 /**
@@ -21,7 +21,7 @@ export async function convertUrlToFile(
   // Validate URL
   try {
     new URL(imageUrl);
-  } catch (error) {
+  } catch {
     throw new Error('Invalid image URL provided');
   }
 
@@ -157,7 +157,7 @@ export async function validateImageUrl(url: string): Promise<boolean> {
  */
 export async function imageUrlToDataUrl(
   imageUrl: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (_progress: number) => void
 ): Promise<string> {
   try {
     const file = await convertUrlToFile(imageUrl, { onProgress });

@@ -8,8 +8,7 @@ export const page = sqliteTable('page', {
   id: int().primaryKey({ autoIncrement: true }),
   title: text().notNull(),
   description: text(),
-  slug: text().notNull().unique(),
-
+  slug: text().notNull(),
   userId: integer()
     .notNull()
     .references(() => user.id),

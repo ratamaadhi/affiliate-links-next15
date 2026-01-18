@@ -1,0 +1,1 @@
+DROP INDEX `page_slug_unique`;

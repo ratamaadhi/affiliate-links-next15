@@ -3,6 +3,36 @@ import { getPageInfinite, getPages, PaginationParams } from '@/server/pages';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
 
+export interface UsernamePreview {
+  username: string;
+  homePageUrl: string;
+  examplePageUrl: string;
+  shortUrl: string;
+  warning: string;
+}
+
+export interface UsernameHistoryItem {
+  id: number;
+  oldUsername: string;
+  changedAt: number;
+}
+
+export interface ShortLink {
+  id: number;
+  shortCode: string;
+  targetUrl: string;
+  pageId: number;
+  userId: number;
+  clickCount: number;
+  createdAt: number;
+  expiresAt: number | null;
+  page?: {
+    id: number;
+    title: string;
+    slug: string;
+  };
+}
+
 export function usePages(
   params: PaginationParams = { page: 1, limit: 5, search: '' }
 ) {
@@ -162,6 +192,73 @@ export function useLinkForPageInfinite(
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 1000, // Prevent duplicate requests within 1 second
+    }
+  );
+}
+
+export function useUsernamePreview(username?: string) {
+  return useSWR<UsernamePreview>(
+    username ? `/api/user/username-preview?username=${username}` : null,
+    async () => {
+      const res = await fetch(
+        `/api/user/username-preview?username=${encodeURIComponent(username)}`
+      );
+      if (!res.ok) throw new Error('Failed to fetch username preview');
+      const response = await res.json();
+      return response.data;
+    },
+    {
+      revalidateOnFocus: false,
+    }
+  );
+}
+
+export function useUsernameAvailability(username?: string) {
+  return useSWR<{ available: boolean; message?: string }>(
+    username ? `/api/user/username-availability/${username}` : null,
+    async () => {
+      const res = await fetch(`/api/user/username-availability/${username}`);
+      if (!res.ok) throw new Error('Failed to check username availability');
+      const response = await res.json();
+      return response;
+    },
+    {
+      revalidateOnFocus: false,
+    }
+  );
+}
+
+export function useUsernameHistory() {
+  return useSWR<UsernameHistoryItem[]>(
+    '/api/user/username-history',
+    async () => {
+      const res = await fetch('/api/user/username-history');
+      if (!res.ok) throw new Error('Failed to fetch username history');
+      const response = await res.json();
+      return response.data;
+    },
+    {
+      revalidateOnFocus: false,
+    }
+  );
+}
+
+export function useUserShortLinks(pageId?: number) {
+  return useSWR<ShortLink[]>(
+    pageId !== undefined
+      ? `/api/short-links/user?pageId=${pageId}`
+      : '/api/short-links/user',
+    async () => {
+      const url = pageId
+        ? `/api/short-links/user?pageId=${pageId}`
+        : '/api/short-links/user';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch short links');
+      const response = await res.json();
+      return response.data;
+    },
+    {
+      revalidateOnFocus: false,
     }
   );
 }
