@@ -226,4 +226,78 @@ export const deleteShortLink = async (id: number, userId: number) => {
   }
 };
 
+export const createShortLinkForPage = async (
+  pageId: number,
+  userId: number
+) => {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    const sessionUserId = +session?.user?.id;
+
+    if (!sessionUserId) {
+      return { success: false, message: 'User not authenticated' };
+    }
+
+    if (sessionUserId !== userId) {
+      return { success: false, message: 'Unauthorized' };
+    }
+
+    // Verify page belongs to user
+    const pageData = await db.query.page.findFirst({
+      where: and(eq(page.id, pageId), eq(page.userId, userId)),
+      columns: { id: true, slug: true },
+    });
+
+    if (!pageData) {
+      return { success: false, message: 'Page not found or unauthorized' };
+    }
+
+    // Generate new short code
+    const shortCode = await generateShortCode();
+
+    // Build target URL
+    const userData = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+      columns: { username: true },
+    });
+
+    if (!userData?.username) {
+      return { success: false, message: 'User not found' };
+    }
+
+    const targetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/${userData.username}/${pageData.slug}`;
+    const shortUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/s/${shortCode}`;
+
+    // Create new short link
+    const [newLink] = await db
+      .insert(shortLink)
+      .values({
+        shortCode,
+        targetUrl,
+        pageId,
+        userId,
+        createdAt: Date.now(),
+      })
+      .returning();
+
+    // Invalidate cache
+    await invalidateShortLinkCache(shortCode);
+    await invalidateUserCache(userId);
+
+    return {
+      success: true,
+      data: {
+        shortCode,
+        shortUrl,
+        link: newLink,
+      },
+    };
+  } catch (error) {
+    console.error('Failed to create short link for page:', error);
+    return { success: false, message: 'Failed to create short link' };
+  }
+};
+
 export { generateShortCode };

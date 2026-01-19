@@ -57,7 +57,30 @@ export async function generateShortLink(
   if (!res.ok) {
     const error = await res.json();
     throw new Error(
-      error.message || error.error || 'Failed to generate short link'
+      error.message || error.error || 'Failed to generate short URL'
+    );
+  }
+
+  const response = await res.json();
+  return response.data;
+}
+
+export async function createShortLink(
+  _url: string,
+  { arg }: { arg: { pageId: number } }
+) {
+  const res = await fetch('/api/short-links/create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(arg),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(
+      error.message || error.error || 'Failed to create short URL'
     );
   }
 
@@ -279,13 +302,27 @@ export function useGenerateShortLink(pageId?: number) {
   return useSWRmutation('/short-links', generateShortLink, {
     onSuccess: () => {
       mutate();
-      toast.success('Short link generated successfully');
+      toast.success('Short URL generated successfully');
     },
     onError: (error) => {
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate short link';
+        error instanceof Error ? error.message : 'Failed to generate short URL';
+      toast.error(message);
+    },
+  });
+}
+
+export function useCreateShortLink() {
+  const { mutate } = useUserShortLinks();
+
+  return useSWRmutation('/short-links', createShortLink, {
+    onSuccess: (data) => {
+      mutate();
+      toast.success(`Short URL created: ${data.shortUrl}`);
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to create short URL';
       toast.error(message);
     },
   });
@@ -297,11 +334,11 @@ export function useDeleteShortLink(pageId?: number) {
   return useSWRmutation('/short-links', deleteShortLink, {
     onSuccess: () => {
       mutate();
-      toast.success('Short link deleted successfully');
+      toast.success('Short URL deleted successfully');
     },
     onError: (error) => {
       const message =
-        error instanceof Error ? error.message : 'Failed to delete short link';
+        error instanceof Error ? error.message : 'Failed to delete short URL';
       toast.error(message);
     },
   });
