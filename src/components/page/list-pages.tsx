@@ -9,16 +9,28 @@ import {
 } from '@/context/link-page-context';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { useContext, useEffect, useMemo } from 'react';
-import { BorderBeam } from '../ui/border-beam';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import PaginationWithLink from '../ui/pagination-with-link';
 import { Skeleton } from '../ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { Item, ItemGroup } from '@/components/ui/item';
 import { DeletePageButton } from './delete-page-button';
 import { EditPageButton } from './edit-page-button';
+import { ViewShortUrlsButton } from '../short-urls/view-short-urls-button';
+import { ViewShortUrlsDialog } from '../short-urls/view-short-urls-dialog';
+import { ViewShortUrlsDrawer } from '../short-urls/view-short-urls-drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
   const { selectedPage } = useContext(LinkPageContext);
   const dispatch = useContext(LinkPageDispatchContext);
+
+  const [viewShortUrlsOpen, setViewShortUrlsOpen] = useState(false);
+  const [selectedPageForView, setSelectedPageForView] = useState<{
+    id: number;
+    slug: string;
+  } | null>(null);
+  const isMobile = useIsMobile();
 
   const searchParams = useSearchParams();
   const pageIndex = +(searchParams.get('_page') ?? 1);
@@ -34,7 +46,9 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
     const shouldSetDefaultValue = !selectedPage && defaultPageSlug;
 
     if (shouldSetDefaultValue) {
-      const defaultValue = pages.find((list) => list.slug === defaultPageSlug);
+      const defaultValue = pages.find(
+        (pages) => pages.slug === defaultPageSlug
+      );
 
       if (defaultValue) {
         dispatch({
@@ -52,80 +66,143 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
     });
   }
 
+  function handleViewShortUrls(pageId: number, pageSlug: string) {
+    setSelectedPageForView({ id: pageId, slug: pageSlug });
+    setViewShortUrlsOpen(true);
+  }
+
   return (
     <div>
-      <div className="min-h-[342px] mb-3">
+      {/* UPDATED: Reduced min-height */}
+      <div className="min-h-[300px] mb-3">
         {!isLoading && pages.length === 0 && (
           <p className="text-sm text-muted-foreground">No pages found.</p>
         )}
         {!isLoading && pages.length > 0 && (
-          <ul className="space-y-2">
+          /* UPDATED: Using ItemGroup instead of ul */
+          <ItemGroup className="space-y-1.5">
             {pages.map((page) => (
-              <li
+              /* UPDATED: Using Item instead of li */
+              <Item
                 key={page.id}
+                variant="outline"
                 className={cn(
-                  'relative w-full flex gap-x-1 justify-between items-center px-4 py-2 border rounded-md shadow cursor-pointer hover:bg-accent/50 hover:shadow-md',
-                  selectedPage?.id === page.id && 'bg-accent/30 shadow-md'
+                  'cursor-pointer transition-colors',
+                  selectedPage?.id === page.id && 'bg-accent/50 border-accent'
                 )}
+                onClick={() => handleSelectPage(page)}
               >
-                <div
-                  className="min-w-0 w-full"
-                  onClick={() => handleSelectPage(page)}
-                >
-                  <h3 className="font-medium truncate">{page.title}</h3>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {page.description || 'No description'}
-                  </p>
+                {/* Top Content Area */}
+                <div className="w-full flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    {/* Title */}
+                    <h3 className="font-semibold text-sm mb-1">{page.title}</h3>
+
+                    {/* Slug + Description as Subtitle */}
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <code className="text-xs font-mono bg-muted/50 px-1.5 py-0.5 rounded">
+                        {page.slug}
+                      </code>
+                      <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                      <span className="text-muted-foreground/75 line-clamp-1">
+                        {page.description || 'No description'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Selected Indicator Dot */}
+                  {selectedPage?.id === page.id && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 mt-1" />
+                  )}
                 </div>
+
+                {/* Separator Line */}
+                <Separator className="" />
+
+                {/* Bottom Actions Area */}
                 {user && user.username && (
-                  <div className="space-x-2 flex-shrink-0">
-                    <EditPageButton data={page} />
-                    {user.username !== page.slug && (
-                      <DeletePageButton data={page} />
-                    )}
+                  <div className="w-full flex items-center justify-between">
+                    <div className="w-full flex items-center justify-end gap-2">
+                      <div onMouseDown={(e) => e.stopPropagation()}>
+                        <ViewShortUrlsButton
+                          pageId={page.id}
+                          pageSlug={page.slug}
+                          onClick={() =>
+                            handleViewShortUrls(page.id, page.slug)
+                          }
+                        />
+                      </div>
+                      {/* Wrapper div to prevent event bubbling to Item onClick */}
+                      <div onMouseDown={(e) => e.stopPropagation()}>
+                        <EditPageButton data={page} />
+                      </div>
+                      {user.username !== page.slug && (
+                        <div onMouseDown={(e) => e.stopPropagation()}>
+                          <DeletePageButton data={page} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
-                {selectedPage?.id === page.id && (
-                  <>
-                    <BorderBeam
-                      duration={8}
-                      size={80}
-                      borderWidth={2}
-                      // className="from-transparent via-purple-500 to-transparent"
-                    />
-                    <BorderBeam
-                      duration={8}
-                      delay={4}
-                      size={80}
-                      borderWidth={2}
-                      // className="from-transparent via-blue-500 to-transparent"
-                    />
-                  </>
-                )}
-              </li>
+              </Item>
             ))}
-          </ul>
+          </ItemGroup>
         )}
         {isLoading && (
-          <div className="space-y-2">
+          /* UPDATED: Skeleton with new layout */
+          <ItemGroup className="space-y-1.5">
             {Array.from({ length: 5 }).map((_, index) => (
-              <div
-                className="flex justify-between items-center px-4 py-2 border rounded-md shadow gap-2"
-                key={index}
-              >
-                <div className="w-full space-y-3">
-                  <Skeleton className="w-1/4 h-4" />
-                  <Skeleton className="w-full h-4" />
+              <Item key={index} variant="outline">
+                {/* Content Area Skeleton */}
+                <div className="w-full flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    {/* Title Skeleton */}
+                    <Skeleton className="h-4 w-1/3 mb-1" />
+                    {/* Slug + Description as Subtitle Skeleton */}
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Skeleton className="h-3 w-16 rounded px-1.5" />
+                      <Skeleton className="w-1 h-1 rounded-full" />
+                      <Skeleton className="h-3 w-3/4" />
+                    </div>
+                  </div>
+                  {/* Selected Indicator Dot Skeleton */}
+                  <Skeleton className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1" />
                 </div>
-                <div className="space-x-2 flex">
-                  <Skeleton className="w-8 h-8" />
-                  <Skeleton className="w-8 h-8" />
+
+                {/* Separator */}
+                <Separator className="px-4" />
+
+                {/* Bottom Actions Area Skeleton */}
+                <div className="w-full flex items-center justify-between">
+                  <div className="w-full flex items-center justify-end gap-2">
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
                 </div>
-              </div>
+              </Item>
             ))}
-          </div>
+          </ItemGroup>
         )}
       </div>
+
+      {viewShortUrlsOpen &&
+        selectedPageForView &&
+        (isMobile ? (
+          <ViewShortUrlsDrawer
+            pageId={selectedPageForView.id}
+            pageSlug={selectedPageForView.slug}
+            open={viewShortUrlsOpen}
+            onOpenChange={setViewShortUrlsOpen}
+          />
+        ) : (
+          <ViewShortUrlsDialog
+            pageId={selectedPageForView.id}
+            pageSlug={selectedPageForView.slug}
+            open={viewShortUrlsOpen}
+            onOpenChange={setViewShortUrlsOpen}
+          />
+        ))}
 
       <PaginationWithLink pagination={pagination} pageSearchParam="_page" />
     </div>
