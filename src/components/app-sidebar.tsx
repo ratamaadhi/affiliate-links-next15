@@ -1,23 +1,13 @@
 'use client';
 
-import {
-  BookOpen,
-  Bot,
-  Frame,
-  LayoutGrid,
-  LifeBuoy,
-  Map,
-  PieChart,
-  Send,
-  Settings2,
-} from 'lucide-react';
+import { BookOpen, LayoutGrid, LifeBuoy, Send, Settings2 } from 'lucide-react';
 import * as React from 'react';
 import { Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { TbDiamond } from 'react-icons/tb';
 
 import { NavMain } from '@/components/nav-main';
-import { NavProjects } from '@/components/nav-projects';
 import { NavSecondary } from '@/components/nav-secondary';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -54,29 +44,6 @@ const data = {
         {
           title: 'Short URLs',
           url: '/dashboard/short-urls',
-        },
-        {
-          title: 'Settings',
-          url: '/dashboard/settings',
-        },
-      ],
-    },
-    {
-      title: 'Models',
-      url: '#',
-      icon: Bot,
-      items: [
-        {
-          title: 'Genesis',
-          url: '#',
-        },
-        {
-          title: 'Explorer',
-          url: '#',
-        },
-        {
-          title: 'Quantum',
-          url: '#',
         },
       ],
     },
@@ -122,28 +89,33 @@ const data = {
       icon: Send,
     },
   ],
-  projects: [
-    {
-      name: 'Design Engineering',
-      url: '#',
-      icon: Frame,
-    },
-    {
-      name: 'Sales & Marketing',
-      url: '#',
-      icon: PieChart,
-    },
-    {
-      name: 'Travel',
-      url: '#',
-      icon: Map,
-    },
-  ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <Sidebar variant="inset" {...props}>
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Skeleton className="h-12 w-full" />
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+          <SidebarContent>
+            <div className="space-y-2 px-2">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          </SidebarContent>
+          <SidebarFooter>
+            <Skeleton className="h-12 w-full" />
+          </SidebarFooter>
+        </Sidebar>
+      }
+    >
       <Sidebar variant="inset" {...props}>
         <SidebarHeader>
           <SidebarMenu>
@@ -164,7 +136,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
         <SidebarContent>
           <NavMain items={data.navMain} />
-          <NavProjects projects={data.projects} />
           <NavSecondary items={data.navSecondary} className="mt-auto" />
         </SidebarContent>
         <SidebarFooter>

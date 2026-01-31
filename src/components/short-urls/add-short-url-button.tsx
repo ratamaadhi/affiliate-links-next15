@@ -59,7 +59,7 @@ export function AddShortUrlButton() {
           Add Short URL
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[380px] max-w-[95vw]">
+      <DialogContent className="max-w-[95vw]">
         <DialogHeader>
           <DialogTitle>Add Short URL</DialogTitle>
           <DialogDescription>
@@ -67,29 +67,41 @@ export function AddShortUrlButton() {
             short URLs per page.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-3 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="page" className="text-right">
+        <div className="grid gap-3 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="grid gap-2">
+            <Label htmlFor="page" className="text-left">
               Page
             </Label>
-            <div className="col-span-3">
-              <Select
-                value={selectedPageId?.toString()}
-                onValueChange={(value) => setSelectedPageId(Number(value))}
-                disabled={isMutating}
+            <Select
+              value={selectedPageId?.toString()}
+              onValueChange={(value) => setSelectedPageId(Number(value))}
+              disabled={isMutating}
+            >
+              <SelectTrigger id="page" className="w-full">
+                <SelectValue placeholder="Select a page" />
+              </SelectTrigger>
+              <SelectContent
+                align="start"
+                side="bottom"
+                sideOffset={4}
+                className="max-h-[250px] w-full overflow-y-auto"
+                portal={false}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a page" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pages.map((page) => (
-                    <SelectItem key={page.id} value={page.id.toString()}>
-                      {page.title} ({page.slug})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {pages.map((page) => (
+                  <SelectItem
+                    key={page.id}
+                    value={page.id.toString()}
+                    className="truncate"
+                  >
+                    <span className="truncate block">{page.title}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {' '}
+                      ({page.slug})
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {selectedPageId && (

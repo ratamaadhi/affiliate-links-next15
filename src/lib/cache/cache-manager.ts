@@ -89,6 +89,9 @@ export const cacheDelete = async (key: string): Promise<boolean> => {
  * Delete multiple cache keys by pattern
  * @param pattern - Cache key pattern (supports wildcards)
  * @returns Number of keys deleted
+ *
+ * NOTE: This uses Redis KEYS command which is blocking. For production with
+ * large datasets, consider implementing SCAN instead for non-blocking operation.
  */
 export const cacheDeletePattern = async (pattern: string): Promise<number> => {
   const client = getRedisClient();
@@ -98,6 +101,7 @@ export const cacheDeletePattern = async (pattern: string): Promise<number> => {
   }
 
   try {
+    // TODO: Replace KEYS with SCAN for production to avoid blocking
     const keys = await client.keys(pattern);
 
     if (keys.length === 0) {
@@ -150,6 +154,9 @@ export const cacheGetOrSet = async <T>(
  * Invalidate all cache keys for a specific user
  * @param userId - User ID
  * @returns Number of keys invalidated
+ *
+ * NOTE: This uses Redis KEYS command which is blocking. For production with
+ * large datasets, consider implementing SCAN instead for non-blocking operation.
  */
 export const invalidateUserCache = async (userId: number): Promise<number> => {
   const client = getRedisClient();
@@ -167,6 +174,7 @@ export const invalidateUserCache = async (userId: number): Promise<number> => {
     let totalDeleted = 0;
 
     for (const pattern of patterns) {
+      // TODO: Replace KEYS with SCAN for production to avoid blocking
       const keys = await client.keys(pattern);
       if (keys.length > 0) {
         await client.del(...keys);
@@ -185,6 +193,9 @@ export const invalidateUserCache = async (userId: number): Promise<number> => {
  * Invalidate all cache keys for a specific username
  * @param username - Username
  * @returns Number of keys invalidated
+ *
+ * NOTE: This uses Redis KEYS command which is blocking. For production with
+ * large datasets, consider implementing SCAN instead for non-blocking operation.
  */
 export const invalidateUsernameCache = async (
   username: string
@@ -205,6 +216,7 @@ export const invalidateUsernameCache = async (
     let totalDeleted = 0;
 
     for (const pattern of patterns) {
+      // TODO: Replace KEYS with SCAN for production to avoid blocking
       const keys = await client.keys(pattern);
       if (keys.length > 0) {
         await client.del(...keys);
@@ -256,6 +268,9 @@ export const invalidatePageBySlugCache = async (
 /**
  * Clear all cache (use with caution)
  * @returns Number of keys deleted
+ *
+ * NOTE: This uses Redis KEYS command which is blocking. For production with
+ * large datasets, consider implementing SCAN instead for non-blocking operation.
  */
 export const clearAllCache = async (): Promise<number> => {
   const client = getRedisClient();
@@ -265,6 +280,7 @@ export const clearAllCache = async (): Promise<number> => {
   }
 
   try {
+    // TODO: Replace KEYS with SCAN for production to avoid blocking
     const keys = await client.keys('affiliate-links:*');
 
     if (keys.length === 0) {

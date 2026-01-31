@@ -4,6 +4,7 @@ import {
   invalidateUserCache,
   invalidateUsernameCache,
 } from '@/lib/cache/cache-manager';
+import { updateUsernameRedirect } from '@/lib/cache/username-redirects';
 import db from '@/lib/db';
 import { page, shortLink, user, usernameHistory } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -148,6 +149,9 @@ export const handleUsernameChange = async (
       })
       .where(eq(user.id, userId));
 
+    // Update in-memory redirect cache (O(1) operation)
+    updateUsernameRedirect(oldUsername, newUsername);
+
     // Invalidate cache for old username
     await invalidateUsernameCache(oldUsername);
 
@@ -273,7 +277,15 @@ export const generateUsernamePreview = async (
       ? `${baseUrl}/s/${firstShortLink.shortCode}`
       : undefined;
 
-    const warning = `⚠️ Important: Changing your username will:\n• Update your profile URLs\n• Redirect old links to new username (301 redirect)\n• Generate new short URLs for sharing\n• You cannot change username again for ${COOLDOWN_DAYS} days\n\nAre you sure you want to continue?`;
+    const warning = [
+      '⚠️ Important: Changing your username will:',
+      '• Update your profile URLs',
+      '• Redirect old links to new username (301 redirect)',
+      '• Generate new short URLs for sharing',
+      `• You cannot change username again for ${COOLDOWN_DAYS} days`,
+      '',
+      'Are you sure you want to continue?',
+    ].join('\n');
 
     return {
       success: true,

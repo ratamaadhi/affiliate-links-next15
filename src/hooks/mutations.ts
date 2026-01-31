@@ -5,6 +5,7 @@ import {
   updateLink,
   updateLinkOrder,
 } from '@/server/links';
+import { useRouter } from 'next/navigation';
 import {
   createPage,
   deletePage,
@@ -13,7 +14,11 @@ import {
 } from '@/server/pages';
 import { toast } from 'sonner';
 import useSWRmutation from 'swr/mutation';
-import { useLinkInfinite, usePages, useUserShortLinks } from './queries';
+import {
+  useLinkInfinite,
+  usePagesInfinite,
+  useUserShortLinks,
+} from './queries';
 
 export interface UpdateUsernameParams {
   username: string;
@@ -106,14 +111,15 @@ export async function deleteShortLink(
   return { success: true };
 }
 
-export function useCreatePage(
-  params: PaginationParams = { page: 1, limit: 5, search: '' }
-) {
-  const { page, limit = 5, search } = params;
-  const { mutate } = usePages({ page, limit, search });
+export function useCreatePage() {
+  const { mutate } = usePagesInfinite();
 
   return useSWRmutation('/pages', createPage, {
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (!data.success) {
+        toast.error(data.message || 'Failed to create page');
+        return;
+      }
       mutate();
     },
     onError: (error) => {
@@ -124,14 +130,15 @@ export function useCreatePage(
   });
 }
 
-export function useUpdatePage(
-  params: PaginationParams = { page: 1, limit: 5, search: '' }
-) {
-  const { page, limit = 5, search } = params;
-  const { mutate } = usePages({ page, limit, search });
+export function useUpdatePage() {
+  const { mutate } = usePagesInfinite();
 
   return useSWRmutation('/pages', updatePage, {
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (!data.success) {
+        toast.error(data.message || 'Failed to update page');
+        return;
+      }
       mutate();
       toast.success('Page updated successfully');
     },
@@ -143,14 +150,15 @@ export function useUpdatePage(
   });
 }
 
-export function useDeletePage(
-  params: PaginationParams = { page: 1, limit: 5, search: '' }
-) {
-  const { page, limit = 5, search } = params;
-  const { mutate } = usePages({ page, limit, search });
+export function useDeletePage() {
+  const { mutate } = usePagesInfinite();
 
   return useSWRmutation('/pages', deletePage, {
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (!data.success) {
+        toast.error(data.message || 'Failed to delete page');
+        return;
+      }
       mutate();
       toast.success('Page deleted successfully');
     },
@@ -283,10 +291,11 @@ export function useUpdateLink(
 }
 
 export function useUpdateUsername() {
+  const router = useRouter();
   return useSWRmutation('/username', updateUsername, {
     onSuccess: () => {
       toast.success('Username updated successfully');
-      window.location.href = '/dashboard/settings';
+      router.push('/dashboard/settings');
     },
     onError: (error) => {
       const message =

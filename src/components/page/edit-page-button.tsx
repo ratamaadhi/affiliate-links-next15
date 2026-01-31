@@ -18,7 +18,6 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/hooks/useAuth';
 import { PageSelect } from '@/lib/db/schema/page';
-import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { HiOutlinePencilAlt } from 'react-icons/hi';
 import { Loader2 } from 'lucide-react';
@@ -55,9 +54,6 @@ interface EditPageButtonProps {
 
 export const EditPageButton = ({ data }: EditPageButtonProps) => {
   const { user } = useAuth();
-  const searchParams = useSearchParams();
-  const pageIndex = +(searchParams.get('_page') ?? 1);
-  const search = searchParams.get('_search') ?? '';
 
   const [isOpen, setIsOpen] = useState(false);
   const [autoGenerateSlug, setAutoGenerateSlug] = useState(true);
@@ -65,7 +61,7 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
   const [slugHighlight, setSlugHighlight] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
-  const { trigger, isMutating } = useUpdatePage({ page: pageIndex, search });
+  const { trigger, isMutating } = useUpdatePage();
   const form = useForm<z.infer<typeof formSchema>>({
     defaultValues: {
       title: data.title || '',
@@ -167,13 +163,13 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
                 setTimeout(() => setSlugHighlight(false), 2000);
 
                 toast.error(
-                  `Slug '${values.slug}' sudah ada. Auto-update ke '${slugResponse.slug}'. Silakan submit ulang.`,
+                  `Slug '${values.slug}' already exists. Auto-updated to '${slugResponse.slug}'. Please submit again.`,
                   { duration: 5000 }
                 );
               }
               return {
                 success: false,
-                message: `Slug '${values.slug}' sudah ada. Auto-update ke '${slugResponse.slug}'. Silakan submit ulang.`,
+                message: `Slug '${values.slug}' already exists. Auto-updated to '${slugResponse.slug}'. Please submit again.`,
               };
             } catch {
               return {

@@ -13,14 +13,14 @@ function useInfiniteScroll(
   });
 
   useEffect(() => {
-    if (!loaderRef) return;
-
+    // The ref will be null initially, but isIntersecting will be false
+    // so we only need to check the actual conditions
     const canLoadMore = isIntersecting && hasMore && !isLoading;
 
     if (canLoadMore) {
       onLoadMore();
     }
-  }, [hasMore, onLoadMore, isIntersecting, isLoading, loaderRef]);
+  }, [hasMore, onLoadMore, isIntersecting, isLoading]);
 
   return loaderRef;
 }

@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
 import { page } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check if slug already exists
+    // Check if slug already exists for this user
     const existingPage = await db.query.page.findFirst({
-      where: eq(page.slug, slug),
+      where: and(eq(page.slug, slug), eq(page.userId, userId)),
     });
 
     if (existingPage) {

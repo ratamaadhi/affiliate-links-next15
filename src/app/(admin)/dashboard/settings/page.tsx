@@ -28,30 +28,6 @@ const UsernameChangeForm = dynamic(
   }
 );
 
-const ShortLinksList = dynamic(
-  () =>
-    import('@/components/settings/short-links-list').then((mod) => ({
-      default: mod.ShortLinksList,
-    })),
-  {
-    loading: () => (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-32" />
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    ),
-  }
-);
-
 export default async function SettingsPage() {
   const headersList = await headers();
   const userInfo = headersList.get('x-user-info');
@@ -92,33 +68,6 @@ export default async function SettingsPage() {
               }
             >
               <UsernameChangeForm currentUsername={user?.username || ''} />
-            </Suspense>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h2 className="text-lg font-semibold mb-4 sm:text-xl">
-              Short URLs
-            </h2>
-            <Suspense
-              fallback={
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="space-y-4">
-                      <Skeleton className="h-6 w-32" />
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="space-y-2">
-                          <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-4 w-3/4" />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              }
-            >
-              <ShortLinksList />
             </Suspense>
           </div>
 

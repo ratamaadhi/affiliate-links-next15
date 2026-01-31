@@ -1,13 +1,25 @@
-import PagesPage from '@/app/(admin)/dashboard/pages/page';
-import { render, screen } from '@testing-library/react';
-import { headers } from 'next/headers';
-
-// Mock the child components
+// Mock the child components BEFORE importing PagesPage
 jest.mock('@/components/page/create-page-button', () => ({
   CreatePageButton: () => <div data-testid="create-page-button" />,
 }));
 jest.mock('@/components/page/list-pages', () => ({
   ListPages: () => <div data-testid="list-pages" />,
+}));
+jest.mock('@/components/page/pages-content', () => ({
+  PagesContent: ({ defaultPageSlug }: { defaultPageSlug: string }) => (
+    <div data-testid="pages-content">
+      <h1 className="xl:text-xl text-lg font-bold ms-1 self-start lg:self-center-safe">
+        Your Pages
+      </h1>
+      <div className="w-full flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
+        <div className="lg:max-w-sm w-full flex gap-2 items-center flex-1 place-self-end-safe">
+          <div data-testid="search-page-input" />
+          <div data-testid="create-page-button" />
+        </div>
+      </div>
+      <div data-testid="list-pages" />
+    </div>
+  ),
 }));
 jest.mock('@/components/page/page-wrapper', () => ({
   __esModule: true,
@@ -88,18 +100,6 @@ jest.mock('@/hooks/use-mobile', () => ({
   useIsMobile: jest.fn(() => false),
 }));
 
-// Mock context
-jest.mock('@/context/link-page-context', () => ({
-  LinkPageContext: {
-    Provider: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="link-page-context-provider">{children}</div>
-    ),
-  },
-  useContext: jest.fn(() => ({
-    selectedPage: { slug: 'test' },
-  })),
-}));
-
 // Mock LinkPageProvider
 jest.mock('@/components/link/link-page-provider', () => ({
   __esModule: true,
@@ -124,6 +124,11 @@ jest.mock('@/context/mobile-dock-context', () => ({
     },
   })),
 }));
+
+// Import PagesPage AFTER all mocks are defined
+import PagesPage from '@/app/(admin)/dashboard/pages/page';
+import { render, screen } from '@testing-library/react';
+import { headers } from 'next/headers';
 
 describe('PagesPage', () => {
   beforeEach(() => {

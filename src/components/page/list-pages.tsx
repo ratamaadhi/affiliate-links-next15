@@ -1,16 +1,13 @@
 'use client';
 
-import { usePages } from '@/hooks/queries';
-import { useSearchParams } from 'next/navigation';
-
 import {
   LinkPageContext,
   LinkPageDispatchContext,
 } from '@/context/link-page-context';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { useContext, useEffect, useMemo, useState } from 'react';
-import PaginationWithLink from '../ui/pagination-with-link';
+import { useContext, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Item, ItemGroup } from '@/components/ui/item';
@@ -20,8 +17,23 @@ import { ViewShortUrlsButton } from '../short-urls/view-short-urls-button';
 import { ViewShortUrlsDialog } from '../short-urls/view-short-urls-dialog';
 import { ViewShortUrlsDrawer } from '../short-urls/view-short-urls-drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
+import type { PageSelect } from '@/lib/db/schema';
 
-export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
+interface ListPagesProps {
+  defaultPageSlug: string;
+  pages: PageSelect[];
+  hasMore: boolean;
+  isLoading: boolean;
+  loaderRef: (node?: Element | null) => void;
+}
+
+export const ListPages = ({
+  defaultPageSlug,
+  pages,
+  hasMore,
+  isLoading,
+  loaderRef,
+}: ListPagesProps) => {
   const { selectedPage } = useContext(LinkPageContext);
   const dispatch = useContext(LinkPageDispatchContext);
 
@@ -32,32 +44,7 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
   } | null>(null);
   const isMobile = useIsMobile();
 
-  const searchParams = useSearchParams();
-  const pageIndex = +(searchParams.get('_page') ?? 1);
-  const search = searchParams.get('_search') ?? '';
-
-  const { data, isLoading } = usePages({ page: pageIndex, search });
   const { user } = useAuth();
-
-  const pages = useMemo(() => data?.data || [], [data?.data]);
-  const pagination = data?.pagination;
-
-  useEffect(() => {
-    const shouldSetDefaultValue = !selectedPage && defaultPageSlug;
-
-    if (shouldSetDefaultValue) {
-      const defaultValue = pages.find(
-        (pages) => pages.slug === defaultPageSlug
-      );
-
-      if (defaultValue) {
-        dispatch({
-          type: 'changed',
-          payload: defaultValue,
-        });
-      }
-    }
-  }, [pages, defaultPageSlug, selectedPage, dispatch]);
 
   function handleSelectPage(page) {
     dispatch({
@@ -73,16 +60,14 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
 
   return (
     <div>
-      {/* UPDATED: Reduced min-height */}
+      {/* Pages List */}
       <div className="min-h-[300px] mb-3">
         {!isLoading && pages.length === 0 && (
           <p className="text-sm text-muted-foreground">No pages found.</p>
         )}
         {!isLoading && pages.length > 0 && (
-          /* UPDATED: Using ItemGroup instead of ul */
-          <ItemGroup className="space-y-1.5">
+          <ItemGroup className="space-y-3">
             {pages.map((page) => (
-              /* UPDATED: Using Item instead of li */
               <Item
                 key={page.id}
                 variant="outline"
@@ -148,9 +133,8 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
             ))}
           </ItemGroup>
         )}
-        {isLoading && (
-          /* UPDATED: Skeleton with new layout */
-          <ItemGroup className="space-y-1.5">
+        {isLoading && pages.length === 0 && (
+          <ItemGroup className="space-y-3">
             {Array.from({ length: 5 }).map((_, index) => (
               <Item key={index} variant="outline">
                 {/* Content Area Skeleton */}
@@ -186,6 +170,20 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
         )}
       </div>
 
+      {/* Infinite Scroll Loader */}
+      {hasMore && (
+        <div ref={loaderRef} className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* End of List Message */}
+      {!hasMore && pages.length > 0 && (
+        <p className="text-center text-xs text-muted-foreground py-2">
+          You&apos;ve reached the end
+        </p>
+      )}
+
       {viewShortUrlsOpen &&
         selectedPageForView &&
         (isMobile ? (
@@ -203,8 +201,6 @@ export const ListPages = ({ defaultPageSlug }: { defaultPageSlug: string }) => {
             onOpenChange={setViewShortUrlsOpen}
           />
         ))}
-
-      <PaginationWithLink pagination={pagination} pageSearchParam="_page" />
     </div>
   );
 };

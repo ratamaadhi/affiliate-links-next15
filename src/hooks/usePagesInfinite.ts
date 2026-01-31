@@ -1,109 +1,86 @@
 'use client';
 
 import { getPages } from '@/server/pages';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import useSWRInfinite from 'swr/infinite';
 import { useDebounce } from './useDebounce';
 
 const PAGE_SIZE = 10;
 
-function validateApiResponse(response: any) {
-  const responseData = response?.data.data;
-  const pagination = response?.data.pagination;
-
-  if (!responseData || !pagination) {
-    return { valid: false, responseData: null, pagination: null };
+const getPagesKey = (index: number, previousPageData: any, search: string) => {
+  // Reached the end - check the actual data array inside the response
+  if (previousPageData && !previousPageData?.data?.data?.length) {
+    return null;
   }
-  return { valid: true, responseData, pagination };
-}
 
-interface UpdatePagesStateArgs {
-  setPages: React.Dispatch<React.SetStateAction<any[]>>;
-  setHasMore: React.Dispatch<React.SetStateAction<boolean>>;
-  setPage: React.Dispatch<React.SetStateAction<number>>;
-  newPages: any[];
-  totalItems: number;
-  currentPage: number;
-  isFirstPage: boolean;
-}
-
-function updatePagesState({
-  setPages,
-  setHasMore,
-  setPage,
-  newPages,
-  totalItems,
-  currentPage,
-  isFirstPage,
-}: UpdatePagesStateArgs) {
-  setPages((prevPosts) => {
-    const updatedPages = isFirstPage ? newPages : [...prevPosts, ...newPages];
-
-    const uniquePages = Array.from(
-      new Map(updatedPages.map((page) => [page.id, page])).values()
-    );
-
-    setHasMore(uniquePages.length < totalItems);
-    setPage(currentPage);
-
-    return uniquePages;
-  });
-}
+  // Return an object key (like useLinkInfinite) for proper cache key handling
+  return {
+    page: index + 1,
+    limit: PAGE_SIZE,
+    search: search || '',
+    key: 'pages',
+  };
+};
 
 function usePagesInfinite() {
-  const [pages, setPages] = useState([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const prevSearchTerm = useRef(debouncedSearchTerm);
 
-  const fetchPages = useCallback(
-    async (pageNumber: number, keyword: string = '') => {
-      try {
-        setIsLoading(true);
-        const response = await getPages({
-          page: pageNumber,
-          limit: PAGE_SIZE,
-          search: keyword,
+  const { data, isLoading, isValidating, mutate, size, setSize } =
+    useSWRInfinite(
+      (index, previousPageData) =>
+        getPagesKey(index, previousPageData, debouncedSearchTerm),
+      (arg) => {
+        return getPages({
+          page: arg.page,
+          limit: arg.limit,
+          search: arg.search,
         });
-        const { valid, responseData, pagination } =
-          validateApiResponse(response);
-
-        if (!valid) {
-          setHasMore(false);
-          return;
-        }
-
-        updatePagesState({
-          setPages,
-          setHasMore,
-          setPage,
-          newPages: responseData,
-          totalItems: pagination.totalItems,
-          currentPage: pagination.currentPage,
-          isFirstPage: pageNumber === 1,
-        });
-      } catch (error) {
-        console.error('Failed to load pages:', error);
-        setHasMore(false);
-      } finally {
-        setIsLoading(false);
+      },
+      {
+        revalidateAll: true,
+        revalidateOnFocus: false,
+        dedupingInterval: 1000,
       }
-    },
-    [setPages, setHasMore, setPage]
-  );
+    );
 
-  const handleSearch = useCallback((value) => {
+  // Flatten the paginated data
+  const pages = data?.flatMap((page) => page?.data?.data || []) || [];
+
+  // Check if there's more data using pagination metadata from API response
+  const lastPage = data?.[data.length - 1];
+  const hasMore =
+    lastPage?.data?.pagination &&
+    lastPage.data.pagination.currentPage < lastPage.data.pagination.totalPages;
+
+  // Current page number (size is the number of pages loaded)
+  const page = size;
+
+  // Reset to first page when debounced search term changes
+  useEffect(() => {
+    if (prevSearchTerm.current !== debouncedSearchTerm) {
+      prevSearchTerm.current = debouncedSearchTerm;
+      setSize(1);
+    }
+  }, [debouncedSearchTerm, setSize]);
+
+  const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
   }, []);
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
-
-  useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    setPages([]);
-    fetchPages(1, debouncedSearchTerm);
-  }, [debouncedSearchTerm, fetchPages]);
+  // Fetch more pages
+  const fetchPages = useCallback(
+    (pageNumber: number, keyword: string = '') => {
+      if (keyword !== debouncedSearchTerm) {
+        setSearchTerm(keyword);
+        setSize(1);
+      } else {
+        setSize(pageNumber);
+      }
+    },
+    [debouncedSearchTerm, setSize]
+  );
 
   return {
     data: pages,
@@ -111,9 +88,10 @@ function usePagesInfinite() {
     page,
     handleSearch,
     isLoading,
-    setIsLoading,
+    isValidating,
     fetchPages,
     debouncedSearchTerm,
+    mutate,
   };
 }
 
