@@ -12,7 +12,7 @@ import { nanoid } from 'nanoid';
 import { headers } from 'next/headers';
 
 const generateShortCode = async (): Promise<string> => {
-  const maxAttempts = 10;
+  const maxAttempts = 100;
   let attempts = 0;
 
   while (attempts < maxAttempts) {
@@ -73,13 +73,24 @@ export const createShortLink = async (
           columns: { username: true },
         });
 
-        if (userData?.username) {
-          finalTargetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/${userData.username}/${pageData.slug}`;
+        if (!userData?.username) {
+          return {
+            success: false,
+            message: 'User not found - cannot generate short link without username',
+          };
         }
-      }
 
-      if (!finalTargetUrl) {
-        finalTargetUrl = shortUrl;
+        // For default page (slug equals username), use /{username}
+        // For other pages, use /{username}/{slug}
+        const isDefaultPage = pageData.slug === userData.username;
+        finalTargetUrl = isDefaultPage
+          ? `${process.env.NEXT_PUBLIC_BASE_URL}/${userData.username}`
+          : `${process.env.NEXT_PUBLIC_BASE_URL}/${userData.username}/${pageData.slug}`;
+      } else {
+        return {
+          success: false,
+          message: 'Page not found - cannot generate short link',
+        };
       }
     }
 
@@ -267,7 +278,12 @@ export const createShortLinkForPage = async (
       return { success: false, message: 'User not found' };
     }
 
-    const targetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/${userData.username}/${pageData.slug}`;
+    // For default page (slug equals username), use /{username}
+    // For other pages, use /{username}/{slug}
+    const isDefaultPage = pageData.slug === userData.username;
+    const targetUrl = isDefaultPage
+      ? `${process.env.NEXT_PUBLIC_BASE_URL}/${userData.username}`
+      : `${process.env.NEXT_PUBLIC_BASE_URL}/${userData.username}/${pageData.slug}`;
     const shortUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/s/${shortCode}`;
 
     // Create new short link

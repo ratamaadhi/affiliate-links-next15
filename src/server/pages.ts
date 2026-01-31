@@ -28,7 +28,7 @@ export const createHomePageUser = async () => {
   }
   const username = user?.username || 'user';
   try {
-    const slug = await generateUniqueSlug(username);
+    const slug = await generateUniqueSlug(username, userId);
     const [newPage] = await db
       .insert(pageSchema)
       .values({
@@ -40,7 +40,15 @@ export const createHomePageUser = async () => {
       .returning();
 
     if (newPage && newPage.id) {
-      await createShortLink(newPage.id, userId);
+      try {
+        await createShortLink(newPage.id, userId);
+      } catch (shortLinkError) {
+        // Log the error but don't fail the page creation
+        console.error(
+          'Failed to create short link for home page:',
+          shortLinkError
+        );
+      }
     }
 
     return { success: true, message: 'Page created successfully' };
@@ -50,21 +58,28 @@ export const createHomePageUser = async () => {
   }
 };
 
-// OPTIMIZATION: Uses index on page.slug (created in migration 0011)
-export const findPageBySlug = async (slug: string) => {
+// OPTIMIZATION: Uses index on (user_id, slug) composite index (created in migration 0010)
+// When userId is provided, only checks for slug conflicts within that user's pages
+// Note: Global slug lookup (without userId) is for backward compatibility only.
+// In production, userId should always be provided as slugs are only unique per-user
+// since the composite index was added in migration 0010.
+export const findPageBySlug = async (slug: string, userId?: number) => {
   return db.query.page.findFirst({
-    where: eq(pageSchema.slug, slug),
+    where: userId
+      ? and(eq(pageSchema.slug, slug), eq(pageSchema.userId, userId))
+      : eq(pageSchema.slug, slug),
   });
 };
 
 export const generateUniqueSlug = async (
   title: string,
+  userId?: number,
   excludePageId?: number
 ): Promise<string> => {
   let slug = slugify(title);
 
   while (true) {
-    const existingPage = await findPageBySlug(slug);
+    const existingPage = await findPageBySlug(slug, userId);
 
     if (!existingPage || existingPage.id === excludePageId) {
       return slug;
@@ -93,7 +108,7 @@ export const createPage = async (
     let slug = arg.slug;
 
     if (!slug) {
-      slug = await generateUniqueSlug(arg.title);
+      slug = await generateUniqueSlug(arg.title, userId);
     } else {
       const slugFormat = /^[a-z0-9-]+$/;
       if (!slugFormat.test(slug)) {
@@ -104,7 +119,7 @@ export const createPage = async (
         };
       }
 
-      const existingPage = await findPageBySlug(slug);
+      const existingPage = await findPageBySlug(slug, userId);
       if (existingPage) {
         return {
           success: false,
@@ -119,7 +134,12 @@ export const createPage = async (
       .returning();
 
     if (newPage && newPage.id) {
-      await createShortLink(newPage.id, userId);
+      try {
+        await createShortLink(newPage.id, userId);
+      } catch (shortLinkError) {
+        // Log the error but don't fail the page creation
+        console.error('Failed to create short link for page:', shortLinkError);
+      }
     }
 
     return {
@@ -311,7 +331,7 @@ export const updatePage = async (
         };
       }
 
-      const existingPage = await findPageBySlug(arg.values.slug);
+      const existingPage = await findPageBySlug(arg.values.slug, userId);
       if (existingPage && existingPage.id !== arg.id) {
         return {
           success: false,
@@ -334,7 +354,7 @@ export const updatePage = async (
 
         // Only regenerate slug if NOT the default page AND title changed
         if (!isDefaultPage && originalPage.title !== arg.values.title) {
-          newValues.slug = await generateUniqueSlug(arg.values.title);
+          newValues.slug = await generateUniqueSlug(arg.values.title, userId);
         }
 
         // If it's the default page, ensure slug is NOT in newValues

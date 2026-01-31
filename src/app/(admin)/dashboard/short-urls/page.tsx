@@ -15,7 +15,7 @@ export default async function ShortUrlsPage() {
 
   return (
     <PageWrapper breadcrumbs={breadcrumbs}>
-      <main className="flex flex-col h-full gap-y-2 bg-muted/50 rounded-lg p-4 2xl:pt-8">
+      <main className="flex flex-col h-full gap-y-2 bg-muted/50 rounded-lg p-4">
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>

@@ -2,6 +2,7 @@ import { getLinks, getLinksForPage } from '@/server/links';
 import { getPageInfinite, getPages, PaginationParams } from '@/server/pages';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
+import usePagesInfinite from './usePagesInfinite';
 
 export interface UsernamePreview {
   username: string;
@@ -262,3 +263,5 @@ export function useUserShortLinks(pageId?: number) {
     }
   );
 }
+
+export { usePagesInfinite };

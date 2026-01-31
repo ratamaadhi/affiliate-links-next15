@@ -40,7 +40,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { TbLibraryPlus } from 'react-icons/tb';
@@ -61,10 +60,10 @@ const formSchema = z.object({
       message: 'Slug must be at least 2 characters long',
     })
     .max(100)
-    .regex(/^[a-z0-9-]+$/, {
-      message: 'Slug can only contain lowercase letters, numbers, and hyphens',
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+      message: 'Slug can only contain lowercase letters, numbers, and hyphens (no consecutive or leading/trailing hyphens)',
     })
-    .nonempty('Slug is required'),
+    .optional(),
 });
 
 interface CreatePageFormContentProps {
@@ -307,16 +306,12 @@ const CreatePageDrawerContent = ({
 export const CreatePageButton = ({}) => {
   const { user } = useAuth();
 
-  const searchParams = useSearchParams();
-  const pageIndex = +(searchParams.get('_page') ?? 1);
-  const search = searchParams.get('_search') ?? '';
-
   const [isOpen, setIsOpen] = useState(false);
   const [autoGenerateSlug, setAutoGenerateSlug] = useState(true);
   const [slugHighlight, setSlugHighlight] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
-  const { trigger, isMutating } = useCreatePage({ page: pageIndex, search });
+  const { trigger, isMutating } = useCreatePage();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -364,11 +359,12 @@ export const CreatePageButton = ({}) => {
 
           if (data.slug) {
             form.setValue('slug', data.slug);
+            form.trigger('slug'); // Re-validate with the new slug value
             setSlugHighlight(true);
             setTimeout(() => setSlugHighlight(false), 2000);
 
             toast.error(
-              `Slug '${values.slug}' sudah ada. Auto-update ke '${data.slug}'. Silakan submit ulang.`,
+              `Slug '${values.slug}' already exists. Auto-updated to '${data.slug}'. Please submit again.`,
               { duration: 5000 }
             );
           }

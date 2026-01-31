@@ -58,10 +58,37 @@ async function checkUsernameRedirect(username: string): Promise<string | null> {
       CACHE_TTL.USERNAME_HISTORY
     );
 
-    return result.data?.newUsername || null;
+    if (result.data?.newUsername) {
+      return result.data.newUsername;
+    }
+
+    // Fallback: if cache misses or fails, query database directly
+    const historyEntry = await db.query.usernameHistory.findFirst({
+      where: eq(usernameHistory.oldUsername, username),
+      with: {
+        user: {
+          columns: { username: true },
+        },
+      },
+    });
+
+    return historyEntry?.user?.username || null;
   } catch (error) {
     console.error('Error checking username redirect:', error);
-    return null;
+    // On cache error, try direct database lookup as fallback
+    try {
+      const historyEntry = await db.query.usernameHistory.findFirst({
+        where: eq(usernameHistory.oldUsername, username),
+        with: {
+          user: {
+            columns: { username: true },
+          },
+        },
+      });
+      return historyEntry?.user?.username || null;
+    } catch {
+      return null;
+    }
   }
 }
 

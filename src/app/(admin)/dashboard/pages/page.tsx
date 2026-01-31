@@ -1,11 +1,9 @@
 import { DynamicPageLink } from '@/components/link/dynamic-page-link';
 import LinkPageProvider from '@/components/link/link-page-provider';
 import { MobileDock } from '@/components/link/mobile-dock';
-import { CreatePageButton } from '@/components/page/create-page-button';
-import { ListPages } from '@/components/page/list-pages';
+import { PagesContent } from '@/components/page/pages-content';
 import PageWrapper from '@/components/page/page-wrapper';
 import { PagesMobileDockProvider } from '@/components/page/pages-mobile-dock-provider';
-import SearchPageInput from '@/components/page/search-page-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileQuestion } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -60,16 +58,7 @@ export default async function PagesPage() {
             <div className="w-full flex flex-col xl:flex-row justify-between gap-4 max-w-7xl mx-auto">
               <div className="w-full flex-1">
                 <div className="max-w-[640px] w-full mx-auto">
-                  <div className="w-full flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
-                    <h1 className="xl:text-xl text-lg font-bold ms-1 self-start lg:self-center-safe">
-                      Your Pages
-                    </h1>
-                    <div className="lg:max-w-sm w-full flex gap-2 items-center flex-1 place-self-end-safe">
-                      <SearchPageInput />
-                      <CreatePageButton />
-                    </div>
-                  </div>
-                  <ListPages defaultPageSlug={user?.username || ''} />
+                  <PagesContent defaultPageSlug={user?.username || ''} />
                 </div>
               </div>
               <div className="hidden md:block min-w-[200px] max-w-[460px] mx-auto w-full">

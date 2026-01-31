@@ -2,11 +2,16 @@
 
 import { debounce } from 'lodash';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HiOutlineSearch } from 'react-icons/hi';
 import { Input } from '../ui/input';
 
-function SearchPageInput() {
+interface SearchPageInputProps {
+  onSearch?: (_term: string) => void;
+  useUrl?: boolean;
+}
+
+function SearchPageInput({ onSearch, useUrl = true }: SearchPageInputProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -27,23 +32,35 @@ function SearchPageInput() {
     [pathname, router]
   );
 
-  const debouncedSetSearchTerm = useRef(debounce(setSearchParams, 500)).current;
+  const debouncedSetSearchParams = useMemo(
+    () => debounce(setSearchParams, 500),
+    [setSearchParams]
+  );
 
   const handleSearch = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const term = event.target.value;
       setSearchTerm(term);
-      debouncedSetSearchTerm(term);
+
+      if (useUrl) {
+        debouncedSetSearchParams(term);
+      }
+
+      if (onSearch) {
+        onSearch(term);
+      }
     },
-    [debouncedSetSearchTerm]
+    [debouncedSetSearchParams, onSearch, useUrl]
   );
 
   useEffect(() => {
+    if (!useUrl) return;
+
     const searchParam = searchParams.get('_search');
     if (searchParam !== searchTerm) {
       setSearchTerm(searchParam || '');
     }
-  }, [searchParams]);
+  }, [searchParams, useUrl]);
 
   return (
     <Input
