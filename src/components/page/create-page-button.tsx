@@ -61,7 +61,8 @@ const formSchema = z.object({
     })
     .max(100)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-      message: 'Slug can only contain lowercase letters, numbers, and hyphens (no consecutive or leading/trailing hyphens)',
+      message:
+        'Slug can only contain lowercase letters, numbers, and hyphens (no consecutive or leading/trailing hyphens)',
     })
     .optional(),
 });

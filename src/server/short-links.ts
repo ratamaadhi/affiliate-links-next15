@@ -76,7 +76,8 @@ export const createShortLink = async (
         if (!userData?.username) {
           return {
             success: false,
-            message: 'User not found - cannot generate short link without username',
+            message:
+              'User not found - cannot generate short link without username',
           };
         }
 
