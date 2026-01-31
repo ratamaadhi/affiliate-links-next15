@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    const slug = await generateUniqueSlug(title, userId, excludePageId);
+    const slug = await generateUniqueSlug(title, +userId, excludePageId);
 
     return NextResponse.json({ slug });
   } catch (error) {
