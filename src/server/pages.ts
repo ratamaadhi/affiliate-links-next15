@@ -90,7 +90,8 @@ export const generateUniqueSlug = async (
   }
 };
 
-export type PageCreationArgs = Omit<PageInsert, 'userId'>;
+export type PageCreationArgs = Omit<PageInsert, 'userId' | 'slug'> &
+  Partial<Pick<PageInsert, 'slug'>>;
 
 export const createPage = async (
   _url: string,
