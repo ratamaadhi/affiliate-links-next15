@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Check if slug already exists for this user
     const existingPage = await db.query.page.findFirst({
-      where: and(eq(page.slug, slug), eq(page.userId, userId)),
+      where: and(eq(page.slug, slug), eq(page.userId, +userId)),
     });
 
     if (existingPage) {
