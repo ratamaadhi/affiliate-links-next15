@@ -6,13 +6,12 @@ import { getUsernameRedirect } from './lib/cache/username-redirects';
 
 const AUTH_PAGES = ['/login', '/signup', '/forgot-password', '/reset-password'];
 const ONBOARDING_PAGES = ['/new-username'];
-const PUBLIC_ROUTE_PREFIXES = ['/api', '/_next', '/s', '/favicon'];
+const PUBLIC_PREFIX_PATHS = ['/api', '/_next', '/s/'] as const;
 
 function isPublicRoute(pathname: string): boolean {
   return (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/s/') ||
+    pathname === '/' ||
+    PUBLIC_PREFIX_PATHS.some((prefix) => pathname.startsWith(prefix)) ||
     pathname.includes('favicon') ||
     pathname === '/robots.txt' ||
     pathname === '/sitemap.xml'
@@ -25,13 +24,7 @@ function isPublicRoute(pathname: string): boolean {
 async function handleUsernameRedirect(pathname: string) {
   const username = pathname.split('/')[1];
 
-  if (
-    !username ||
-    username === 's' ||
-    username.startsWith('api') ||
-    username.startsWith('_next') ||
-    pathname === '/new-username'
-  ) {
+  if (!username || pathname === '/new-username') {
     return null;
   }
 
@@ -73,37 +66,33 @@ export async function middleware(request: NextRequest) {
   const isUsernameRoute =
     usernameMatch &&
     !pathname.startsWith('/dashboard') &&
-    !pathname.startsWith('/login') &&
-    !pathname.startsWith('/signup') &&
-    !pathname.startsWith('/forgot-password') &&
-    !pathname.startsWith('/reset-password') &&
-    !pathname.startsWith('/new-username');
+    !AUTH_PAGES.some((page) => pathname.startsWith(page)) &&
+    !ONBOARDING_PAGES.some((page) => pathname.startsWith(page));
 
-  // For public username routes, allow access without auth but try to get session for context
+  // Get session once for both username and protected routes
+  let session: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
+  let sessionError = false;
+
+  try {
+    session = await auth.api.getSession({
+      headers: await headers(),
+    });
+  } catch {
+    sessionError = true;
+  }
+
+  // For public username routes, allow access without auth but use session for context if available
   if (isUsernameRoute) {
-    try {
-      const session = await auth.api.getSession({
-        headers: await headers(),
-      });
+    const response = NextResponse.next();
 
-      const response = NextResponse.next();
-
-      if (session?.user) {
-        response.headers.set('x-user-info', JSON.stringify(session.user));
-      }
-
-      return response;
-    } catch {
-      // If auth fails, still allow access to public routes
-      return NextResponse.next();
+    if (session?.user) {
+      response.headers.set('x-user-info', JSON.stringify(session.user));
     }
+
+    return response;
   }
 
   // Auth required for dashboard and other protected routes
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
   if (!session) {
     // Allow unauthenticated users to access auth pages
     if (AUTH_PAGES.includes(pathname)) {
