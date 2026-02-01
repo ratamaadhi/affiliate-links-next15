@@ -25,12 +25,26 @@ export function useLinkClick() {
       })
       .catch(console.error);
 
-    // Open URL in new tab with fallback for popup blockers
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!newWindow) {
-      // Popup was blocked, fall back to opening in same tab
-      window.location.href = url;
+    // Open URL in new tab using programmatic anchor click
+    // This mimics a user-initiated click which is more reliable with popup blockers
+    // Note: Only truly reliable when triggered directly from a user event
+    if (!url) {
+      console.error('Invalid URL provided to useLinkClick');
+      return;
     }
+
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+
+    // Delay cleanup to ensure browser processes the click
+    setTimeout(() => {
+      document.body.removeChild(anchor);
+    }, 100);
   };
 
   return { handleClick };
