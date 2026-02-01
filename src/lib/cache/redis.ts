@@ -58,9 +58,14 @@ export const getRedisClient = (): Redis | null => {
 
 /**
  * Check if Redis is available
+ * Also accepts 'connect' status since operations will trigger connection
  */
 export const isRedisReady = (): boolean => {
-  return isRedisAvailable && redisClient?.status === 'ready';
+  const status = redisClient?.status;
+  return (
+    isRedisAvailable &&
+    (status === 'ready' || status === 'connect' || status === 'connecting')
+  );
 };
 
 /**
