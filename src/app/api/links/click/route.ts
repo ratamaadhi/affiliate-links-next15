@@ -1,5 +1,6 @@
 import { trackLinkClick } from '@/server/links';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkClickRateLimit, getClientIp } from '@/lib/cache/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: 'Invalid link ID' },
         { status: 400 }
+      );
+    }
+
+    // Check rate limit before tracking click
+    const ip = getClientIp(request);
+    const rateLimit = await checkClickRateLimit(ip, numericLinkId);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Rate limit exceeded',
+          retryAfter: rateLimit.retryAfter,
+        },
+        { status: 429 }
       );
     }
 
