@@ -130,12 +130,12 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
 
         try {
           const response = await trigger({
-          id: data.id,
-          values: {
-            ...values,
-            userId: typeof userId === 'string' ? Number(userId) : userId,
-          },
-        });
+            id: data.id,
+            values: {
+              ...values,
+              userId: typeof userId === 'string' ? Number(userId) : userId,
+            },
+          });
 
           if (response.success) {
             form.reset({

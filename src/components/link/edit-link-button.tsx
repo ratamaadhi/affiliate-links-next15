@@ -442,28 +442,28 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
 
       if (data?.imageUrl !== imageFile?.preview) {
         if (imageFile && imageFile.file instanceof File) {
-        try {
-          const checksum = await computeSHA256(imageFile.file);
-          const key = generateS3Key();
-          const singedUrlResult = await generatePresignedUrlAction({
-            key,
-            expiresIn: 120,
-            checksum,
-            type: imageFile.file.type,
-            size: imageFile.file.size,
-          });
-          const upload = await axios.put(singedUrlResult, imageFile.file, {
-            headers: {
-              'Content-Type': imageFile.file.type,
-            },
-          });
+          try {
+            const checksum = await computeSHA256(imageFile.file);
+            const key = generateS3Key();
+            const singedUrlResult = await generatePresignedUrlAction({
+              key,
+              expiresIn: 120,
+              checksum,
+              type: imageFile.file.type,
+              size: imageFile.file.size,
+            });
+            const upload = await axios.put(singedUrlResult, imageFile.file, {
+              headers: {
+                'Content-Type': imageFile.file.type,
+              },
+            });
 
-          if (upload.status === 200) {
-            locationUploadedImage = singedUrlResult.split('?')[0];
-            if (data?.imageUrl) {
-              await deleteFileFromS3ByUrlAction(data.imageUrl);
+            if (upload.status === 200) {
+              locationUploadedImage = singedUrlResult.split('?')[0];
+              if (data?.imageUrl) {
+                await deleteFileFromS3ByUrlAction(data.imageUrl);
+              }
             }
-          }
           } catch (uploadError) {
             console.error('Failed to upload new image:', uploadError);
             toast.error('Failed to upload new image');
@@ -656,7 +656,10 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                         <Input
                           placeholder="https://example.com"
                           disabled={
-                            isMutating || isSubmitting || isFetchingMetadata || loadCompression
+                            isMutating ||
+                            isSubmitting ||
+                            isFetchingMetadata ||
+                            loadCompression
                           }
                           className="flex-1"
                           {...field}
@@ -718,7 +721,12 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isMutating || isSubmitting || isFetchingMetadata || loadCompression}
+                disabled={
+                  isMutating ||
+                  isSubmitting ||
+                  isFetchingMetadata ||
+                  loadCompression
+                }
                 onClick={() => {
                   setImageFile(initialImageMemo);
                   form.setValue('imageUrl', initialImageMemo.preview);
@@ -895,7 +903,10 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
             )}
           </Button>
           <DrawerClose asChild>
-            <Button variant="outline" disabled={isMutating || isSubmitting || loadCompression}>
+            <Button
+              variant="outline"
+              disabled={isMutating || isSubmitting || loadCompression}
+            >
               Cancel
             </Button>
           </DrawerClose>
