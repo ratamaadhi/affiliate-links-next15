@@ -227,8 +227,16 @@ const CreatePageDialogContent = ({
             Cancel
           </Button>
         </DialogClose>
-        <Button disabled={isMutating || isSubmitting} type="submit" form="create-page-form">
-          {isMutating || isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Create'}
+        <Button
+          disabled={isMutating || isSubmitting}
+          type="submit"
+          form="create-page-form"
+        >
+          {isMutating || isSubmitting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            'Create'
+          )}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -360,28 +368,28 @@ export const CreatePageButton = ({}) => {
         setIsOpen(false);
       } else {
         if (response.message?.toLowerCase().includes('slug')) {
-        try {
-          const res = await fetch('/api/pages/generate-slug', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: values.title }),
-          });
-          const data = await res.json();
+          try {
+            const res = await fetch('/api/pages/generate-slug', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title: values.title }),
+            });
+            const data = await res.json();
 
-          if (data.slug) {
-            form.setValue('slug', data.slug);
-            form.trigger('slug'); // Re-validate with the new slug value
-            setSlugHighlight(true);
-            setTimeout(() => setSlugHighlight(false), 2000);
+            if (data.slug) {
+              form.setValue('slug', data.slug);
+              form.trigger('slug'); // Re-validate with the new slug value
+              setSlugHighlight(true);
+              setTimeout(() => setSlugHighlight(false), 2000);
 
-            toast.error(
-              `Slug '${values.slug}' already exists. Auto-updated to '${data.slug}'. Please submit again.`,
-              { duration: 5000 }
-            );
+              toast.error(
+                `Slug '${values.slug}' already exists. Auto-updated to '${data.slug}'. Please submit again.`,
+                { duration: 5000 }
+              );
+            }
+          } catch {
+            toast.error(response.message || 'Failed to create page');
           }
-        } catch {
-          toast.error(response.message || 'Failed to create page');
-        }
         } else {
           toast.error(response.message || 'Failed to create page');
         }

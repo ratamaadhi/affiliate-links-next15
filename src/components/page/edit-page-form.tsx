@@ -126,7 +126,9 @@ export const EditPageFormContent = ({
                     <FormControl>
                       <Input
                         placeholder="my-page-url"
-                        disabled={isMutating || isSubmitting || autoGenerateSlug}
+                        disabled={
+                          isMutating || isSubmitting || autoGenerateSlug
+                        }
                         className={`transition-all duration-300 ${slugHighlight ? 'border-amber-500 ring-2 ring-amber-500/20 animate-pulse' : ''}`}
                         {...field}
                       />
@@ -161,7 +163,8 @@ export const EditPageFormContent = ({
   );
 };
 
-interface EditPageFormProps extends Omit<EditPageFormContentProps, 'onSubmitAction'> {
+interface EditPageFormProps
+  extends Omit<EditPageFormContentProps, 'onSubmitAction'> {
   onSubmitAction: (
     _values: z.infer<typeof formSchema>
   ) => Promise<{ success: boolean; message?: string }>;

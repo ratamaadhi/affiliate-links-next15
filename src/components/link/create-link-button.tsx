@@ -286,7 +286,7 @@ export const CreateLinkButton = () => {
       }
 
       const response = await trigger({
-      ...values,
+        ...values,
         pageId: selectedPage?.id,
         imageUrl: locationUploadedImage ?? '',
         displayOrder: values.displayOrder,
@@ -381,7 +381,10 @@ export const CreateLinkButton = () => {
                         <Input
                           placeholder="https://example.com"
                           disabled={
-                            isMutating || isSubmitting || isFetchingMetadata || loadCompression
+                            isMutating ||
+                            isSubmitting ||
+                            isFetchingMetadata ||
+                            loadCompression
                           }
                           className="flex-1"
                           {...field}
@@ -578,7 +581,9 @@ export const CreateLinkButton = () => {
               </Button>
             </DialogClose>
             <Button
-              disabled={isMutating || isSubmitting || !metadata || loadCompression}
+              disabled={
+                isMutating || isSubmitting || !metadata || loadCompression
+              }
               type="submit"
               form="create-link-form"
               className="min-w-[120px]"
@@ -625,7 +630,9 @@ export const CreateLinkButton = () => {
         </div>
         <DrawerFooter className="pt-2 gap-2">
           <Button
-            disabled={isMutating || isSubmitting || !metadata || loadCompression}
+            disabled={
+              isMutating || isSubmitting || !metadata || loadCompression
+            }
             type="submit"
             form="create-link-form"
             className="min-w-[120px]"
@@ -640,7 +647,10 @@ export const CreateLinkButton = () => {
             )}
           </Button>
           <DrawerClose asChild>
-            <Button variant="outline" disabled={isMutating || isSubmitting || loadCompression}>
+            <Button
+              variant="outline"
+              disabled={isMutating || isSubmitting || loadCompression}
+            >
               Cancel
             </Button>
           </DrawerClose>
