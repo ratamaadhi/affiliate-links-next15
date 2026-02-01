@@ -10,11 +10,13 @@ export default function FileUpload({
   onFilesChange,
   isMultiple = false,
   maxSizeMB = 5,
+  disabled = false,
 }: {
   parentFiles?: FileWithPreview[];
   onFilesChange?: (_files: FileWithPreview[]) => void;
   isMultiple?: boolean;
   maxSizeMB?: number;
+  disabled?: boolean;
 }) {
   const maxSize = maxSizeMB * 1024 * 1024; // 2MB default
 
@@ -59,17 +61,19 @@ export default function FileUpload({
       <div className="relative">
         {/* Drop area */}
         <div
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
+          onDragEnter={disabled ? undefined : handleDragEnter}
+          onDragLeave={disabled ? undefined : handleDragLeave}
+          onDragOver={disabled ? undefined : handleDragOver}
+          onDrop={disabled ? undefined : handleDrop}
           data-dragging={isDragging || undefined}
-          className="relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-input p-4 transition-colors has-[input:focus]:border-ring has-[input:focus]:ring-[3px] has-[input:focus]:ring-ring/50 data-[dragging=true]:bg-accent/50"
+          data-disabled={disabled || undefined}
+          className="relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-input p-4 transition-colors has-[input:focus]:border-ring has-[input:focus]:ring-[3px] has-[input:focus]:ring-ring/50 data-[dragging=true]:bg-accent/50 data-[disabled=true]:opacity-50 data-[disabled=true]:cursor-not-allowed"
         >
           <input
             {...getInputProps()}
             className="sr-only"
             aria-label="Upload image file"
+            disabled={disabled}
           />
           {previewUrl ? (
             <div className="absolute inset-0 flex items-center justify-center p-4">
@@ -95,7 +99,8 @@ export default function FileUpload({
                 type="button"
                 variant="outline"
                 className="mt-4"
-                onClick={openFileDialog}
+                onClick={disabled ? undefined : openFileDialog}
+                disabled={disabled}
               >
                 <UploadIcon
                   className="-ms-1 size-4 opacity-60"
@@ -111,9 +116,10 @@ export default function FileUpload({
           <div className="absolute top-4 right-4">
             <button
               type="button"
-              className="z-50 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="z-50 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => removeFile(files[0].id)}
               aria-label="Remove image"
+              disabled={disabled}
             >
               <XIcon className="size-4" aria-hidden="true" />
             </button>

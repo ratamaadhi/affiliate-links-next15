@@ -116,11 +116,10 @@ export function useCreatePage() {
 
   return useSWRmutation('/pages', createPage, {
     onSuccess: (data) => {
-      if (!data.success) {
-        toast.error(data.message || 'Failed to create page');
-        return;
+      if (data?.success) {
+        mutate();
+        toast.success('Page created successfully');
       }
-      mutate();
     },
     onError: (error) => {
       const message =
@@ -135,12 +134,10 @@ export function useUpdatePage() {
 
   return useSWRmutation('/pages', updatePage, {
     onSuccess: (data) => {
-      if (!data.success) {
-        toast.error(data.message || 'Failed to update page');
-        return;
+      if (data?.success) {
+        mutate();
+        toast.success('Page updated successfully');
       }
-      mutate();
-      toast.success('Page updated successfully');
     },
     onError: (error) => {
       const message =
@@ -155,12 +152,10 @@ export function useDeletePage() {
 
   return useSWRmutation('/pages', deletePage, {
     onSuccess: (data) => {
-      if (!data.success) {
-        toast.error(data.message || 'Failed to delete page');
-        return;
+      if (data?.success) {
+        mutate();
+        toast.success('Page deleted successfully');
       }
-      mutate();
-      toast.success('Page deleted successfully');
     },
     onError: (error) => {
       const message =

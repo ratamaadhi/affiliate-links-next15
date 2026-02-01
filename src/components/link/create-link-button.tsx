@@ -101,6 +101,7 @@ export const CreateLinkButton = () => {
     useState<FileWithPreview | null>();
   const [imageFile, setImageFile] = useState<FileWithPreview | null>(null);
   const [loadCompression, setLoadCompression] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { trigger, isMutating } = useCreateLink({
     search: keywordLink || '',
@@ -247,51 +248,56 @@ export const CreateLinkButton = () => {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const { data: session } = await authClient.getSession();
-    if (!session?.user?.id) {
-      toast.error('Authentication required. Please log in again.');
-      return;
-    }
-
-    let locationUploadedImage = '';
-    if (imageFile && imageFile.file) {
-      // Check if the file is a File instance (not FileMetadata)
-      if (imageFile.file instanceof File) {
-        const checksum = await computeSHA256(imageFile.file);
-        const key = generateS3Key();
-        const singedUrlResult = await generatePresignedUrlAction({
-          key,
-          expiresIn: 120,
-          checksum,
-          type: imageFile.file.type,
-          size: imageFile.file.size,
-        });
-        const upload = await axios.put(singedUrlResult, imageFile.file, {
-          headers: {
-            'Content-Type': imageFile.file.type,
-          },
-        });
-
-        if (upload.status === 200) {
-          locationUploadedImage = singedUrlResult.split('?')[0];
-        }
-      } else {
-        console.error(
-          'Cannot upload FileMetadata to S3, only File objects are supported'
-        );
+    try {
+      setIsSubmitting(true);
+      const { data: session } = await authClient.getSession();
+      if (!session?.user?.id) {
+        toast.error('Authentication required. Please log in again.');
+        return;
       }
-    }
 
-    const response = await trigger({
+      let locationUploadedImage = '';
+      if (imageFile && imageFile.file) {
+        // Check if the file is a File instance (not FileMetadata)
+        if (imageFile.file instanceof File) {
+          const checksum = await computeSHA256(imageFile.file);
+          const key = generateS3Key();
+          const singedUrlResult = await generatePresignedUrlAction({
+            key,
+            expiresIn: 120,
+            checksum,
+            type: imageFile.file.type,
+            size: imageFile.file.size,
+          });
+          const upload = await axios.put(singedUrlResult, imageFile.file, {
+            headers: {
+              'Content-Type': imageFile.file.type,
+            },
+          });
+
+          if (upload.status === 200) {
+            locationUploadedImage = singedUrlResult.split('?')[0];
+          }
+        } else {
+          console.error(
+            'Cannot upload FileMetadata to S3, only File objects are supported'
+          );
+        }
+      }
+
+      const response = await trigger({
       ...values,
-      pageId: selectedPage?.id,
-      imageUrl: locationUploadedImage ?? '',
-      displayOrder: values.displayOrder,
-    });
-    if (response.success) {
-      form.reset();
-      setMetadata(null);
-      setIsOpen(false);
+        pageId: selectedPage?.id,
+        imageUrl: locationUploadedImage ?? '',
+        displayOrder: values.displayOrder,
+      });
+      if (response.success) {
+        form.reset();
+        setMetadata(null);
+        setIsOpen(false);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -359,6 +365,7 @@ export const CreateLinkButton = () => {
               name="displayOrder"
               totalCount={totalCount}
               addNumber={1}
+              disabled={isMutating || isSubmitting}
             />
           )}
           <div className="flex-1">
@@ -374,7 +381,7 @@ export const CreateLinkButton = () => {
                         <Input
                           placeholder="https://example.com"
                           disabled={
-                            isMutating || isFetchingMetadata || loadCompression
+                            isMutating || isSubmitting || isFetchingMetadata || loadCompression
                           }
                           className="flex-1"
                           {...field}
@@ -388,6 +395,7 @@ export const CreateLinkButton = () => {
                           variant="outline"
                           disabled={
                             isMutating ||
+                            isSubmitting ||
                             !field.value ||
                             isFetchingMetadata ||
                             loadCompression
@@ -463,12 +471,14 @@ export const CreateLinkButton = () => {
                   <FileUpload
                     parentFiles={imageFile ? [imageFile] : []}
                     onFilesChange={handleImageChange}
+                    disabled={isMutating || isSubmitting}
                   />
                   {imageFile !== imageFileFromUrl && imageFileFromUrl && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
+                      disabled={isMutating || isSubmitting}
                       onClick={() => {
                         setImageFile(imageFileFromUrl);
                         form.setValue('imageUrl', imageFileFromUrl.preview);
@@ -495,7 +505,7 @@ export const CreateLinkButton = () => {
                   <FormControl>
                     <Input
                       placeholder="Link title"
-                      disabled={isMutating}
+                      disabled={isMutating || isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -513,7 +523,7 @@ export const CreateLinkButton = () => {
                   <FormControl>
                     <Input
                       placeholder="Link description"
-                      disabled={isMutating}
+                      disabled={isMutating || isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -560,7 +570,7 @@ export const CreateLinkButton = () => {
           <DialogFooter>
             <DialogClose asChild>
               <Button
-                disabled={isMutating || loadCompression}
+                disabled={isMutating || isSubmitting || loadCompression}
                 variant="outline"
                 type="button"
               >
@@ -568,12 +578,12 @@ export const CreateLinkButton = () => {
               </Button>
             </DialogClose>
             <Button
-              disabled={isMutating || !metadata || loadCompression}
+              disabled={isMutating || isSubmitting || !metadata || loadCompression}
               type="submit"
               form="create-link-form"
               className="min-w-[120px]"
             >
-              {isMutating ? (
+              {isMutating || isSubmitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin mr-2" />
                   Creating...
@@ -615,12 +625,12 @@ export const CreateLinkButton = () => {
         </div>
         <DrawerFooter className="pt-2 gap-2">
           <Button
-            disabled={isMutating || !metadata || loadCompression}
+            disabled={isMutating || isSubmitting || !metadata || loadCompression}
             type="submit"
             form="create-link-form"
             className="min-w-[120px]"
           >
-            {isMutating ? (
+            {isMutating || isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin mr-2" />
                 Creating...
@@ -630,7 +640,7 @@ export const CreateLinkButton = () => {
             )}
           </Button>
           <DrawerClose asChild>
-            <Button variant="outline" disabled={isMutating || loadCompression}>
+            <Button variant="outline" disabled={isMutating || isSubmitting || loadCompression}>
               Cancel
             </Button>
           </DrawerClose>
