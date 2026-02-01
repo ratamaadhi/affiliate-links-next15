@@ -46,6 +46,7 @@ const formSchema = z.object({
 
 interface EditPageFormContentProps {
   isMutating: boolean;
+  isSubmitting: boolean;
   form: UseFormReturn<z.infer<typeof formSchema>>;
   onSubmitAction: (
     _values: z.infer<typeof formSchema>
@@ -58,6 +59,7 @@ interface EditPageFormContentProps {
 
 export const EditPageFormContent = ({
   isMutating,
+  isSubmitting,
   form,
   onSubmitAction,
   isDefaultPage,
@@ -85,7 +87,7 @@ export const EditPageFormContent = ({
                   <FormControl>
                     <Input
                       placeholder="My page title"
-                      disabled={isMutating}
+                      disabled={isMutating || isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -104,7 +106,7 @@ export const EditPageFormContent = ({
                   <FormControl>
                     <Input
                       placeholder="What page is about?"
-                      disabled={isMutating}
+                      disabled={isMutating || isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -124,7 +126,7 @@ export const EditPageFormContent = ({
                     <FormControl>
                       <Input
                         placeholder="my-page-url"
-                        disabled={isMutating || autoGenerateSlug}
+                        disabled={isMutating || isSubmitting || autoGenerateSlug}
                         className={`transition-all duration-300 ${slugHighlight ? 'border-amber-500 ring-2 ring-amber-500/20 animate-pulse' : ''}`}
                         {...field}
                       />
@@ -139,7 +141,7 @@ export const EditPageFormContent = ({
                           onAutoGenerateSlugChange?.(e.target.checked)
                         }
                         className="rounded border-gray-300"
-                        disabled={isMutating}
+                        disabled={isMutating || isSubmitting}
                       />
                       <label
                         htmlFor="auto-slug-edit"
@@ -159,7 +161,10 @@ export const EditPageFormContent = ({
   );
 };
 
-interface EditPageFormProps extends EditPageFormContentProps {
+interface EditPageFormProps extends Omit<EditPageFormContentProps, 'onSubmitAction'> {
+  onSubmitAction: (
+    _values: z.infer<typeof formSchema>
+  ) => Promise<{ success: boolean; message?: string }>;
   onCancelAction: () => void;
   user?: { username?: string } | null;
   onAutoGenerateSlugChange?: (_value: boolean) => void;
@@ -167,6 +172,7 @@ interface EditPageFormProps extends EditPageFormContentProps {
 
 export const EditPageForm = ({
   isMutating,
+  isSubmitting,
   form,
   onSubmitAction,
   onCancelAction,
@@ -203,6 +209,7 @@ export const EditPageForm = ({
       </DialogHeader>
       <EditPageFormContent
         isMutating={isMutating}
+        isSubmitting={isSubmitting}
         form={form}
         onSubmitAction={onSubmitAction}
         isDefaultPage={isDefaultPage}
@@ -213,7 +220,7 @@ export const EditPageForm = ({
       <DialogFooter>
         <DialogClose asChild>
           <Button
-            disabled={isMutating}
+            disabled={isMutating || isSubmitting}
             variant="outline"
             type="button"
             onClick={onCancelAction}
@@ -222,12 +229,12 @@ export const EditPageForm = ({
           </Button>
         </DialogClose>
         <Button
-          disabled={isMutating}
+          disabled={isMutating || isSubmitting}
           type="submit"
           form="edit-page-form"
           className="min-w-[120px]"
         >
-          {isMutating ? (
+          {isMutating || isSubmitting ? (
             <>
               <Loader2 className="size-4 animate-spin mr-2" />
               Saving...

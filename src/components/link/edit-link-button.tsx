@@ -389,6 +389,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
   );
   const [loadCompression, setLoadCompression] = useState(false);
   const [hasUsedNewData, setHasUsedNewData] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { trigger, isMutating } = useUpdateLink({
     search: keywordLink || '',
@@ -429,16 +430,18 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
   } = useEditLinkMetadata(data?.url, data);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const userId = (await authClient.getSession()).data?.user.id;
-    if (!userId) {
-      toast.error('You must be logged in to edit a link');
-      return;
-    }
+    try {
+      setIsSubmitting(true);
+      const userId = (await authClient.getSession()).data?.user.id;
+      if (!userId) {
+        toast.error('You must be logged in to edit a link');
+        return;
+      }
 
-    let locationUploadedImage = values.imageUrl || '';
+      let locationUploadedImage = values.imageUrl || '';
 
-    if (data?.imageUrl !== imageFile?.preview) {
-      if (imageFile && imageFile.file instanceof File) {
+      if (data?.imageUrl !== imageFile?.preview) {
+        if (imageFile && imageFile.file instanceof File) {
         try {
           const checksum = await computeSHA256(imageFile.file);
           const key = generateS3Key();
@@ -461,33 +464,33 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
               await deleteFileFromS3ByUrlAction(data.imageUrl);
             }
           }
-        } catch (uploadError) {
-          console.error('Failed to upload new image:', uploadError);
-          toast.error('Failed to upload new image');
-          return;
+          } catch (uploadError) {
+            console.error('Failed to upload new image:', uploadError);
+            toast.error('Failed to upload new image');
+            return;
+          }
+        }
+        if (data?.imageUrl) {
+          await deleteFileFromS3ByUrlAction(data.imageUrl);
         }
       }
-      if (data?.imageUrl) {
-        await deleteFileFromS3ByUrlAction(data.imageUrl);
+
+      const response = await trigger({
+        id: data.id,
+        values: {
+          ...values,
+          imageUrl: locationUploadedImage ?? '',
+          displayOrder: values.displayOrder,
+        },
+      });
+
+      if (response.success) {
+        form.reset();
+        setImageFile(null);
+        setIsOpen(false);
       }
-    }
-
-    const response = await trigger({
-      id: data.id,
-      values: {
-        ...values,
-        imageUrl: locationUploadedImage ?? '',
-        displayOrder: values.displayOrder,
-      },
-    });
-
-    if (response.success) {
-      form.reset();
-      setImageFile(null);
-      setIsOpen(false);
-      toast.success('Link updated successfully');
-    } else {
-      toast.error('Failed to update link');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -639,6 +642,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
               control={form.control}
               name="displayOrder"
               totalCount={totalCount}
+              disabled={isMutating || isSubmitting}
             />
             <div className="flex-1">
               <FormField
@@ -652,7 +656,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                         <Input
                           placeholder="https://example.com"
                           disabled={
-                            isMutating || isFetchingMetadata || loadCompression
+                            isMutating || isSubmitting || isFetchingMetadata || loadCompression
                           }
                           className="flex-1"
                           {...field}
@@ -666,6 +670,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                           variant="outline"
                           disabled={
                             isMutating ||
+                            isSubmitting ||
                             !field.value ||
                             isFetchingMetadata ||
                             loadCompression
@@ -706,13 +711,14 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
             <FileUpload
               parentFiles={imageFile ? [imageFile] : []}
               onFilesChange={handleImageChange}
+              disabled={isMutating || isSubmitting}
             />
             {imageFile !== initialImageMemo && initialImageMemo && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isMutating || isFetchingMetadata || loadCompression}
+                disabled={isMutating || isSubmitting || isFetchingMetadata || loadCompression}
                 onClick={() => {
                   setImageFile(initialImageMemo);
                   form.setValue('imageUrl', initialImageMemo.preview);
@@ -732,7 +738,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                 <FormControl>
                   <Input
                     placeholder="Link title"
-                    disabled={isMutating}
+                    disabled={isMutating || isSubmitting}
                     {...field}
                   />
                 </FormControl>
@@ -750,7 +756,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                 <FormControl>
                   <Input
                     placeholder="Link description"
-                    disabled={isMutating}
+                    disabled={isMutating || isSubmitting}
                     {...field}
                   />
                 </FormControl>
@@ -769,7 +775,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
                   variant="secondary"
                   onClick={handleResetToOriginal}
                   size="sm"
-                  disabled={isFetchingMetadata}
+                  disabled={isMutating || isSubmitting || isFetchingMetadata}
                 >
                   Reset data
                 </Button>
@@ -819,7 +825,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
           <DialogFooter>
             <DialogClose asChild>
               <Button
-                disabled={isMutating || loadCompression}
+                disabled={isMutating || isSubmitting || loadCompression}
                 variant="outline"
                 type="button"
               >
@@ -827,12 +833,12 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
               </Button>
             </DialogClose>
             <Button
-              disabled={isMutating || loadCompression}
+              disabled={isMutating || isSubmitting || loadCompression}
               type="submit"
               form="edit-link-form"
               className="min-w-[120px]"
             >
-              {isMutating ? (
+              {isMutating || isSubmitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin mr-2" />
                   Saving...
@@ -874,12 +880,12 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
         </div>
         <DrawerFooter className="pt-2 gap-2">
           <Button
-            disabled={isMutating || loadCompression}
+            disabled={isMutating || isSubmitting || loadCompression}
             type="submit"
             form="edit-link-form"
             className="min-w-[120px]"
           >
-            {isMutating ? (
+            {isMutating || isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin mr-2" />
                 Saving...
@@ -889,7 +895,7 @@ export const EditLinkButton = ({ data }: EditLinkButtonProps) => {
             )}
           </Button>
           <DrawerClose asChild>
-            <Button variant="outline" disabled={isMutating || loadCompression}>
+            <Button variant="outline" disabled={isMutating || isSubmitting || loadCompression}>
               Cancel
             </Button>
           </DrawerClose>

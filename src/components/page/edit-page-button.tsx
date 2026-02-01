@@ -59,6 +59,7 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
   const [autoGenerateSlug, setAutoGenerateSlug] = useState(true);
   const [hasResetForm, setHasResetForm] = useState(false);
   const [slugHighlight, setSlugHighlight] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const { trigger, isMutating } = useUpdatePage();
@@ -116,17 +117,19 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
       success: boolean;
       message?: string;
     }> => {
-      const userId = user?.id;
-      if (!userId) {
-        toast.error('You must be logged in to edit page');
-        return {
-          success: false,
-          message: 'You must be logged in to edit page',
-        };
-      }
-
       try {
-        const response = await trigger({
+        setIsSubmitting(true);
+        const userId = user?.id;
+        if (!userId) {
+          toast.error('You must be logged in to edit page');
+          return {
+            success: false,
+            message: 'You must be logged in to edit page',
+          };
+        }
+
+        try {
+          const response = await trigger({
           id: data.id,
           values: {
             ...values,
@@ -134,62 +137,64 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
           },
         });
 
-        if (response.success) {
-          form.reset({
-            title: values.title,
-            description: values.description || '',
-            slug: values.slug,
-          });
-          setAutoGenerateSlug(true);
-          setIsOpen(false);
-          toast.success('Page updated successfully');
-          return { success: true };
-        } else {
-          if (response.message?.toLowerCase().includes('slug')) {
-            try {
-              const res = await fetch('/api/pages/generate-slug', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  title: values.title,
-                  excludePageId: data.id,
-                }),
-              });
-              const slugResponse = await res.json();
+          if (response.success) {
+            form.reset({
+              title: values.title,
+              description: values.description || '',
+              slug: values.slug,
+            });
+            setAutoGenerateSlug(true);
+            setIsOpen(false);
+            return { success: true };
+          } else {
+            if (response.message?.toLowerCase().includes('slug')) {
+              try {
+                const res = await fetch('/api/pages/generate-slug', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title: values.title,
+                    excludePageId: data.id,
+                  }),
+                });
+                const slugResponse = await res.json();
 
-              if (slugResponse.slug) {
-                form.setValue('slug', slugResponse.slug);
-                setSlugHighlight(true);
-                setTimeout(() => setSlugHighlight(false), 2000);
+                if (slugResponse.slug) {
+                  form.setValue('slug', slugResponse.slug);
+                  setSlugHighlight(true);
+                  setTimeout(() => setSlugHighlight(false), 2000);
 
-                toast.error(
-                  `Slug '${values.slug}' already exists. Auto-updated to '${slugResponse.slug}'. Please submit again.`,
-                  { duration: 5000 }
-                );
+                  toast.error(
+                    `Slug '${values.slug}' already exists. Auto-updated to '${slugResponse.slug}'. Please submit again.`,
+                    { duration: 5000 }
+                  );
+                }
+                return {
+                  success: false,
+                  message: `Slug '${values.slug}' already exists. Auto-updated to '${slugResponse.slug}'. Please submit again.`,
+                };
+              } catch {
+                return {
+                  success: false,
+                  message: response.message || 'Failed to update page',
+                };
               }
-              return {
-                success: false,
-                message: `Slug '${values.slug}' already exists. Auto-updated to '${slugResponse.slug}'. Please submit again.`,
-              };
-            } catch {
-              return {
-                success: false,
-                message: response.message || 'Failed to update page',
-              };
             }
+            return {
+              success: false,
+              message: response.message || 'Failed to update page',
+            };
           }
+        } catch (error) {
+          toast.error('An unexpected error occurred');
+          console.error('Update page error:', error);
           return {
             success: false,
-            message: response.message || 'Failed to update page',
+            message: 'An unexpected error occurred',
           };
         }
-      } catch (error) {
-        toast.error('An unexpected error occurred');
-        console.error('Update page error:', error);
-        return {
-          success: false,
-          message: 'An unexpected error occurred',
-        };
+      } finally {
+        setIsSubmitting(false);
       }
     },
     [user, trigger, data.id, form]
@@ -210,7 +215,7 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
               variant="outline"
               className="size-8"
               onClick={() => setIsOpen(true)}
-              disabled={isMutating}
+              disabled={isMutating || isSubmitting}
               aria-label="Edit page"
             >
               <HiOutlinePencilAlt />
@@ -223,6 +228,7 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
         <EditPageForm
           form={form}
           isMutating={isMutating}
+          isSubmitting={isSubmitting}
           onSubmitAction={handleSubmit}
           onCancelAction={handleCancel}
           isDefaultPage={user?.username === data.slug}
@@ -242,7 +248,7 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
           variant="outline"
           className="size-8"
           onClick={() => setIsOpen(true)}
-          disabled={isMutating}
+          disabled={isMutating || isSubmitting}
           aria-label="Edit page"
         >
           <HiOutlinePencilAlt />
@@ -275,6 +281,7 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
           <EditPageFormContent
             form={form}
             isMutating={isMutating}
+            isSubmitting={isSubmitting}
             onSubmitAction={handleSubmit}
             isDefaultPage={user?.username === data.slug}
             autoGenerateSlug={autoGenerateSlug}
@@ -284,12 +291,12 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
         </div>
         <DrawerFooter className="pt-2 gap-2">
           <Button
-            disabled={isMutating}
+            disabled={isMutating || isSubmitting}
             type="submit"
             form="edit-page-form"
             className="min-w-[120px]"
           >
-            {isMutating ? (
+            {isMutating || isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin mr-2" />
                 Saving...
@@ -299,7 +306,7 @@ export const EditPageButton = ({ data }: EditPageButtonProps) => {
             )}
           </Button>
           <DrawerClose asChild>
-            <Button variant="outline" disabled={isMutating}>
+            <Button variant="outline" disabled={isMutating || isSubmitting}>
               Cancel
             </Button>
           </DrawerClose>

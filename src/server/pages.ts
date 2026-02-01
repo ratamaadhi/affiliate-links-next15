@@ -103,7 +103,8 @@ export const createPage = async (
     const userId = +user?.id;
 
     if (!userId) {
-      return { success: false, message: 'User not found' };
+      // Intentionally throw error so mutation hooks' onError can handle it uniformly
+      throw new Error('User not found');
     }
 
     let slug = arg.slug;
@@ -113,19 +114,14 @@ export const createPage = async (
     } else {
       const slugFormat = /^[a-z0-9-]+$/;
       if (!slugFormat.test(slug)) {
-        return {
-          success: false,
-          message:
-            'Slug can only contain lowercase letters, numbers, and hyphens',
-        };
+        throw new Error(
+          'Slug can only contain lowercase letters, numbers, and hyphens'
+        );
       }
 
       const existingPage = await findPageBySlug(slug, userId);
       if (existingPage) {
-        return {
-          success: false,
-          message: 'Slug already taken. Please try another one.',
-        };
+        throw new Error('Slug already taken. Please try another one.');
       }
     }
 
@@ -149,8 +145,10 @@ export const createPage = async (
       data: { slug },
     };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to create page';
     console.error('Failed to create page:', error);
-    return { success: false, message: 'Failed to create page' };
+    throw new Error(message);
   }
 };
 
@@ -317,7 +315,8 @@ export const updatePage = async (
     const userUsername = user?.username;
 
     if (!userId) {
-      return { success: false, message: 'User not found' };
+      // Intentionally throw error so mutation hooks' onError can handle it uniformly
+      throw new Error('User not found');
     }
 
     const newValues: Partial<PageInsert> = { ...arg.values };
@@ -325,19 +324,14 @@ export const updatePage = async (
     if (arg.values.slug) {
       const slugFormat = /^[a-z0-9-]+$/;
       if (!slugFormat.test(arg.values.slug)) {
-        return {
-          success: false,
-          message:
-            'Slug can only contain lowercase letters, numbers, and hyphens',
-        };
+        throw new Error(
+          'Slug can only contain lowercase letters, numbers, and hyphens'
+        );
       }
 
       const existingPage = await findPageBySlug(arg.values.slug, userId);
       if (existingPage && existingPage.id !== arg.id) {
-        return {
-          success: false,
-          message: 'Slug already taken. Please try another one.',
-        };
+        throw new Error('Slug already taken. Please try another one.');
       }
     }
 
@@ -368,8 +362,10 @@ export const updatePage = async (
 
     return await updatePageValues(arg.id, userId, newValues);
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to update page';
     console.error('Failed to update page:', error);
-    return { success: false, message: 'Failed to update page' };
+    throw new Error(message);
   }
 };
 
@@ -386,7 +382,8 @@ export const deletePage = async (
     const userUsername = user?.username;
 
     if (!userId) {
-      return { success: false, message: 'User not found' };
+      // Intentionally throw error so mutation hooks' onError can handle it uniformly
+      throw new Error('User not found');
     }
 
     // Check if the page to delete is the default page
@@ -396,10 +393,7 @@ export const deletePage = async (
     });
 
     if (pageToDelete?.slug === userUsername) {
-      return {
-        success: false,
-        message: 'Cannot delete default page. This is your main page.',
-      };
+      throw new Error('Cannot delete default page. This is your main page.');
     }
 
     // First, delete all links associated with this page
@@ -416,8 +410,10 @@ export const deletePage = async (
 
     return { success: true, message: 'Page deleted successfully' };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to delete page';
     console.error('Failed to delete page:', error);
-    return { success: false, message: 'Failed to delete Page' };
+    throw new Error(message);
   }
 };
 

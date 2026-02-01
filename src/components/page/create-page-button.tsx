@@ -70,6 +70,7 @@ const formSchema = z.object({
 interface CreatePageFormContentProps {
   form: UseFormReturn<z.infer<typeof formSchema>>;
   isMutating: boolean;
+  isSubmitting: boolean;
   autoGenerateSlug: boolean;
   setAutoGenerateSlug: (_value: boolean) => void;
   slugHighlight: boolean;
@@ -79,6 +80,7 @@ interface CreatePageFormContentProps {
 const CreatePageFormContent = ({
   form,
   isMutating,
+  isSubmitting,
   autoGenerateSlug,
   setAutoGenerateSlug,
   slugHighlight,
@@ -101,7 +103,7 @@ const CreatePageFormContent = ({
                 <FormControl>
                   <Input
                     placeholder="My page title"
-                    disabled={isMutating}
+                    disabled={isMutating || isSubmitting}
                     {...field}
                   />
                 </FormControl>
@@ -120,7 +122,7 @@ const CreatePageFormContent = ({
                 <FormControl>
                   <Input
                     placeholder="What page is about?"
-                    disabled={isMutating}
+                    disabled={isMutating || isSubmitting}
                     {...field}
                   />
                 </FormControl>
@@ -139,7 +141,7 @@ const CreatePageFormContent = ({
                 <FormControl>
                   <Input
                     placeholder="my-page-url"
-                    disabled={isMutating || autoGenerateSlug}
+                    disabled={isMutating || isSubmitting || autoGenerateSlug}
                     className={`transition-all duration-300 ${slugHighlight ? 'border-amber-500 ring-2 ring-amber-500/20 animate-pulse' : ''}`}
                     {...field}
                   />
@@ -152,7 +154,7 @@ const CreatePageFormContent = ({
                     checked={autoGenerateSlug}
                     onChange={(e) => setAutoGenerateSlug(e.target.checked)}
                     className="rounded border-gray-300"
-                    disabled={isMutating}
+                    disabled={isMutating || isSubmitting}
                   />
                   <label
                     htmlFor="auto-slug"
@@ -173,6 +175,7 @@ const CreatePageFormContent = ({
 interface CreatePageDialogContentProps {
   form: UseFormReturn<z.infer<typeof formSchema>>;
   isMutating: boolean;
+  isSubmitting: boolean;
   onSubmit: (_values: z.infer<typeof formSchema>) => Promise<void>;
   user: { username: string };
   autoGenerateSlug: boolean;
@@ -183,6 +186,7 @@ interface CreatePageDialogContentProps {
 const CreatePageDialogContent = ({
   form,
   isMutating,
+  isSubmitting,
   onSubmit,
   user,
   autoGenerateSlug,
@@ -210,6 +214,7 @@ const CreatePageDialogContent = ({
         <CreatePageFormContent
           form={form}
           isMutating={isMutating}
+          isSubmitting={isSubmitting}
           autoGenerateSlug={autoGenerateSlug}
           setAutoGenerateSlug={setAutoGenerateSlug}
           slugHighlight={slugHighlight}
@@ -218,12 +223,12 @@ const CreatePageDialogContent = ({
       </Form>
       <DialogFooter>
         <DialogClose asChild>
-          <Button disabled={isMutating} variant="outline">
+          <Button disabled={isMutating || isSubmitting} variant="outline">
             Cancel
           </Button>
         </DialogClose>
-        <Button disabled={isMutating} type="submit" form="create-page-form">
-          {isMutating ? <Loader2 className="size-4 animate-spin" /> : 'Create'}
+        <Button disabled={isMutating || isSubmitting} type="submit" form="create-page-form">
+          {isMutating || isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Create'}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -233,6 +238,7 @@ const CreatePageDialogContent = ({
 interface CreatePageDrawerContentProps {
   form: UseFormReturn<z.infer<typeof formSchema>>;
   isMutating: boolean;
+  isSubmitting: boolean;
   onSubmit: (_values: z.infer<typeof formSchema>) => Promise<void>;
   user: { username: string };
   autoGenerateSlug: boolean;
@@ -243,6 +249,7 @@ interface CreatePageDrawerContentProps {
 const CreatePageDrawerContent = ({
   form,
   isMutating,
+  isSubmitting,
   onSubmit,
   user,
   autoGenerateSlug,
@@ -271,6 +278,7 @@ const CreatePageDrawerContent = ({
           <CreatePageFormContent
             form={form}
             isMutating={isMutating}
+            isSubmitting={isSubmitting}
             autoGenerateSlug={autoGenerateSlug}
             setAutoGenerateSlug={setAutoGenerateSlug}
             slugHighlight={slugHighlight}
@@ -280,12 +288,12 @@ const CreatePageDrawerContent = ({
       </div>
       <DrawerFooter className="pt-2 gap-2">
         <Button
-          disabled={isMutating}
+          disabled={isMutating || isSubmitting}
           type="submit"
           form="create-page-form"
           className="min-w-[120px]"
         >
-          {isMutating ? (
+          {isMutating || isSubmitting ? (
             <>
               <Loader2 className="size-4 animate-spin mr-2" />
               Creating...
@@ -295,7 +303,7 @@ const CreatePageDrawerContent = ({
           )}
         </Button>
         <DrawerClose asChild>
-          <Button variant="outline" disabled={isMutating}>
+          <Button variant="outline" disabled={isMutating || isSubmitting}>
             Cancel
           </Button>
         </DrawerClose>
@@ -310,6 +318,7 @@ export const CreatePageButton = ({}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [autoGenerateSlug, setAutoGenerateSlug] = useState(true);
   const [slugHighlight, setSlugHighlight] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const { trigger, isMutating } = useCreatePage();
@@ -336,20 +345,21 @@ export const CreatePageButton = ({}) => {
   }, [autoGenerateSlug, debouncedTitle, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const userId = (await authClient.getSession()).data?.user.id;
-    if (!userId) {
-      toast.error('You must be logged in to create a page');
-      return;
-    }
+    try {
+      setIsSubmitting(true);
+      const userId = (await authClient.getSession()).data?.user.id;
+      if (!userId) {
+        toast.error('You must be logged in to create a page');
+        return;
+      }
 
-    const response = await trigger({ ...values });
-    if (response.success) {
-      form.reset();
-      setAutoGenerateSlug(true);
-      setIsOpen(false);
-      toast.success('Page created successfully!');
-    } else {
-      if (response.message?.toLowerCase().includes('slug')) {
+      const response = await trigger({ ...values });
+      if (response.success) {
+        form.reset();
+        setAutoGenerateSlug(true);
+        setIsOpen(false);
+      } else {
+        if (response.message?.toLowerCase().includes('slug')) {
         try {
           const res = await fetch('/api/pages/generate-slug', {
             method: 'POST',
@@ -372,9 +382,12 @@ export const CreatePageButton = ({}) => {
         } catch {
           toast.error(response.message || 'Failed to create page');
         }
-      } else {
-        toast.error(response.message || 'Failed to create page');
+        } else {
+          toast.error(response.message || 'Failed to create page');
+        }
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -406,6 +419,7 @@ export const CreatePageButton = ({}) => {
         <CreatePageDialogContent
           form={form}
           isMutating={isMutating}
+          isSubmitting={isSubmitting}
           onSubmit={onSubmit}
           user={user}
           autoGenerateSlug={autoGenerateSlug}
@@ -431,6 +445,7 @@ export const CreatePageButton = ({}) => {
       <CreatePageDrawerContent
         form={form}
         isMutating={isMutating}
+        isSubmitting={isSubmitting}
         onSubmit={onSubmit}
         user={user}
         autoGenerateSlug={autoGenerateSlug}
