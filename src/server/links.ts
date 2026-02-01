@@ -9,7 +9,7 @@ import {
   shortLink,
 } from '@/lib/db/schema';
 import { InPagination, SessionUser } from '@/lib/types';
-import { and, asc, count, eq, like, or } from 'drizzle-orm';
+import { and, asc, count, eq, like, or, sql } from 'drizzle-orm';
 import { headers } from 'next/headers';
 
 // Helper function to get authenticated user
@@ -403,5 +403,28 @@ export const getLinksForPage = async (
       error instanceof Error ? error.message : 'Failed to get page';
     console.error('Failed to get links for page:', error);
     return { success: false, message };
+  }
+};
+
+export const trackLinkClick = async (linkId: number) => {
+  try {
+    const result = await db
+      .update(linkSchema)
+      .set({
+        clickCount: sql`${linkSchema.clickCount} + 1`,
+        updatedAt: Date.now(),
+      })
+      .where(eq(linkSchema.id, linkId))
+      .returning();
+
+    // Check if any rows were updated (link exists)
+    if (result.length === 0) {
+      return { success: false, message: 'Link not found' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to track link click:', error);
+    return { success: false, message: 'Failed to track click' };
   }
 };

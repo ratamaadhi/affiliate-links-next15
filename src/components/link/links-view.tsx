@@ -6,8 +6,10 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ErrorState } from '@/components/ui/loading-states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLinkForPageInfinite } from '@/hooks/queries';
+import { useLinkClick } from '@/hooks/use-link-click';
 import { useDebounce } from '@/hooks/useDebounce';
 import { page } from '@/lib/db/schema';
+import type { LinkSelect } from '@/lib/db/schema/link';
 import { cn } from '@/lib/utils';
 import {
   BookOpen,
@@ -78,19 +80,35 @@ const getLinkCategory = (url: string, title: string) => {
 };
 
 // Enhanced link card component
-const LinkCard = ({ link, ...props }: { link: any; [key: string]: any }) => {
+const LinkCard = ({
+  link,
+  handleClick,
+  ...props
+}: {
+  link: LinkSelect;
+  handleClick: (_linkId: number, _url: string) => void;
+  [key: string]: any;
+}) => {
   const {
     icon: CategoryIcon,
     category,
     color,
   } = getLinkCategory(link.url, link.title);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick(link.id, link.url);
+    }
+  };
+
   return (
-    <a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block group break-inside-avoid mb-4"
+    <button
+      type="button"
+      role="link"
+      onClick={() => handleClick(link.id, link.url)}
+      onKeyDown={handleKeyDown}
+      className="block group break-inside-avoid mb-4 w-full text-left border-0 bg-transparent p-0 cursor-pointer"
       {...props}
     >
       <Card className="relative h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 hover:border-border cursor-pointer">
@@ -172,7 +190,7 @@ const LinkCard = ({ link, ...props }: { link: any; [key: string]: any }) => {
           </div>
         </div>
       </Card>
-    </a>
+    </button>
   );
 };
 
@@ -236,6 +254,9 @@ export function LinksView({
   username?: string;
   currentSlug?: string;
 }) {
+  // Hook for click tracking
+  const { handleClick } = useLinkClick();
+
   // State for search functionality
   const [searchTerm, setSearchTerm] = useState('');
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -446,7 +467,11 @@ export function LinksView({
                   className="animate-in fade-in slide-in-from-bottom-4 duration-500"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <LinkCard link={link} data-testid="link-card" />
+                  <LinkCard
+                    link={link}
+                    handleClick={handleClick}
+                    data-testid="link-card"
+                  />
                 </div>
               ))}
             </div>
