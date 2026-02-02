@@ -24,7 +24,14 @@ function isPublicRoute(pathname: string): boolean {
 async function handleUsernameRedirect(pathname: string) {
   const username = pathname.split('/')[1];
 
-  if (!username || pathname === '/new-username') {
+  // Skip known routes that are not usernames
+  if (
+    !username ||
+    pathname === '/new-username' ||
+    pathname.startsWith('/dashboard') ||
+    AUTH_PAGES.some((page) => pathname.startsWith(page)) ||
+    ONBOARDING_PAGES.some((page) => pathname.startsWith(page))
+  ) {
     return null;
   }
 

@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  invalidatePageBySlugCache,
   invalidateUserCache,
   invalidateUsernameCache,
 } from '@/lib/cache/cache-manager';
@@ -36,6 +37,7 @@ const RESERVED_USERNAMES = [
 const USERNAME_REGEX = /^[a-z0-9-]+$/;
 const MIN_USERNAME_LENGTH = 3;
 const COOLDOWN_DAYS = 30;
+const RELEASE_USERNAME_AFTER_MONTHS = 6; // Username can be reused after 6 months
 
 export const canChangeUsername = async (
   newUsername: string,
@@ -149,6 +151,23 @@ export const handleUsernameChange = async (
       })
       .where(eq(user.id, userId));
 
+    // Update the default page slug (the page that has the old username as slug)
+    const defaultPage = await db.query.page.findFirst({
+      where: eq(page.slug, oldUsername),
+      columns: { id: true },
+    });
+
+    if (defaultPage) {
+      await db
+        .update(page)
+        .set({ slug: newUsername, updatedAt: Date.now() })
+        .where(eq(page.id, defaultPage.id));
+
+      // Invalidate cache for both old and new slugs
+      await invalidatePageBySlugCache(oldUsername);
+      await invalidatePageBySlugCache(newUsername);
+    }
+
     // Update in-memory redirect cache (O(1) operation)
     updateUsernameRedirect(oldUsername, newUsername);
 
@@ -169,8 +188,13 @@ export const handleUsernameChange = async (
 };
 
 export const checkUsernameAvailability = async (
-  username: string
-): Promise<{ available: boolean; message?: string }> => {
+  username: string,
+  currentUserId?: number
+): Promise<{
+  available: boolean;
+  message?: string;
+  isOwnOldUsername?: boolean;
+}> => {
   try {
     if (!USERNAME_REGEX.test(username)) {
       return {
@@ -206,14 +230,31 @@ export const checkUsernameAvailability = async (
     // This query is optimized with O(log n) lookup time
     const existingHistory = await db.query.usernameHistory.findFirst({
       where: eq(usernameHistory.oldUsername, username),
-      columns: { id: true },
+      columns: { userId: true, changedAt: true },
     });
 
     if (existingHistory) {
-      return {
-        available: false,
-        message: 'This username has been used before',
-      };
+      // Allow if it's the current user's own old username
+      if (currentUserId && existingHistory.userId === currentUserId) {
+        return { available: true, isOwnOldUsername: true };
+      }
+
+      // Check if the release period has passed
+      const monthsSinceChange =
+        (Date.now() - existingHistory.changedAt) / (1000 * 60 * 60 * 24 * 30); // Convert milliseconds to months
+
+      if (monthsSinceChange < RELEASE_USERNAME_AFTER_MONTHS) {
+        const monthsRemaining = Math.ceil(
+          RELEASE_USERNAME_AFTER_MONTHS - monthsSinceChange
+        );
+        return {
+          available: false,
+          message: `This username has been used before. It will be available in ${monthsRemaining} month(s).`,
+        };
+      }
+
+      // Release period has passed, username is available
+      return { available: true };
     }
 
     return { available: true };

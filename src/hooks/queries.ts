@@ -215,7 +215,11 @@ export function useUsernamePreview(username?: string) {
 }
 
 export function useUsernameAvailability(username?: string) {
-  return useSWR<{ available: boolean; message?: string }>(
+  return useSWR<{
+    available: boolean;
+    message?: string;
+    isOwnOldUsername?: boolean;
+  }>(
     username ? `/api/user/username-availability/${username}` : null,
     async () => {
       const res = await fetch(`/api/user/username-availability/${username}`);
