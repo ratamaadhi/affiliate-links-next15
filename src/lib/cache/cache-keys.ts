@@ -14,10 +14,15 @@ export const USERNAME_HISTORY_KEY = (username: string): string =>
 
 /**
  * Username availability cache keys
- * Format: username:availability:{username}
+ * Format: username:availability:{username}:{userId}
  */
-export const USERNAME_AVAILABILITY_KEY = (username: string): string =>
-  `${CACHE_PREFIX}:username:availability:${username}`;
+export const USERNAME_AVAILABILITY_KEY = (
+  username: string,
+  userId?: number
+): string =>
+  userId
+    ? `${CACHE_PREFIX}:username:availability:${username}:${userId}`
+    : `${CACHE_PREFIX}:username:availability:${username}:anonymous`;
 
 /**
  * Short link cache keys

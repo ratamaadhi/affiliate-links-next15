@@ -13,7 +13,14 @@ import {
   useUsernamePreview,
 } from '@/hooks/queries';
 import { useUpdateUsername } from '@/hooks/mutations';
-import { AlertCircle, CheckCircle2, Clock, Copy, Loader2 } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Loader2,
+  RotateCcw,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -78,6 +85,14 @@ export function UsernameChangeForm({
     }
 
     if (availability?.available) {
+      if (availability.isOwnOldUsername) {
+        return (
+          <div className="flex items-center gap-1">
+            <RotateCcw className="h-4 w-4 text-blue-500" />
+            <span className="text-xs text-blue-500">Your old username</span>
+          </div>
+        );
+      }
       return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     }
 
@@ -132,9 +147,15 @@ export function UsernameChangeForm({
               Username can only contain lowercase letters, numbers, and hyphens.
               Minimum 3 characters.
             </p>
-            {availability?.message && (
+            {availability?.message && !availability.isOwnOldUsername && (
               <p className="text-xs text-red-500 break-words">
                 {availability.message}
+              </p>
+            )}
+
+            {availability?.isOwnOldUsername && (
+              <p className="text-xs text-blue-500 break-words">
+                This is one of your previous usernames. You can reuse it!
               </p>
             )}
           </div>

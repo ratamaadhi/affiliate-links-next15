@@ -26,6 +26,23 @@ type PageData = {
 
 const cachedGetPageBySlug = cache(getPageBySlug);
 
+/**
+ * Check if a username is currently active (being used by a user)
+ * @param username - The username to check
+ * @returns true if the username is currently active, false otherwise
+ */
+async function isUsernameActive(username: string): Promise<boolean> {
+  try {
+    const activeUser = await db.query.user.findFirst({
+      where: eq(user.username, username),
+      columns: { id: true },
+    });
+    return !!activeUser;
+  } catch {
+    return false;
+  }
+}
+
 type Props = {
   params: Promise<{
     username: string;
@@ -35,6 +52,13 @@ type Props = {
 
 async function checkUsernameRedirect(username: string): Promise<string | null> {
   try {
+    // First, check if this username is currently active (being used by a user)
+    // If it's active, we should NOT redirect - this is the user's current page
+    if (await isUsernameActive(username)) {
+      return null;
+    }
+
+    // Username is not active, check if it's in history (old username)
     const cacheKey = USERNAME_HISTORY_KEY(username);
 
     const result = await cacheGetOrSet<{ newUsername: string }>(
@@ -77,6 +101,11 @@ async function checkUsernameRedirect(username: string): Promise<string | null> {
     console.error('Error checking username redirect:', error);
     // On cache error, try direct database lookup as fallback
     try {
+      // First check if username is active
+      if (await isUsernameActive(username)) {
+        return null;
+      }
+
       const historyEntry = await db.query.usernameHistory.findFirst({
         where: eq(usernameHistory.oldUsername, username),
         with: {

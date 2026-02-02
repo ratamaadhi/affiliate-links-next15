@@ -1,5 +1,6 @@
 import db from '@/lib/db';
-import { usernameHistory } from '@/lib/db/schema';
+import { user, usernameHistory } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * In-memory cache for username redirects
@@ -37,6 +38,9 @@ export async function getUsernameRedirect(
 /**
  * Initialize the redirect cache from the database
  * Loads all username history entries into memory
+ *
+ * IMPORTANT: We must exclude usernames that are currently active to prevent
+ * redirecting valid usernames to other users.
  */
 async function initializeCache(): Promise<void> {
   try {
@@ -48,9 +52,26 @@ async function initializeCache(): Promise<void> {
       },
     });
 
+    // Get all currently active usernames
+    const activeUsers = await db.query.user.findMany({
+      columns: { username: true },
+    });
+    const activeUsernameSet = new Set(activeUsers.map((u) => u.username));
+
     for (const entry of history) {
       if (entry.user?.username) {
-        redirectCache.set(entry.oldUsername, entry.user.username);
+        const oldUsername = entry.oldUsername;
+        const newUsername = entry.user.username;
+
+        // Only cache if:
+        // 1. The old username is NOT currently active (prevents redirecting valid usernames)
+        // 2. The new username IS currently active (ensures redirect target exists)
+        if (
+          !activeUsernameSet.has(oldUsername) &&
+          activeUsernameSet.has(newUsername)
+        ) {
+          redirectCache.set(oldUsername, newUsername);
+        }
       }
     }
 
@@ -73,7 +94,12 @@ export function updateUsernameRedirect(
   newUsername?: string
 ): void {
   if (newUsername) {
+    // Add redirect from old to new username
     redirectCache.set(oldUsername, newUsername);
+
+    // IMPORTANT: Remove any existing redirect that has newUsername as the old key
+    // This prevents redirecting a newly taken username to its previous owner
+    redirectCache.delete(newUsername);
   } else {
     redirectCache.delete(oldUsername);
   }

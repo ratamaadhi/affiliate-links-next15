@@ -2,6 +2,7 @@ import { CACHE_TTL, USERNAME_AVAILABILITY_KEY } from '@/lib/cache/cache-keys';
 import { cacheGetOrSet } from '@/lib/cache/cache-manager';
 import { checkUsernameAvailability } from '@/server/username-manager';
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -20,18 +21,24 @@ export async function GET(
       return response;
     }
 
-    const cacheKey = USERNAME_AVAILABILITY_KEY(username);
+    // Get session for user context
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
+    const userId = session?.user?.id ? +session.user.id : undefined;
+
+    const cacheKey = USERNAME_AVAILABILITY_KEY(username, userId);
     const cachedResult = await cacheGetOrSet(
       cacheKey,
-      async () => await checkUsernameAvailability(username),
+      async () => await checkUsernameAvailability(username, userId),
       CACHE_TTL.USERNAME_AVAILABILITY
     );
 
     const result = cachedResult.data;
 
     const response = NextResponse.json(result);
-    // Username availability can be cached for 5 minutes
-    response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=300');
+    // Username availability is user-specific, use no-store to prevent caching
+    response.headers.set('Cache-Control', 'private, no-store');
     return response;
   } catch (error) {
     console.error('Error checking username availability:', error);
