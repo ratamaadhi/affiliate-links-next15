@@ -4,58 +4,9 @@
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1754707325260,
-      "tag": "0000_talented_sauron",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1755249190946,
-      "tag": "0001_right_umar",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1756382824197,
-      "tag": "0002_nebulous_aaron_stack",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1757610537743,
-      "tag": "0003_lovely_warbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1758870617636,
-      "tag": "0004_parallel_sharon_ventura",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1759249874968,
-      "tag": "0005_bright_mantis",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1767933215091,
-      "tag": "0006_wet_frog_thor",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1767960396501,
-      "tag": "0007_lean_power_man",
+      "version": "1738511312229",
+      "when": 1738511312229,
+      "tag": "0000_boring_lizard",
       "breakpoints": true
     }
   ]

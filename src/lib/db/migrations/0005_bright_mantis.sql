@@ -1,1 +1,0 @@
-ALTER TABLE `link` ADD `description` text;

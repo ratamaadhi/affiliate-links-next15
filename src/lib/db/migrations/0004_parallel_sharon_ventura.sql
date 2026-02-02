@@ -1,1 +1,0 @@
-ALTER TABLE `link` ADD `image_url` text;
