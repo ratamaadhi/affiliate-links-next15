@@ -21,7 +21,11 @@ import { PageThemeForm, PageThemeFormContent } from './page-theme-form';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { themeSettingsSchema, parseThemeSettings, type ThemeSettings } from '@/lib/page-theme';
+import {
+  themeSettingsSchema,
+  parseThemeSettings,
+  type ThemeSettings,
+} from '@/lib/page-theme';
 import type { PageSelect } from '@/lib/db/schema/page';
 
 const formSchema = themeSettingsSchema;
@@ -32,9 +36,8 @@ interface EditPageThemeButtonProps {
 
 export const EditPageThemeButton = ({ data }: EditPageThemeButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentThemeSettings, setCurrentThemeSettings] = useState<ThemeSettings>(() =>
-    parseThemeSettings(data.themeSettings)
-  );
+  const [currentThemeSettings, setCurrentThemeSettings] =
+    useState<ThemeSettings>(() => parseThemeSettings(data.themeSettings));
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const { trigger, isMutating } = useUpdatePageTheme();
@@ -74,6 +77,8 @@ export const EditPageThemeButton = ({ data }: EditPageThemeButtonProps) => {
         form.reset(values);
         setIsOpen(false);
       }
+
+      return response;
     },
     [trigger, data.id, form]
   );
