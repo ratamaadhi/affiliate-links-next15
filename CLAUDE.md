@@ -26,6 +26,7 @@ yarn db:studio        # Open Drizzle Studio
 ## Architecture Overview
 
 ### Tech Stack
+
 - **Next.js 15** with App Router (not Pages Router)
 - **Turso** (SQLite) + **Drizzle ORM**
 - **Better Auth** for authentication (not NextAuth)
@@ -34,6 +35,7 @@ yarn db:studio        # Open Drizzle Studio
 - **SWR** for data fetching
 
 ### Directory Structure
+
 ```
 src/
 ├── app/
@@ -52,6 +54,7 @@ src/
 ## Authentication Architecture
 
 **Better Auth** is configured in `src/lib/auth.ts`:
+
 - Uses Drizzle adapter
 - Email/password + Google OAuth
 - Username management via Better Auth's username plugin
@@ -65,12 +68,14 @@ Protected routes use middleware or session checks via `auth.api`.
 **Important**: When modifying schema, always edit files in `src/lib/db/schema/`, NOT `src/lib/db/migrations/schema.ts` (which is auto-generated).
 
 Core relationships:
+
 - `user` → `page` (one-to-many)
 - `page` → `link` (one-to-many)
 - `page` → `short_link` (one-to-many)
 - `user` → `username_history` (one-to-many)
 
 Key features:
+
 - Fractional indexing for link ordering (`display_order` field uses `real` type)
 - JSON column for page theme settings
 - Cascade deletes on foreign keys
@@ -78,6 +83,7 @@ Key features:
 ## Form Patterns
 
 All forms follow this pattern:
+
 1. Define Zod schema for validation
 2. Use React Hook Form with Zod resolver
 3. Submit via server action or API route
@@ -88,6 +94,7 @@ Example forms: `src/components/form/signup-form-fields.tsx`, `src/components/pag
 ## Data Fetching with SWR
 
 Custom hooks in `src/hooks/queries.ts` wrap SWR for consistent data fetching:
+
 - Use `useSWR` for standard queries
 - Use `useSWRInfinite` for paginated data
 - Key format: `/api/resource` for API routes
@@ -96,6 +103,7 @@ Custom hooks in `src/hooks/queries.ts` wrap SWR for consistent data fetching:
 ## Link Ordering System
 
 Links use **fractional indexing** (not integer positions) for drag-and-drop reordering:
+
 - `display_order` is a `real` type, not integer
 - Allows inserting between items without reordering entire list
 - See `src/components/link/list-links.tsx` for DnD Kit implementation
@@ -110,9 +118,10 @@ Links use **fractional indexing** (not integer positions) for drag-and-drop reor
 ## Import Conventions
 
 Use absolute imports with `@/` prefix:
+
 ```typescript
-import { Button } from "@/components/ui/button"
-import { db } from "@/lib/db"
+import { Button } from '@/components/ui/button';
+import { db } from '@/lib/db';
 ```
 
 ## Code Style
@@ -124,6 +133,7 @@ import { db } from "@/lib/db"
 ## Environment Setup
 
 Copy `.env.example` to `.env.local` and configure:
+
 - `DATABASE_URL` + `DATABASE_TOKEN` (Turso)
 - `UPSTASH_REDIS_REST_URL` (optional, for caching)
 - `RESEND_API_KEY` (for emails)
@@ -132,6 +142,7 @@ Copy `.env.example` to `.env.local` and configure:
 ## Testing
 
 Tests in `__test__/` use Jest + React Testing Library:
+
 - Run `yarn test` for all tests
 - Individual test files: `jest __test__/filename.test.js`
 - `role="link"` for interactive elements (not buttons)
