@@ -25,6 +25,13 @@ import {
 } from 'lucide-react';
 import { SearchLinksView } from './search-links-view';
 import { FloatingPageMenu } from './floating-page-menu';
+import { LinksContainer } from './links-container';
+import { parseThemeSettings, DEFAULT_THEME_SETTINGS } from '@/lib/page-theme';
+import {
+  MasonrySkeleton,
+  ListSkeleton,
+  GridSkeleton,
+} from './layout/layout-variants';
 
 import useInfiniteScroll from '@/hooks/useInfiniteScroll';
 import { Avatar, AvatarFallback } from '../ui/avatar';
@@ -38,7 +45,7 @@ import {
 } from '../ui/card';
 
 // Link category detection and icon mapping
-const getLinkCategory = (url: string, title: string) => {
+export const getLinkCategory = (url: string, title: string) => {
   try {
     const domain = new URL(url).hostname.toLowerCase();
 
@@ -79,171 +86,28 @@ const getLinkCategory = (url: string, title: string) => {
   return { icon: Globe, category: 'Website', color: 'bg-gray-500' };
 };
 
-// Enhanced link card component
-const LinkCard = ({
-  link,
-  handleClick,
-  ...props
+// Partial loading skeleton for links only
+const PartialLinksSkeleton = ({
+  themeSettings,
 }: {
-  link: LinkSelect;
-  handleClick: (_linkId: number, _url: string) => void;
-  [key: string]: any;
+  themeSettings: typeof DEFAULT_THEME_SETTINGS;
 }) => {
-  const {
-    icon: CategoryIcon,
-    category,
-    color,
-  } = getLinkCategory(link.url, link.title);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleClick(link.id, link.url);
-    }
-  };
+  const SkeletonComponent = {
+    masonry: MasonrySkeleton,
+    list: ListSkeleton,
+    grid: GridSkeleton,
+  }[themeSettings.layout];
 
   return (
-    <button
-      type="button"
-      role="link"
-      onClick={() => handleClick(link.id, link.url)}
-      onKeyDown={handleKeyDown}
-      className="block group break-inside-avoid mb-4 w-full text-left border-0 bg-transparent p-0 cursor-pointer"
-      {...props}
-    >
-      <Card className="relative h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 hover:border-border cursor-pointer">
-        {/* Animated gradient border */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-        {/* Large image at top - 16:9 aspect ratio, 120px height */}
-        <div className="relative h-32 overflow-hidden">
-          {link.imageUrl ? (
-            <img
-              src={link.imageUrl}
-              alt={link.title.replace(/\s+\d+.*$/, '').trim()}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                const fallback = e.currentTarget
-                  .nextElementSibling as HTMLElement;
-                if (fallback) fallback.style.display = 'flex';
-              }}
-            />
-          ) : null}
-          {/* Fallback gradient with category icon */}
-          <div
-            className={cn(
-              'absolute inset-0 flex items-center justify-center',
-              link.imageUrl ? 'hidden' : 'flex',
-              color,
-              'bg-opacity-10'
-            )}
-          >
-            <CategoryIcon
-              className={cn('w-12 h-12', color.replace('bg-', 'text-'))}
-            />
-          </div>
-        </div>
-
-        {/* Content section */}
-        <div className="p-4">
-          {/* Category badges */}
-          <div className="flex items-center gap-1 mb-2">
-            <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-              {category}
-            </Badge>
-            {link.clickCount > 10 && (
-              <Badge
-                variant="default"
-                className="text-xs gap-0.5 px-1.5 py-0.5"
-              >
-                <TrendingUp className="w-2.5 h-2.5" />
-                Popular
-              </Badge>
-            )}
-          </div>
-
-          {/* Title */}
-          <h3 className="text-base font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-            {link.title}
-          </h3>
-
-          {/* Description */}
-          {link.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-              {link.description}
-            </p>
-          )}
-
-          {/* Link metadata */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-0.5">
-              <Clock className="w-2.5 h-2.5" />
-              <span>{new Date(link.updatedAt).toLocaleDateString()}</span>
-            </div>
-            {link.clickCount > 0 && (
-              <div className="flex items-center gap-0.5">
-                <TrendingUp className="w-2.5 h-2.5" />
-                <span>{link.clickCount}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-    </button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-32 rounded" />
+        <Skeleton className="h-6 w-20 rounded-full" />
+      </div>
+      <SkeletonComponent />
+    </div>
   );
 };
-
-// Enhanced skeleton loader - compact (keep original for backward compatibility)
-const LinkCardSkeleton = () => (
-  <Card className="overflow-hidden mb-4 break-inside-avoid">
-    {/* Large image skeleton */}
-    <div className="h-32 bg-muted">
-      <Skeleton className="w-full h-full" />
-    </div>
-
-    {/* Content skeleton */}
-    <div className="p-4 space-y-3">
-      {/* Category badges */}
-      <div className="flex gap-1.5">
-        <Skeleton className="h-4 w-12 rounded-full" />
-        <Skeleton className="h-4 w-12 rounded-full" />
-      </div>
-
-      {/* Title */}
-      <Skeleton className="h-5 w-3/4 rounded" />
-
-      {/* Description */}
-      <div className="space-y-1">
-        <Skeleton className="h-3.5 w-full rounded" />
-        <Skeleton className="h-3.5 w-2/3 rounded" />
-      </div>
-
-      {/* Metadata */}
-      <div className="flex justify-between">
-        <Skeleton className="h-3 w-16 rounded" />
-        <Skeleton className="h-3 w-12 rounded" />
-      </div>
-    </div>
-  </Card>
-);
-
-// Partial loading skeleton for links only
-const PartialLinksSkeleton = () => (
-  <div className="space-y-6">
-    <div className="flex items-center justify-between">
-      <Skeleton className="h-8 w-32 rounded" />
-      <Skeleton className="h-6 w-20 rounded-full" />
-    </div>
-    <div className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="break-inside-avoid">
-          <LinkCardSkeleton />
-        </div>
-      ))}
-    </div>
-  </div>
-);
 
 export function LinksView({
   pageData,
@@ -256,6 +120,11 @@ export function LinksView({
 }) {
   // Hook for click tracking
   const { handleClick } = useLinkClick();
+
+  // Parse theme settings
+  const themeSettings = React.useMemo(() => {
+    return parseThemeSettings(pageData?.themeSettings);
+  }, [pageData?.themeSettings]);
 
   // State for search functionality
   const [searchTerm, setSearchTerm] = useState('');
@@ -327,6 +196,12 @@ export function LinksView({
 
   // Initial load - show full page skeleton
   if (isInitialLoad) {
+    const SkeletonComponent = {
+      masonry: MasonrySkeleton,
+      list: ListSkeleton,
+      grid: GridSkeleton,
+    }[themeSettings.layout];
+
     return (
       <div className="space-y-8">
         {/* Page header skeleton */}
@@ -342,14 +217,8 @@ export function LinksView({
           </CardHeader>
         </Card>
 
-        {/* Links grid skeleton - masonry */}
-        <div className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="break-inside-avoid">
-              <LinkCardSkeleton />
-            </div>
-          ))}
-        </div>
+        {/* Links skeleton - uses theme-based layout */}
+        <SkeletonComponent />
       </div>
     );
   }
@@ -442,7 +311,7 @@ export function LinksView({
         )}
         {isInitialLoad && (
           // Search loading - show only links skeleton
-          <PartialLinksSkeleton />
+          <PartialLinksSkeleton themeSettings={themeSettings} />
         )}
         {links.length > 0 && (
           <div className="space-y-6">
@@ -456,49 +325,30 @@ export function LinksView({
               </Badge>
             </div>
 
-            {/* Masonry grid layout for desktop */}
-            <div
-              className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
-              data-testid="links-container"
-            >
-              {links.map((link, index) => (
-                <div
-                  key={link.id}
-                  className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <LinkCard
-                    link={link}
-                    handleClick={handleClick}
-                    data-testid="link-card"
-                  />
-                </div>
-              ))}
-            </div>
+            {/* Links container - uses theme-based layout */}
+            <LinksContainer
+              links={links}
+              themeSettings={themeSettings}
+              handleClick={handleClick}
+              isLoading={false}
+            />
             {!isReachingEnd && !isLoadingMore && (
-              <div
-                ref={loaderRef}
-                className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
-                data-testid="links-container-skeleton"
-              >
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="break-inside-avoid">
-                    <LinkCardSkeleton />
-                  </div>
-                ))}
+              <div ref={loaderRef}>
+                <LinksContainer
+                  links={[]}
+                  themeSettings={themeSettings}
+                  handleClick={handleClick}
+                  isLoading={true}
+                />
               </div>
             )}
             {isLoadingMore && (
-              <div
-                className="columns-1 sm:columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4"
-                data-testid="links-container-skeleton"
-              >
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="break-inside-avoid">
-                    <LinkCardSkeleton />
-                  </div>
-                ))}
-              </div>
+              <LinksContainer
+                links={[]}
+                themeSettings={themeSettings}
+                handleClick={handleClick}
+                isLoading={true}
+              />
             )}
           </div>
         )}

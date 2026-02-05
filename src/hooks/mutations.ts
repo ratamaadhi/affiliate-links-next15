@@ -12,8 +12,10 @@ import {
   PaginationParams,
   updatePage,
 } from '@/server/pages';
+import { updatePageTheme } from '@/server/page-theme';
 import { toast } from 'sonner';
 import useSWRmutation from 'swr/mutation';
+import { useSWRConfig } from 'swr';
 import {
   useLinkInfinite,
   usePagesInfinite,
@@ -343,6 +345,29 @@ export function useDeleteShortLink(pageId?: number) {
     onError: (error) => {
       const message =
         error instanceof Error ? error.message : 'Failed to delete short URL';
+      toast.error(message);
+    },
+  });
+}
+
+export function useUpdatePageTheme() {
+  const { mutate: mutatePages } = usePagesInfinite();
+  const { mutate: globalMutate } = useSWRConfig();
+
+  return useSWRmutation('/page-theme', updatePageTheme, {
+    onSuccess: (data) => {
+      if (data?.success) {
+        mutatePages();
+        // Trigger global revalidation to update any cached page data
+        globalMutate(() => true, undefined, { revalidate: true });
+        toast.success('Theme settings updated successfully');
+      }
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to update theme settings';
       toast.error(message);
     },
   });

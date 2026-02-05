@@ -14,6 +14,7 @@ import { Item, ItemGroup } from '@/components/ui/item';
 import { DeletePageButton } from './delete-page-button';
 import { EditPageButton } from './edit-page-button';
 import { ViewShortUrlsButton } from '../short-urls/view-short-urls-button';
+import { EditPageThemeButton } from './edit-page-theme-button';
 import { ViewShortUrlsDialog } from '../short-urls/view-short-urls-dialog';
 import { ViewShortUrlsDrawer } from '../short-urls/view-short-urls-drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -117,6 +118,9 @@ export const ListPages = ({
                           }
                         />
                       </div>
+                      <div onMouseDown={(e) => e.stopPropagation()}>
+                        <EditPageThemeButton data={page} />
+                      </div>
                       {/* Wrapper div to prevent event bubbling to Item onClick */}
                       <div onMouseDown={(e) => e.stopPropagation()}>
                         <EditPageButton data={page} />
@@ -159,6 +163,7 @@ export const ListPages = ({
                 {/* Bottom Actions Area Skeleton */}
                 <div className="w-full flex items-center justify-between">
                   <div className="w-full flex items-center justify-end gap-2">
+                    <Skeleton className="h-8 w-8 rounded" />
                     <Skeleton className="h-8 w-8 rounded" />
                     <Skeleton className="h-8 w-8 rounded" />
                     <Skeleton className="h-8 w-8 rounded" />
