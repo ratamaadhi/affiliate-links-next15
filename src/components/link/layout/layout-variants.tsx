@@ -23,6 +23,9 @@ import {
 
 // Note: LinkSelect type is imported from '@/lib/db/schema/link'
 
+// Extended type for links with position calculated from server
+export type LinkWithPosition = LinkSelect & { position: number };
+
 // ============================================
 // LINK CARD COMPONENTS
 // ============================================
@@ -33,7 +36,7 @@ export const LinkCard = ({
   handleClick,
   className,
 }: {
-  link: LinkSelect;
+  link: LinkWithPosition;
   handleClick: (_linkId: number, _url: string) => void;
   className?: string;
 }) => {
@@ -81,6 +84,10 @@ export const LinkCard = ({
 
             {/* Large image at top - 16:9 aspect ratio, 120px height */}
             <div className="relative h-32 overflow-hidden">
+              {/* Order number badge - positioned over image */}
+              <div className="absolute top-3 left-3 z-10 rounded-full w-7 h-7 flex items-center justify-center bg-primary text-primary-foreground text-sm font-semibold shadow-md">
+                {link.position ?? '-'}
+              </div>
               {!imageError && link.imageUrl ? (
                 <img
                   src={link.imageUrl}
@@ -165,7 +172,7 @@ export const LinkCard = ({
 
 // Minimal list card (Linktree-style)
 interface ListLinkCardProps {
-  link: LinkSelect;
+  link: LinkWithPosition;
   handleClick: (_linkId: number, _url: string) => void;
 }
 
@@ -199,25 +206,31 @@ export const ListLinkCard = ({ link, handleClick }: ListLinkCardProps) => {
             role="link"
             onClick={() => handleClick(link.id, link.url)}
           >
-            {!imageError && link.imageUrl ? (
-              <ItemMedia variant="image" className="rounded-md">
-                <img
-                  src={link.imageUrl}
-                  alt={link.title}
-                  className="size-full object-cover"
-                  onError={() => setImageError(true)}
-                />
-              </ItemMedia>
-            ) : (
-              <ItemMedia
-                variant="icon"
-                className={cn(color, 'bg-opacity-10', 'flex')}
-              >
-                <CategoryIcon
-                  className={cn('w-4 h-4', color.replace('bg-', 'text-'))}
-                />
-              </ItemMedia>
-            )}
+            {/* Wrap ItemMedia with relative div for order badge */}
+            <div className="relative pl-1">
+              <div className="absolute -left-1 -top-1.5 z-10 rounded-full w-5 h-5 flex items-center justify-center bg-primary text-primary-foreground text-xs font-semibold shadow-md border-2 border-background">
+                {link.position ?? '-'}
+              </div>
+              {!imageError && link.imageUrl ? (
+                <ItemMedia variant="image" className="rounded-md">
+                  <img
+                    src={link.imageUrl}
+                    alt={link.title}
+                    className="size-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                </ItemMedia>
+              ) : (
+                <ItemMedia
+                  variant="icon"
+                  className={cn(color, 'bg-opacity-10', 'flex')}
+                >
+                  <CategoryIcon
+                    className={cn('w-4 h-4', color.replace('bg-', 'text-'))}
+                  />
+                </ItemMedia>
+              )}
+            </div>
             <ItemContent>
               <ItemTitle className="line-clamp-1">{link.title}</ItemTitle>
               {link.description && (
@@ -298,7 +311,7 @@ export const ListLinkCardSkeleton = () => (
 
 // Grid card (uniform height for GridLayout)
 interface GridLinkCardProps {
-  link: LinkSelect;
+  link: LinkWithPosition;
   handleClick: (_linkId: number, _url: string) => void;
 }
 
@@ -342,6 +355,10 @@ export const GridLinkCard = ({ link, handleClick }: GridLinkCardProps) => {
 
             {/* Image at top - fixed height */}
             <div className="relative h-32 overflow-hidden flex-shrink-0">
+              {/* Order number badge - positioned over image */}
+              <div className="absolute top-3 left-3 z-10 rounded-full w-7 h-7 flex items-center justify-center bg-primary text-primary-foreground text-sm font-semibold shadow-md">
+                {link.position ?? '-'}
+              </div>
               {!imageError && link.imageUrl ? (
                 <img
                   src={link.imageUrl}
@@ -429,7 +446,7 @@ export const GridLinkCard = ({ link, handleClick }: GridLinkCardProps) => {
 // ============================================
 
 interface LayoutProps {
-  links: LinkSelect[];
+  links: LinkWithPosition[];
   handleClick: (_linkId: number, _url: string) => void;
 }
 
