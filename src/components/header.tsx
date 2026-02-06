@@ -6,7 +6,7 @@ import { useScroll } from 'motion/react';
 import Link from 'next/link';
 import React from 'react';
 import { LogoutButton } from './logout-button';
-import { ModeToggle } from './mode-toggle';
+import { AnimatedThemeToggle } from './animated-theme-toggle';
 
 const menuItems = [
   { name: 'Features', href: '#link' },
@@ -92,7 +92,7 @@ export const HeroHeader = ({ session: sessionData }) => {
                 </ul>
               </div> */}
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                <ModeToggle />
+                <AnimatedThemeToggle />
                 {sessionData?.session ? (
                   <>
                     <Button asChild variant="outline" size="sm">

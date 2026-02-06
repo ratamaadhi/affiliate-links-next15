@@ -3,7 +3,6 @@
 import { cn } from '@/lib/utils';
 import { Fragment } from 'react';
 import { LogoutButton } from '../logout-button';
-import { ModeToggle } from '../mode-toggle';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,6 +13,7 @@ import {
 } from '../ui/breadcrumb';
 import { Separator } from '../ui/separator';
 import { SidebarInset, SidebarTrigger } from '../ui/sidebar';
+import { AnimatedThemeToggle } from '../animated-theme-toggle';
 
 export default function PageWrapper({
   children,
@@ -60,7 +60,7 @@ export default function PageWrapper({
           </Breadcrumb>
         </div>
         <div className="flex justify-between items-center gap-2 px-4">
-          <ModeToggle />
+          <AnimatedThemeToggle />
           <LogoutButton />
         </div>
       </header>
