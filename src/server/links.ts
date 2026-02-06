@@ -198,20 +198,38 @@ async function fetchPaginatedActiveLinks(
 
   // OPTIMIZATION: Uses composite index on (page_id, is_active, display_order) (created in migration 0011)
   // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
-  // The Promise.all executes all three queries in parallel for better performance
-  const [links, [totalItems], pageShortLink] = await Promise.all([
-    db.query.link.findMany({
-      where: whereCondition,
-      orderBy: (links, { asc }) => [asc(links.displayOrder)],
-      limit,
-      offset,
-    }),
-    db.select({ count: count() }).from(linkSchema).where(whereCondition),
-    db.query.shortLink.findFirst({
-      where: eq(shortLink.pageId, pageId),
-      columns: { shortCode: true },
-    }),
-  ]);
+  // The Promise.all executes all queries in parallel for better performance
+  // Fetch ALL links (active + inactive) for this page to calculate positions
+  // This matches the admin panel logic in update-position-button.tsx
+  const [links, [totalItems], pageShortLink, allLinksForPage] =
+    await Promise.all([
+      db.query.link.findMany({
+        where: whereCondition,
+        orderBy: (links, { asc }) => [asc(links.displayOrder)],
+        limit,
+        offset,
+      }),
+      db.select({ count: count() }).from(linkSchema).where(whereCondition),
+      db.query.shortLink.findFirst({
+        where: eq(shortLink.pageId, pageId),
+        columns: { shortCode: true },
+      }),
+      // Fetch ALL links (active + inactive) for this page to calculate positions
+      // This matches the admin panel logic in update-position-button.tsx
+      db.query.link.findMany({
+        where: eq(linkSchema.pageId, pageId), // NO isActive filter - get ALL links
+        orderBy: (links, { asc }) => [asc(links.displayOrder)],
+      }),
+    ]);
+
+  // Calculate position for each link (same logic as admin panel)
+  // Position is based on rank among ALL links (active + inactive)
+  // OPTIMIZATION: Build a Map for O(1) position lookups instead of O(n) findIndex
+  const positionMap = new Map(allLinksForPage.map((l, i) => [l.id, i + 1]));
+  const linksWithPosition = links.map((link) => ({
+    ...link,
+    position: positionMap.get(link.id) ?? 0,
+  }));
 
   const totalPages = Math.ceil(Number(totalItems.count) / limit);
 
@@ -228,7 +246,7 @@ async function fetchPaginatedActiveLinks(
     : null;
 
   return {
-    data: links,
+    data: linksWithPosition,
     pagination,
     shortUrl,
   };

@@ -1,6 +1,5 @@
 'use client';
 
-import { LinkSelect } from '@/lib/db/schema/link';
 import { ThemeSettings } from '@/lib/page-theme';
 import {
   MasonryLayout,
@@ -9,6 +8,7 @@ import {
   MasonrySkeleton,
   ListSkeleton,
   GridSkeleton,
+  LinkWithPosition,
 } from './layout/layout-variants';
 
 // Layout component maps - defined outside component to avoid recreation on every render
@@ -25,7 +25,7 @@ const layoutComponents = {
 } as const;
 
 interface LinksContainerProps {
-  links: LinkSelect[];
+  links: LinkWithPosition[];
   themeSettings: ThemeSettings;
   handleClick: (_linkId: number, _url: string) => void;
   isLoading?: boolean;
