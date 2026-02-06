@@ -21,6 +21,7 @@ import {
   usePagesInfinite,
   useUserShortLinks,
 } from './queries';
+import { useAuth } from './useAuth';
 
 export interface UpdateUsernameParams {
   username: string;
@@ -368,6 +369,51 @@ export function useUpdatePageTheme() {
         error instanceof Error
           ? error.message
           : 'Failed to update theme settings';
+      toast.error(message);
+    },
+  });
+}
+
+export interface UpdateUserImageParams {
+  imageUrl: string | null;
+}
+
+export async function updateUserImage(
+  _url: string,
+  { arg }: { arg: UpdateUserImageParams }
+) {
+  const res = await fetch('/api/user/update-image', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(arg),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(
+      error.message || error.error || 'Failed to update profile image'
+    );
+  }
+
+  const response = await res.json();
+  return response;
+}
+
+export function useUpdateUserImage() {
+  const { mutate } = useAuth();
+
+  return useSWRmutation('/user-image', updateUserImage, {
+    onSuccess: () => {
+      mutate();
+      toast.success('Profile image updated');
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to update profile image';
       toast.error(message);
     },
   });
