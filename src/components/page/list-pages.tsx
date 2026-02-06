@@ -19,6 +19,7 @@ import { ViewShortUrlsDialog } from '../short-urls/view-short-urls-dialog';
 import { ViewShortUrlsDrawer } from '../short-urls/view-short-urls-drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { PageSelect } from '@/lib/db/schema';
+import { BorderBeam } from '../ui/border-beam';
 
 interface ListPagesProps {
   defaultPageSlug: string;
@@ -73,7 +74,7 @@ export const ListPages = ({
                 key={page.id}
                 variant="outline"
                 className={cn(
-                  'cursor-pointer transition-colors',
+                  'relative cursor-pointer transition-colors',
                   selectedPage?.id === page.id && 'bg-accent/50 border-accent'
                 )}
                 onClick={() => handleSelectPage(page)}
@@ -132,6 +133,23 @@ export const ListPages = ({
                       )}
                     </div>
                   </div>
+                )}
+                {selectedPage?.id === page.id && (
+                  <>
+                    <BorderBeam
+                      duration={8}
+                      size={80}
+                      borderWidth={2}
+                      // className="from-transparent via-purple-500 to-transparent"
+                    />
+                    <BorderBeam
+                      duration={8}
+                      delay={4}
+                      size={80}
+                      borderWidth={2}
+                      // className="from-transparent via-blue-500 to-transparent"
+                    />
+                  </>
                 )}
               </Item>
             ))}

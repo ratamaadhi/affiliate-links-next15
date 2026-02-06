@@ -6,9 +6,18 @@ import { Drawer as DrawerPrimitive } from 'vaul';
 import { cn } from '@/lib/utils';
 
 function Drawer({
+  dismissible = true,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+}: React.ComponentProps<typeof DrawerPrimitive.Root> & {
+  dismissible?: boolean;
+}) {
+  return (
+    <DrawerPrimitive.Root
+      data-slot="drawer"
+      dismissible={dismissible}
+      {...props}
+    />
+  );
 }
 
 function DrawerTrigger({

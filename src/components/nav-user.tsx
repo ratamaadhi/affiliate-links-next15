@@ -6,6 +6,7 @@ import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
+  Pencil,
   Sparkles,
 } from 'lucide-react';
 
@@ -26,13 +27,16 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AvatarUpload } from '@/components/settings/avatar-upload';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 export function NavUser() {
   const { user, isLoading } = useAuth();
+  const [avatarUploadOpen, setAvatarUploadOpen] = useState(false);
 
   const { isMobile } = useSidebar();
 
@@ -96,12 +100,23 @@ export function NavUser() {
             >
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user.image} alt={user.name} />
-                    <AvatarFallback className="rounded-lg">
-                      {avatarFallback}
-                    </AvatarFallback>
-                  </Avatar>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUploadOpen(true)}
+                    className="group relative rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="Change profile image"
+                  >
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarImage src={user.image} alt={user.name} />
+                      <AvatarFallback className="rounded-lg">
+                        {avatarFallback}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Hover/focus overlay */}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity rounded-lg flex items-center justify-center pointer-events-none">
+                      <Pencil className="h-4 w-4 text-white" />
+                    </div>
+                  </button>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{user.name}</span>
                     <span className="truncate text-xs">{user.email}</span>
@@ -137,6 +152,13 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <AvatarUpload
+            currentImageUrl={user.image}
+            userName={user.name}
+            isOpen={avatarUploadOpen}
+            onOpenChange={setAvatarUploadOpen}
+          />
         </SidebarMenuItem>
       )}
     </SidebarMenu>
