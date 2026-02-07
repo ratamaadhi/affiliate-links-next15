@@ -287,7 +287,7 @@ function ListLinks() {
                 <div className="flex flex-col items-end gap-2">
                   <InteractiveHealthBadge
                     linkId={link.id}
-                    status={link.healthStatus}
+                    status={link.healthStatus as any}
                     lastCheckedAt={link.lastCheckedAt}
                     statusCode={link.statusCode}
                     responseTime={link.responseTime}
