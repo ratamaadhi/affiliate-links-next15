@@ -5,6 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import { useContext } from 'react';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 function ToggleLinkActive({ isActive = false, linkId }) {
   const { selectedPage } = useContext(LinkPageContext);
@@ -28,13 +34,24 @@ function ToggleLinkActive({ isActive = false, linkId }) {
   }
 
   return (
-    <div>
-      <Switch
-        disabled={isMutating}
-        checked={isActive}
-        onCheckedChange={handleSwitchIsActive}
-      />
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center">
+            <Switch
+              disabled={isMutating}
+              checked={isActive}
+              onCheckedChange={handleSwitchIsActive}
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>
+            {isActive ? 'Click to deactivate link' : 'Click to activate link'}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 

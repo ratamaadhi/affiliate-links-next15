@@ -8,6 +8,7 @@ import {
   page as pageSchema,
   shortLink,
 } from '@/lib/db/schema';
+import { checkUrlHealth, type HealthCheckResult } from '@/lib/health-check';
 import { InPagination, SessionUser } from '@/lib/types';
 import { and, asc, count, eq, like, or, sql } from 'drizzle-orm';
 import { headers } from 'next/headers';
@@ -104,11 +105,22 @@ export const createLink = async (
       newDisplayOrder = firstLink ? firstLink.displayOrder / 2 : 1;
     }
 
-    await db.insert(linkSchema).values({
-      ...arg,
-      pageId: defaultPageId,
-      displayOrder: newDisplayOrder,
+    const result = await db
+      .insert(linkSchema)
+      .values({
+        ...arg,
+        pageId: defaultPageId,
+        displayOrder: newDisplayOrder,
+      })
+      .returning();
+
+    const newLinkId = result[0].id;
+
+    // Trigger async health check in background
+    checkLinkHealth('', { arg: { linkId: newLinkId } }).catch((error) => {
+      console.error('Background health check failed:', error);
     });
+
     return { success: true, message: 'Link created successfully' };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Failed to create link';
@@ -444,5 +456,57 @@ export const trackLinkClick = async (linkId: number) => {
   } catch (error) {
     console.error('Failed to track link click:', error);
     return { success: false, message: 'Failed to track click' };
+  }
+};
+
+export const checkLinkHealth = async (
+  _url: string,
+  { arg }: { arg: { linkId: number } }
+) => {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user || !user.id) {
+      return { success: false, message: 'User not found' };
+    }
+
+    // Verify ownership and get link details
+    const link = await verifyLinkOwnership(arg.linkId, +user.id);
+
+    // Get the link's URL
+    const [linkData] = await db
+      .select({ url: linkSchema.url })
+      .from(linkSchema)
+      .where(eq(linkSchema.id, arg.linkId));
+
+    if (!linkData) {
+      return { success: false, message: 'Link not found' };
+    }
+
+    // Perform the health check
+    const healthResult: HealthCheckResult = await checkUrlHealth(linkData.url);
+
+    // Update the link with health check results
+    await db
+      .update(linkSchema)
+      .set({
+        lastCheckedAt: Date.now(),
+        healthStatus: healthResult.status,
+        statusCode: healthResult.statusCode,
+        responseTime: healthResult.responseTime,
+        errorMessage: healthResult.error,
+        updatedAt: Date.now(),
+      })
+      .where(eq(linkSchema.id, arg.linkId));
+
+    return {
+      success: true,
+      message: 'Health check completed',
+      data: healthResult,
+    };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to check link health';
+    console.error('Failed to check link health:', error);
+    return { success: false, message };
   }
 };

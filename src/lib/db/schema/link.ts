@@ -18,6 +18,13 @@ export const link = sqliteTable('link', {
 
   isActive: integer({ mode: 'boolean' }).default(true).notNull(),
 
+  // Health check fields
+  lastCheckedAt: int('last_checked_at'),
+  healthStatus: text('health_status'), // 'healthy', 'unhealthy', 'timeout', 'unknown'
+  statusCode: int('status_code'),
+  responseTime: int('response_time'), // milliseconds
+  errorMessage: text('error_message'),
+
   createdAt: int()
     .notNull()
     .$default(() => Date.now()),
