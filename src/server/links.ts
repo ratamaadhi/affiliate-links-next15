@@ -469,9 +469,6 @@ export const checkLinkHealth = async (
       return { success: false, message: 'User not found' };
     }
 
-    // Verify ownership and get link details
-    const link = await verifyLinkOwnership(arg.linkId, +user.id);
-
     // Get the link's URL
     const [linkData] = await db
       .select({ url: linkSchema.url })
