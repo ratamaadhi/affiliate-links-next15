@@ -108,7 +108,7 @@ export function InteractiveHealthBadge({
             </Badge>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[300px]">
+        <TooltipContent className="max-w-[300px]">
           <div className="font-semibold">Status: {text}</div>
           <div className="text-xs text-muted">
             Last checked: {relativeTime}
