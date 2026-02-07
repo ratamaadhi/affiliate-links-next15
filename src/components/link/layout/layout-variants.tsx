@@ -72,6 +72,7 @@ export const LinkCard = ({
           onClick={() => handleClick(link.id, link.url)}
           onKeyDown={handleKeyDown}
           className="block group break-inside-avoid mb-4 w-full text-left border-0 bg-transparent p-0 cursor-pointer"
+          data-testid="link-card"
         >
           <Card
             className={cn(
@@ -205,6 +206,7 @@ export const ListLinkCard = ({ link, handleClick }: ListLinkCardProps) => {
             type="button"
             role="link"
             onClick={() => handleClick(link.id, link.url)}
+            data-testid="link-card"
           >
             {/* Wrap ItemMedia with relative div for order badge */}
             <div className="relative pl-1">
@@ -348,6 +350,7 @@ export const GridLinkCard = ({ link, handleClick }: GridLinkCardProps) => {
           onClick={() => handleClick(link.id, link.url)}
           onKeyDown={handleKeyDown}
           className="block group break-inside-avoid w-full text-left border-0 bg-transparent p-0 cursor-pointer h-full"
+          data-testid="link-card"
         >
           <Card className="relative h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 hover:border-border cursor-pointer flex flex-col">
             {/* Animated gradient border */}
