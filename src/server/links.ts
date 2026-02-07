@@ -116,12 +116,14 @@ export const createLink = async (
 
     const newLinkId = result[0].id;
 
-    // Trigger async health check in background
-    checkLinkHealth('', { arg: { linkId: newLinkId } }).catch((error) => {
-      console.error('Background health check failed:', error);
-    });
+    // Note: Health check is now triggered client-side via useCheckLinkHealth hook
+    // to ensure proper UI revalidation and loading state
 
-    return { success: true, message: 'Link created successfully' };
+    return {
+      success: true,
+      message: 'Link created successfully',
+      linkId: newLinkId,
+    };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Failed to create link';
     console.error('Failed to create link:', e);
@@ -409,7 +411,11 @@ export const updateLink = async (
       .update(linkSchema)
       .set(updateValues)
       .where(eq(linkSchema.id, arg.id));
-    return { success: true, message: 'Link updated successfully' };
+    return {
+      success: true,
+      message: 'Link updated successfully',
+      linkId: arg.id,
+    };
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : 'Failed to update link';
@@ -498,7 +504,10 @@ export const checkLinkHealth = async (
     return {
       success: true,
       message: 'Health check completed',
-      data: healthResult,
+      data: {
+        ...healthResult,
+        linkId: arg.linkId,
+      },
     };
   } catch (error: unknown) {
     const message =

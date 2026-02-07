@@ -179,11 +179,25 @@ export function useCreateLink(
 ) {
   const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
+  const { trigger: checkHealth } = useCheckLinkHealth({
+    limit,
+    search,
+    pageId,
+  });
 
   return useSWRmutation('/links', createLink, {
-    onSuccess: () => {
+    onSuccess: async (result) => {
+      // First revalidate to show the new link in the list
       mutate();
-      toast.success('Link created. Checking health...');
+
+      // Then trigger health check if linkId is available
+      // The checkHealth hook will handle revalidation and loading state
+      if (result?.linkId) {
+        await checkHealth({ linkId: result.linkId });
+      } else {
+        // Fallback message if linkId is not available
+        toast.success('Link created. Checking health...');
+      }
     },
     onError: (error) => {
       const message =
@@ -275,11 +289,25 @@ export function useUpdateLink(
 ) {
   const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
+  const { trigger: checkHealth } = useCheckLinkHealth({
+    limit,
+    search,
+    pageId,
+  });
 
   return useSWRmutation('/links', updateLink, {
-    onSuccess: () => {
+    onSuccess: async (result) => {
+      // First revalidate to show the updated link in the list
       mutate();
-      toast.success('Link updated successfully');
+
+      // Then trigger health check if linkId is available
+      // The checkHealth hook will handle revalidation and loading state
+      if (result?.linkId) {
+        await checkHealth({ linkId: result.linkId });
+      } else {
+        // Fallback message if linkId is not available
+        toast.success('Link updated successfully');
+      }
     },
     onError: (error) => {
       const message =
@@ -302,7 +330,46 @@ export function useCheckLinkHealth(
 
   return useSWRmutation('/links/health', checkLinkHealth, {
     onSuccess: (data) => {
-      mutate();
+      // Use optimistic update to update only the specific link in cache
+      // This prevents scroll position reset
+      mutate(
+        (currentData) => {
+          if (!currentData) return currentData;
+
+          // Update the specific link's health status in all pages
+          // Type assertion to avoid complex type inference issues
+          return currentData.map((page: any) => {
+            // Handle both error responses and successful data responses
+            if (!page?.success || !page?.data?.data) {
+              return page;
+            }
+
+            return {
+              ...page,
+              data: {
+                ...page.data,
+                data: page.data.data.map((link: any) => {
+                  // Update only the link that was checked
+                  if (link.id === data?.data?.linkId) {
+                    return {
+                      ...link,
+                      // Use current time since health check just completed
+                      lastCheckedAt: Date.now(),
+                      healthStatus: data.data.status,
+                      statusCode: data.data.statusCode,
+                      responseTime: data.data.responseTime,
+                      errorMessage: data.data.error,
+                    };
+                  }
+                  return link;
+                }),
+              },
+            };
+          });
+        },
+        false // Don't revalidate
+      );
+
       if (data?.data?.status === 'healthy') {
         toast.success('Link is healthy');
       } else if (data?.data?.status === 'timeout') {

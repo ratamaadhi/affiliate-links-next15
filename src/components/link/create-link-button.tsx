@@ -110,7 +110,7 @@ export const CreateLinkButton = () => {
 
   const { data: linksData } = useLinkInfinite({
     pageId: selectedPage?.id,
-    search: '',
+    search: keywordLink || '',
   });
 
   const existingLinksCount = React.useMemo(() => {
