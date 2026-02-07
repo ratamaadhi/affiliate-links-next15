@@ -199,7 +199,7 @@ export const ListLinkCard = ({ link, handleClick }: ListLinkCardProps) => {
           asChild
           size="sm"
           variant="outline"
-          className="cursor-pointer group"
+          className="cursor-pointer group w-full"
           onKeyDown={handleKeyDown}
         >
           <button
@@ -234,7 +234,9 @@ export const ListLinkCard = ({ link, handleClick }: ListLinkCardProps) => {
               )}
             </div>
             <ItemContent>
-              <ItemTitle className="line-clamp-1">{link.title}</ItemTitle>
+              <ItemTitle className="line-clamp-1 w-full">
+                {link.title}
+              </ItemTitle>
               {link.description && (
                 <ItemDescription className="line-clamp-1">
                   {link.description}

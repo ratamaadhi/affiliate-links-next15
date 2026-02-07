@@ -31,6 +31,7 @@ import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { DeleteLinkButton } from './delete-link-button';
 import { EditLinkButton } from './edit-link-button';
+import { InteractiveHealthBadge } from './interactive-health-badge';
 import ToggleLinkActive from './toggle-link-active';
 import { UpdatePositionButton } from './update-position-button';
 
@@ -45,7 +46,7 @@ function DragHandle(props) {
 function LinkSkeleton(props) {
   return (
     <div
-      className="flex items-center pl-0 pr-4 py-3 border rounded-md shadow bg-muted/75"
+      className="flex items-center pl-3 pr-3 py-3 sm:pl-4 sm:pr-4 border rounded-md shadow bg-muted/75"
       {...props}
     >
       {/* Drag Handle Skeleton */}
@@ -239,11 +240,11 @@ function ListLinks() {
         }}
         {...attributes}
       >
-        <div className="flex justify-between items-center pl-0 pr-4 pb-2 pt-3 border rounded-md shadow bg-muted/75">
+        <div className="flex items-center pl-3 pr-3 pb-2 pt-3 sm:pl-4 sm:pr-4 border rounded-md shadow bg-muted/75">
           <DragHandle {...listeners} />
           <div className="flex-1 flex flex-col gap-2 min-w-0">
             <div className="w-full flex items-center">
-              <div className="w-full flex justify-between gap-4">
+              <div className="w-full flex gap-4">
                 <div className="flex items-start gap-3 min-w-0 flex-1">
                   {link.imageUrl && (
                     <img
@@ -283,8 +284,15 @@ function ListLinks() {
                     )}
                   </div>
                 </div>
-                <div className="flex-shrink-0">
-                  <ToggleLinkActive linkId={link.id} isActive={link.isActive} />
+                <div className="flex flex-col items-end gap-2">
+                  <InteractiveHealthBadge
+                    linkId={link.id}
+                    status={link.healthStatus}
+                    lastCheckedAt={link.lastCheckedAt}
+                    statusCode={link.statusCode}
+                    responseTime={link.responseTime}
+                    errorMessage={link.errorMessage}
+                  />
                 </div>
               </div>
             </div>
@@ -299,8 +307,9 @@ function ListLinks() {
                   </Button>
                 </div>
 
-                <div>
+                <div className="flex items-center gap-2">
                   <DeleteLinkButton data={link} linkId={link.id} />
+                  <ToggleLinkActive linkId={link.id} isActive={link.isActive} />
                 </div>
               </div>
             )}

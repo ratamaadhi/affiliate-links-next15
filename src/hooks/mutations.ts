@@ -1,4 +1,5 @@
 import {
+  checkLinkHealth,
   createLink,
   deleteLink,
   switchIsActiveLink,
@@ -182,7 +183,7 @@ export function useCreateLink(
   return useSWRmutation('/links', createLink, {
     onSuccess: () => {
       mutate();
-      toast.success('Link created successfully');
+      toast.success('Link created. Checking health...');
     },
     onError: (error) => {
       const message =
@@ -283,6 +284,38 @@ export function useUpdateLink(
     onError: (error) => {
       const message =
         error instanceof Error ? error.message : 'Failed to update link';
+      toast.error(message);
+    },
+  });
+}
+
+export function useCheckLinkHealth(
+  params: PaginationParams & { pageId: number } = {
+    page: 1,
+    limit: 5,
+    search: '',
+    pageId: null,
+  }
+) {
+  const { limit = 5, search, pageId } = params;
+  const { mutate } = useLinkInfinite({ limit, search, pageId });
+
+  return useSWRmutation('/links/health', checkLinkHealth, {
+    onSuccess: (data) => {
+      mutate();
+      if (data?.data?.status === 'healthy') {
+        toast.success('Link is healthy');
+      } else if (data?.data?.status === 'timeout') {
+        toast.warning('Link check timed out');
+      } else if (data?.data?.status === 'unhealthy') {
+        toast.error('Link is unhealthy');
+      } else {
+        toast.info('Health check completed');
+      }
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to check link health';
       toast.error(message);
     },
   });
