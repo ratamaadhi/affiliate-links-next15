@@ -142,3 +142,56 @@ export const resetClickRateLimit = async (
     return false;
   }
 };
+
+/**
+ * Check rate limit for link reports
+ * Uses Redis INCR with TTL for rate limiting
+ *
+ * Key format: "affiliate-links:rate-limit:report:{ip}"
+ * Window: 3600000ms (1 hour)
+ * Max requests: 5 per hour per IP
+ *
+ * @param ip - Client IP address
+ * @param windowMs - Time window in milliseconds (default: 3600000ms = 1 hour)
+ * @param maxRequests - Maximum requests allowed in window (default: 5)
+ * @returns Rate limit result with allowed status and optional retryAfter seconds
+ */
+export const checkReportRateLimit = async (
+  ip: string,
+  windowMs: number = 3600000,
+  maxRequests: number = 5
+): Promise<RateLimitResult> => {
+  const client = getRedisClient();
+
+  // Graceful fallback: allow request if Redis is unavailable
+  if (!client) {
+    console.warn(
+      '[RateLimiter] Redis client not available - report rate limiting disabled'
+    );
+    return { allowed: true };
+  }
+
+  const key = `affiliate-links:rate-limit:report:${ip}`;
+  const windowSeconds = Math.ceil(windowMs / 1000);
+
+  try {
+    const currentCount = await client.incr(key);
+
+    if (currentCount === 1) {
+      await client.expire(key, windowSeconds);
+    }
+
+    if (currentCount > maxRequests) {
+      const ttl = await client.ttl(key);
+      return {
+        allowed: false,
+        retryAfter: ttl > 0 ? ttl : windowSeconds,
+      };
+    }
+
+    return { allowed: true };
+  } catch (error) {
+    console.error('[RateLimiter] Report rate limit check failed:', error);
+    return { allowed: true };
+  }
+};

@@ -44,3 +44,5 @@ local.db*
 dump*
 
 docker-data
+
+/.playwright-mcp

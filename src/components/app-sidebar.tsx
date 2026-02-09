@@ -45,6 +45,10 @@ const data = {
           title: 'Short URLs',
           url: '/dashboard/short-urls',
         },
+        {
+          title: 'Reports',
+          url: '/dashboard/reports',
+        },
       ],
     },
     {

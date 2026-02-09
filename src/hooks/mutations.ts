@@ -329,47 +329,9 @@ export function useCheckLinkHealth(
   const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
 
-  return useSWRmutation('/links/health', checkLinkHealth, {
+  return useSWRmutation('/links', checkLinkHealth, {
     onSuccess: (data) => {
-      // Use optimistic update to update only the specific link in cache
-      // This prevents scroll position reset
-      // mutate(
-      //   (currentData) => {
-      //     if (!currentData) return currentData;
-
-      //     // Update the specific link's health status in all pages
-      //     // Type assertion to avoid complex type inference issues
-      //     return currentData.map((page: any) => {
-      //       // Handle both error responses and successful data responses
-      //       if (!page?.success || !page?.data?.data) {
-      //         return page;
-      //       }
-
-      //       return {
-      //         ...page,
-      //         data: {
-      //           ...page.data,
-      //           data: page.data.data.map((link: any) => {
-      //             // Update only the link that was checked
-      //             if (link.id === data?.data?.linkId) {
-      //               return {
-      //                 ...link,
-      //                 // Use current time since health check just completed
-      //                 lastCheckedAt: Date.now(),
-      //                 healthStatus: data.data.status,
-      //                 statusCode: data.data.statusCode,
-      //                 responseTime: data.data.responseTime,
-      //                 errorMessage: data.data.error,
-      //               };
-      //             }
-      //             return link;
-      //           }),
-      //         },
-      //       };
-      //     });
-      //   },
-      //   false // Don't revalidate
-      // );
+      mutate();
 
       if (data?.data?.status === 'healthy') {
         toast.success('Link is healthy');
