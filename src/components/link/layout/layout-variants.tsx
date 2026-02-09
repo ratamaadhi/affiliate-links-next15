@@ -123,7 +123,7 @@ export const LinkCard = ({
               {/* Large image at top - 16:9 aspect ratio, 120px height */}
               <div className="relative h-32 overflow-hidden pointer-events-none">
                 {/* Order number badge - positioned over image */}
-                <div className="absolute top-3 left-3 rounded-full w-7 h-7 flex items-center justify-center bg-primary text-primary-foreground text-sm font-semibold shadow-md">
+                <div className="absolute top-3 left-3 z-10 rounded-full w-7 h-7 flex items-center justify-center bg-primary text-primary-foreground text-sm font-semibold shadow-md">
                   {link.position ?? '-'}
                 </div>
                 {!imageError && link.imageUrl ? (
