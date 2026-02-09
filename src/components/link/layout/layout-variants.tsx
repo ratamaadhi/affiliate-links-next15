@@ -589,7 +589,7 @@ export function GridLayout({ links, handleClick }: LayoutProps) {
           style={{ animationDelay: `${index * 50}ms` }}
         >
           <GridLinkCard link={link} handleClick={handleClick} />
-          </div>
+        </div>
       ))}
     </div>
   );
