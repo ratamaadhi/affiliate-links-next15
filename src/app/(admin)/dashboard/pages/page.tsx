@@ -5,6 +5,7 @@ import { PagesContent } from '@/components/page/pages-content';
 import PageWrapper from '@/components/page/page-wrapper';
 import { PagesMobileDockProvider } from '@/components/page/pages-mobile-dock-provider';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AuthProvider } from '@/components/auth/auth-provider';
 import { FileQuestion } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
@@ -52,43 +53,46 @@ export default async function PagesPage() {
 
   return (
     <PageWrapper breadcrumbs={breadcrumbs}>
-      <LinkPageProvider>
-        <PagesMobileDockProvider>
-          <main className="flex flex-col h-full gap-y-2 bg-muted/50 rounded-lg p-4 2xl:pt-8">
-            <div className="w-full flex flex-col xl:flex-row justify-between gap-4 max-w-7xl mx-auto">
-              <div className="w-full flex-1">
-                <div className="max-w-[640px] w-full mx-auto">
-                  <PagesContent defaultPageSlug={user?.username || ''} />
+      {/* OPTIMIZATION: Pass initial user data to prevent duplicate auth fetches */}
+      <AuthProvider initialUser={user}>
+        <LinkPageProvider>
+          <PagesMobileDockProvider>
+            <main className="flex flex-col h-full gap-y-2 bg-muted/50 rounded-lg p-4 2xl:pt-8">
+              <div className="w-full flex flex-col xl:flex-row justify-between gap-4 max-w-7xl mx-auto">
+                <div className="w-full flex-1">
+                  <div className="max-w-[640px] w-full mx-auto">
+                    <PagesContent defaultPageSlug={user?.username || ''} />
+                  </div>
+                </div>
+                <div className="hidden md:block min-w-[200px] max-w-[460px] mx-auto w-full">
+                  <div className="mb-4">
+                    <DynamicPageLink />
+                  </div>
+                  <div className="w-full min-h-0 rounded-lg overflow-hidden relative bg-muted-foreground py-3.5">
+                    {user?.username ? (
+                      <EnhancedDashboardPreview
+                        pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user.username}`}
+                        username={user.username}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                        <FileQuestion className="w-12 h-12 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Set up your username to see preview
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="hidden md:block min-w-[200px] max-w-[460px] mx-auto w-full">
-                <div className="mb-4">
-                  <DynamicPageLink />
-                </div>
-                <div className="w-full min-h-0 rounded-lg overflow-hidden relative bg-muted-foreground py-3.5">
-                  {user?.username ? (
-                    <EnhancedDashboardPreview
-                      pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user.username}`}
-                      username={user.username}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                      <FileQuestion className="w-12 h-12 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Set up your username to see preview
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </main>
-          <MobileDock
-            username={user?.username}
-            pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username || ''}`}
-          />
-        </PagesMobileDockProvider>
-      </LinkPageProvider>
+            </main>
+            <MobileDock
+              username={user?.username}
+              pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username || ''}`}
+            />
+          </PagesMobileDockProvider>
+        </LinkPageProvider>
+      </AuthProvider>
     </PageWrapper>
   );
 }

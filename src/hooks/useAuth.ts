@@ -33,13 +33,20 @@ const sessionFetcher = async (): Promise<InfSession | null> => {
   }
 };
 
-export const useAuth = () => {
+// OPTIMIZATION: Accept initialData from server to skip redundant client-side session fetch
+export const useAuth = (initialUser?: SessionUser | null) => {
   const {
     data: session,
     error,
     isLoading,
     mutate,
   } = useSWR<InfSession | null>('session', sessionFetcher, {
+    // OPTIMIZATION: Use server-provided data as fallback to prevent duplicate fetch
+    fallbackData: initialUser
+      ? { user: initialUser, session: null as any }
+      : undefined,
+    // OPTIMIZATION: Skip revalidation on mount if initial data is provided
+    revalidateOnMount: !initialUser,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
     shouldRetryOnError: false,

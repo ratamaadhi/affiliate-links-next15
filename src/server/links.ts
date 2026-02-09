@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
 import {
@@ -13,8 +14,9 @@ import { InPagination, SessionUser } from '@/lib/types';
 import { and, asc, count, eq, like, or, sql } from 'drizzle-orm';
 import { headers } from 'next/headers';
 
-// Helper function to get authenticated user
-const getAuthenticatedUser = async () => {
+// OPTIMIZATION: Wrap with React.cache() for server-side request deduplication
+// Prevents duplicate session queries within the same request cycle
+const getAuthenticatedUser = cache(async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -23,7 +25,7 @@ const getAuthenticatedUser = async () => {
     return null;
   }
   return user;
-};
+});
 
 // OPTIMIZATION: Uses primary key index on link.id and foreign key index on link.page_id
 // The LEFT JOIN is optimized by the foreign key relationship
@@ -266,40 +268,41 @@ async function fetchPaginatedActiveLinks(
   };
 }
 
-export const getLinks = async (
-  params: PaginationParams & { pageId?: number }
-) => {
-  try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return { success: false, message: 'User not found' };
-    }
-
-    let resolvedPageId = params.pageId;
-    if (!resolvedPageId) {
-      // OPTIMIZATION: Uses index on page.slug (created in migration 0011)
-      // This query efficiently retrieves the default page for a user
-      const userDefaultPage = await db.query.page.findFirst({
-        where: eq(pageSchema.slug, user.username),
-        columns: { id: true },
-      });
-      if (!userDefaultPage) {
-        throw new Error('Default page not found for user');
+// OPTIMIZATION: Wrap with React.cache() for server-side request deduplication
+export const getLinks = cache(
+  async (params: PaginationParams & { pageId?: number }) => {
+    try {
+      const user = await getAuthenticatedUser();
+      if (!user) {
+        return { success: false, message: 'User not found' };
       }
-      resolvedPageId = userDefaultPage.id;
-    }
 
-    const data = await fetchPaginatedLinks({
-      ...params,
-      pageId: resolvedPageId,
-    });
-    return { success: true, data };
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to get links';
-    return { success: false, message };
+      let resolvedPageId = params.pageId;
+      if (!resolvedPageId) {
+        // OPTIMIZATION: Uses index on page.slug (created in migration 0011)
+        // This query efficiently retrieves the default page for a user
+        const userDefaultPage = await db.query.page.findFirst({
+          where: eq(pageSchema.slug, user.username),
+          columns: { id: true },
+        });
+        if (!userDefaultPage) {
+          throw new Error('Default page not found for user');
+        }
+        resolvedPageId = userDefaultPage.id;
+      }
+
+      const data = await fetchPaginatedLinks({
+        ...params,
+        pageId: resolvedPageId,
+      });
+      return { success: true, data };
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to get links';
+      return { success: false, message };
+    }
   }
-};
+);
 
 export const switchIsActiveLink = async (
   _url: string,
@@ -424,23 +427,24 @@ export const updateLink = async (
   }
 };
 
-export const getLinksForPage = async (
-  params: PaginationParams & { pageId: number }
-) => {
-  if (!params.pageId) {
-    return { success: false, data: { data: [], pagination: {} } };
-  }
+// OPTIMIZATION: Wrap with React.cache() for server-side request deduplication
+export const getLinksForPage = cache(
+  async (params: PaginationParams & { pageId: number }) => {
+    if (!params.pageId) {
+      return { success: false, data: { data: [], pagination: {} } };
+    }
 
-  try {
-    const data = await fetchPaginatedActiveLinks(params);
-    return { success: true, data };
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to get page';
-    console.error('Failed to get links for page:', error);
-    return { success: false, message };
+    try {
+      const data = await fetchPaginatedActiveLinks(params);
+      return { success: true, data };
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to get page';
+      console.error('Failed to get links for page:', error);
+      return { success: false, message };
+    }
   }
-};
+);
 
 export const trackLinkClick = async (linkId: number) => {
   try {

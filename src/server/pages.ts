@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { auth } from '@/lib/auth';
 import db from '@/lib/db';
 import {
@@ -172,95 +173,98 @@ const buildPageWhereClause = (userId: number, search?: string) => {
   );
 };
 
-export const getPages = async (
-  params: PaginationParams = { page: 1, limit: 5, search: '' }
-) => {
-  const { page = 1, limit = 5, search = '' } = params;
-  const offset = (page - 1) * limit;
+// OPTIMIZATION: Wrap with React.cache() for server-side request deduplication
+export const getPages = cache(
+  async (params: PaginationParams = { page: 1, limit: 5, search: '' }) => {
+    const { page = 1, limit = 5, search = '' } = params;
+    const offset = (page - 1) * limit;
 
-  try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    const userId = +session?.user?.id;
-    if (!userId) {
-      return { success: false, message: 'User not found' };
+    try {
+      const session = await auth.api.getSession({
+        headers: await headers(),
+      });
+      const userId = +session?.user?.id;
+      if (!userId) {
+        return { success: false, message: 'User not found' };
+      }
+
+      const whereCondition = buildPageWhereClause(userId, search);
+
+      // OPTIMIZATION: Uses index on page.userId (created in migration 0011)
+      // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
+      // The Promise.all executes both queries in parallel for better performance
+      const [pagesByUser, totalItemsResult] = await Promise.all([
+        db.query.page.findMany({
+          where: whereCondition,
+          with: { links: true },
+          limit,
+          offset,
+        }),
+        db.select({ count: count() }).from(pageSchema).where(whereCondition),
+      ]);
+
+      const totalItems = totalItemsResult[0].count;
+      const totalPages = Math.ceil(totalItems / limit);
+
+      const pagination: InPagination = {
+        totalItems: Number(totalItems),
+        itemCount: pagesByUser.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage: page,
+      };
+
+      const data = {
+        data: pagesByUser,
+        pagination,
+      };
+
+      return { success: true, data: data };
+    } catch (error) {
+      console.error('Failed to get pages:', error);
+      return { success: false, message: 'Failed to get pages' };
     }
+  }
+);
 
-    const whereCondition = buildPageWhereClause(userId, search);
+// OPTIMIZATION: Wrap with React.cache() for server-side request deduplication
+export const getPageInfinite = cache(
+  async (params: PaginationParams = { page: 1, limit: 5, search: '' }) => {
+    const { page = 1, limit = 5, search = '' } = params;
+    const offset = (page - 1) * limit;
 
-    // OPTIMIZATION: Uses index on page.userId (created in migration 0011)
-    // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
-    // The Promise.all executes both queries in parallel for better performance
-    const [pagesByUser, totalItemsResult] = await Promise.all([
-      db.query.page.findMany({
+    try {
+      const session = await auth.api.getSession({
+        headers: await headers(),
+      });
+      const userId = +session?.user?.id;
+      if (!userId) {
+        return { success: false, message: 'User not found' };
+      }
+
+      const whereCondition = buildPageWhereClause(userId, search);
+
+      // OPTIMIZATION: Uses index on page.userId (created in migration 0011)
+      // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
+      const pagesByUser = await db.query.page.findMany({
         where: whereCondition,
-        with: { links: true },
+        with: {
+          links: true,
+        },
         limit,
         offset,
-      }),
-      db.select({ count: count() }).from(pageSchema).where(whereCondition),
-    ]);
+      });
 
-    const totalItems = totalItemsResult[0].count;
-    const totalPages = Math.ceil(totalItems / limit);
-
-    const pagination: InPagination = {
-      totalItems: Number(totalItems),
-      itemCount: pagesByUser.length,
-      itemsPerPage: limit,
-      totalPages,
-      currentPage: page,
-    };
-
-    const data = {
-      data: pagesByUser,
-      pagination,
-    };
-
-    return { success: true, data: data };
-  } catch (error) {
-    console.error('Failed to get pages:', error);
-    return { success: false, message: 'Failed to get pages' };
-  }
-};
-
-export const getPageInfinite = async (
-  params: PaginationParams = { page: 1, limit: 5, search: '' }
-) => {
-  const { page = 1, limit = 5, search = '' } = params;
-  const offset = (page - 1) * limit;
-
-  try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    const userId = +session?.user?.id;
-    if (!userId) {
-      return { success: false, message: 'User not found' };
+      return { success: true, data: pagesByUser };
+    } catch (error) {
+      console.error('Failed to get infinite pages:', error);
+      return { success: false, message: 'Failed to get pages' };
     }
-
-    const whereCondition = buildPageWhereClause(userId, search);
-
-    // OPTIMIZATION: Uses index on page.userId (created in migration 0011)
-    // When search is provided, uses LIKE queries (not indexed, but acceptable for search)
-    const pagesByUser = await db.query.page.findMany({
-      where: whereCondition,
-      with: {
-        links: true,
-      },
-      limit,
-      offset,
-    });
-
-    return { success: true, data: pagesByUser };
-  } catch (error) {
-    console.error('Failed to get infinite pages:', error);
-    return { success: false, message: 'Failed to get pages' };
   }
-};
+);
 
-export const getPageById = async (id: number) => {
+// OPTIMIZATION: Wrap with React.cache() for server-side request deduplication
+export const getPageById = cache(async (id: number) => {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     const userId = +session?.user?.id;
@@ -287,7 +291,7 @@ export const getPageById = async (id: number) => {
     console.error('Failed to get page by ID:', error);
     return { success: false, message: 'Failed to get page' };
   }
-};
+});
 
 const updatePageValues = async (
   id: number,
