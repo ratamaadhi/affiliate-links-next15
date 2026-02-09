@@ -25,7 +25,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
-import React, { useCallback, useContext, useState } from 'react';
+import React, { useCallback, useContext, memo, useState } from 'react';
 import { HiOutlineChartBar } from 'react-icons/hi';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
@@ -206,7 +206,13 @@ function ListLinks() {
     });
   }
 
-  function DraggableDiv({ link }: { link: LinkSelect }) {
+  // OPTIMIZATION: Memoize DraggableDiv to prevent unnecessary re-renders during drag operations
+  // This is critical for performance when dragging items in the list
+  const DraggableDiv = memo(function DraggableDiv({
+    link,
+  }: {
+    link: LinkSelect;
+  }) {
     const {
       transform,
       transition,
@@ -317,7 +323,7 @@ function ListLinks() {
         </div>
       </li>
     );
-  }
+  });
 
   return (
     <div className="h-full">

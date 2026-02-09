@@ -9,6 +9,7 @@ import PageWrapper from '@/components/page/page-wrapper';
 import SelectPageInput from '@/components/page/select-page-input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AuthProvider } from '@/components/auth/auth-provider';
 import { FileQuestion } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
@@ -56,60 +57,63 @@ async function LinksPage() {
 
   return (
     <PageWrapper breadcrumbs={breadcrumbs}>
-      <LinkPageProvider>
-        <LinksMobileDockProvider>
-          <main className="flex flex-col h-full gap-y-2 bg-muted/50 rounded-lg p-4 2xl:pt-8">
-            <div className="w-full flex flex-col xl:flex-row justify-between gap-4 max-w-7xl mx-auto flex-1">
-              <div className="w-full flex-1">
-                <div className="w-full max-w-[640px] mx-auto flex flex-col h-full">
-                  <div className="flex justify-between items-center gap-x-2 mb-4">
-                    <Label
-                      htmlFor="select-page-form"
-                      className="font-semibold text-lg"
-                    >
-                      Select Page
-                    </Label>
-                    <SelectPageInput defaultPageSlug={user.username} />
-                  </div>
-                  <div className="mb-4">
-                    <CreateLinkButton />
-                  </div>
-                  <div className="mb-4">
-                    <SearchLinkInput />
-                  </div>
-                  <div className="flex-1 min-h-0">
-                    <ListLinks />
-                  </div>
-                </div>
-              </div>
-              <div className="hidden xl:flex min-w-[200px] max-w-[460px] mx-auto w-full h-full flex-col">
-                <div className="mb-4">
-                  <DynamicPageLink />
-                </div>
-                <div className="w-full min-h-0 rounded-lg overflow-hidden relative bg-muted-foreground py-3.5">
-                  {user?.username ? (
-                    <EnhancedDashboardPreview
-                      pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user.username}`}
-                      username={user.username}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                      <FileQuestion className="w-12 h-12 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Set up your username to see preview
-                      </p>
+      {/* OPTIMIZATION: Pass initial user data to prevent duplicate auth fetches */}
+      <AuthProvider initialUser={user}>
+        <LinkPageProvider>
+          <LinksMobileDockProvider>
+            <main className="flex flex-col h-full gap-y-2 bg-muted/50 rounded-lg p-4 2xl:pt-8">
+              <div className="w-full flex flex-col xl:flex-row justify-between gap-4 max-w-7xl mx-auto flex-1">
+                <div className="w-full flex-1">
+                  <div className="w-full max-w-[640px] mx-auto flex flex-col h-full">
+                    <div className="flex justify-between items-center gap-x-2 mb-4">
+                      <Label
+                        htmlFor="select-page-form"
+                        className="font-semibold text-lg"
+                      >
+                        Select Page
+                      </Label>
+                      <SelectPageInput defaultPageSlug={user.username} />
                     </div>
-                  )}
+                    <div className="mb-4">
+                      <CreateLinkButton />
+                    </div>
+                    <div className="mb-4">
+                      <SearchLinkInput />
+                    </div>
+                    <div className="flex-1 min-h-0">
+                      <ListLinks />
+                    </div>
+                  </div>
+                </div>
+                <div className="hidden xl:flex min-w-[200px] max-w-[460px] mx-auto w-full h-full flex-col">
+                  <div className="mb-4">
+                    <DynamicPageLink />
+                  </div>
+                  <div className="w-full min-h-0 rounded-lg overflow-hidden relative bg-muted-foreground py-3.5">
+                    {user?.username ? (
+                      <EnhancedDashboardPreview
+                        pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user.username}`}
+                        username={user.username}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                        <FileQuestion className="w-12 h-12 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Set up your username to see preview
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </main>
-          <MobileDock
-            username={user?.username}
-            pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}
-          />
-        </LinksMobileDockProvider>
-      </LinkPageProvider>
+            </main>
+            <MobileDock
+              username={user?.username}
+              pageLink={`${process.env.NEXT_PUBLIC_BASE_URL}/${user?.username}`}
+            />
+          </LinksMobileDockProvider>
+        </LinkPageProvider>
+      </AuthProvider>
     </PageWrapper>
   );
 }
