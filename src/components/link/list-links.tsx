@@ -262,10 +262,21 @@ function ListLinks() {
                       }}
                     />
                   )}
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-sm truncate mb-1">
-                      {link.title}
-                    </h3>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-semibold text-sm truncate">
+                        {link.title}
+                      </h3>
+                      <InteractiveHealthBadge
+                        linkId={link.id}
+                        status={link.healthStatus as any}
+                        lastCheckedAt={link.lastCheckedAt}
+                        statusCode={link.statusCode}
+                        responseTime={link.responseTime}
+                        errorMessage={link.errorMessage}
+                        className="shrink-0"
+                      />
+                    </div>
                     <p className="text-sm font- text-muted-foreground truncate">
                       {link.url}
                     </p>
@@ -289,16 +300,6 @@ function ListLinks() {
                       </div>
                     )}
                   </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <InteractiveHealthBadge
-                    linkId={link.id}
-                    status={link.healthStatus as any}
-                    lastCheckedAt={link.lastCheckedAt}
-                    statusCode={link.statusCode}
-                    responseTime={link.responseTime}
-                    errorMessage={link.errorMessage}
-                  />
                 </div>
               </div>
             </div>

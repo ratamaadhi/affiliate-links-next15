@@ -81,7 +81,7 @@ export function InteractiveHealthBadge({
 
   return (
     <TooltipProvider>
-      <Tooltip>
+      <Tooltip delayDuration={350}>
         <TooltipTrigger asChild>
           <div
             className={cn(
@@ -98,13 +98,16 @@ export function InteractiveHealthBadge({
               }
             }}
           >
-            <Badge variant={variant} className="gap-1">
+            <Badge
+              variant={variant}
+              className="gap-1 h-6 w-6 sm:w-auto p-0 sm:px-2 sm:py-0.5"
+            >
               {isMutating ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="animate-spin" />
               ) : (
                 <span className={colorClass}>{icon}</span>
               )}
-              {text}
+              <span className="hidden sm:block">{text}</span>
             </Badge>
           </div>
         </TooltipTrigger>

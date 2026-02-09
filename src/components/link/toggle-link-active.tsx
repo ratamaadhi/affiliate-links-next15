@@ -45,7 +45,7 @@ function ToggleLinkActive({ isActive = false, linkId }) {
             />
           </div>
         </TooltipTrigger>
-        <TooltipContent>
+        <TooltipContent side="bottom">
           <p>
             {isActive ? 'Click to deactivate link' : 'Click to activate link'}
           </p>
