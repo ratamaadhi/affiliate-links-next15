@@ -151,6 +151,8 @@ export const resetClickRateLimit = async (
  * Window: 3600000ms (1 hour)
  * Max requests: 5 per hour per IP
  *
+ * HARD FAIL: If Redis is unavailable, ALL requests are rejected
+ *
  * @param ip - Client IP address
  * @param windowMs - Time window in milliseconds (default: 3600000ms = 1 hour)
  * @param maxRequests - Maximum requests allowed in window (default: 5)
@@ -163,12 +165,12 @@ export const checkReportRateLimit = async (
 ): Promise<RateLimitResult> => {
   const client = getRedisClient();
 
-  // Graceful fallback: allow request if Redis is unavailable
+  // Hard fail: reject request if Redis is unavailable
   if (!client) {
-    console.warn(
-      '[RateLimiter] Redis client not available - report rate limiting disabled'
+    console.error(
+      '[RateLimiter] Redis client not available - rejecting all report requests'
     );
-    return { allowed: true };
+    return { allowed: false, retryAfter: Math.ceil(windowMs / 1000) };
   }
 
   const key = `affiliate-links:rate-limit:report:${ip}`;
@@ -191,7 +193,8 @@ export const checkReportRateLimit = async (
 
     return { allowed: true };
   } catch (error) {
+    // Hard fail: reject request on Redis error
     console.error('[RateLimiter] Report rate limit check failed:', error);
-    return { allowed: true };
+    return { allowed: false, retryAfter: windowSeconds };
   }
 };
