@@ -307,7 +307,9 @@ describe('Link Reports API', () => {
     });
 
     it('should return 500 for unexpected errors', async () => {
-      linkFindFirstSpy.mockRejectedValue(new Error('Database connection failed'));
+      linkFindFirstSpy.mockRejectedValue(
+        new Error('Database connection failed')
+      );
       checkReportRateLimit.mockResolvedValue({ allowed: true });
 
       const request = createMockRequest(validReportBody);

@@ -21,14 +21,20 @@ export default async function ReportsPage() {
   return (
     <PageWrapper breadcrumbs={breadcrumbs}>
       <AuthProvider initialUser={user}>
-        <main className="container mx-auto py-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold">Link Reports</h1>
-            <p className="text-muted-foreground">
-              View and manage reports submitted for your links
-            </p>
+        <main className="flex flex-col h-full bg-muted/50 rounded-lg p-4 2xl:pt-6">
+          <div className="container mx-auto max-w-6xl sm:px-0">
+            <div className="mb-3 sm:mb-4">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                  Link Reports
+                </h1>
+                <span className="text-sm text-muted-foreground hidden sm:inline">
+                  Manage and review submitted reports
+                </span>
+              </div>
+            </div>
+            <LinkReportsList />
           </div>
-          <LinkReportsList />
         </main>
       </AuthProvider>
     </PageWrapper>
