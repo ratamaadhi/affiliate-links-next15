@@ -6,7 +6,13 @@ import {
   invalidateUserCache,
 } from '@/lib/cache/cache-manager';
 import db from '@/lib/db';
-import { page, shortLink, user, type ShortLinkSelect } from '@/lib/db/schema';
+import {
+  page,
+  shortLink,
+  user,
+  linkClickHistory,
+  type ShortLinkSelect,
+} from '@/lib/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { headers } from 'next/headers';
@@ -141,12 +147,34 @@ export const trackShortLinkClick = async (shortCode: string) => {
   try {
     // OPTIMIZATION: Uses unique index on short_link.short_code (created in migration 0006)
     // This update query is optimized with O(log n) lookup time
+    // First get the short link ID
+    const [shortLinkData] = await db
+      .select({ id: shortLink.id })
+      .from(shortLink)
+      .where(eq(shortLink.shortCode, shortCode));
+
+    if (!shortLinkData) {
+      return { success: false };
+    }
+
+    // Update click count
     await db
       .update(shortLink)
       .set({
         clickCount: sql`${shortLink.clickCount} + 1`,
       })
       .where(eq(shortLink.shortCode, shortCode));
+
+    // Record click history asynchronously (non-blocking)
+    db.insert(linkClickHistory)
+      .values({
+        shortLinkId: shortLinkData.id,
+        clickedAt: Date.now(),
+      })
+      .catch((err) => {
+        // Log error but don't fail the click tracking
+        console.error('Failed to record click history:', err);
+      });
 
     return { success: true };
   } catch (error) {

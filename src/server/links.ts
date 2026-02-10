@@ -8,6 +8,7 @@ import {
   link as linkSchema,
   page as pageSchema,
   shortLink,
+  linkClickHistory,
 } from '@/lib/db/schema';
 import { checkUrlHealth, type HealthCheckResult } from '@/lib/health-check';
 import { InPagination, SessionUser } from '@/lib/types';
@@ -448,6 +449,7 @@ export const getLinksForPage = cache(
 
 export const trackLinkClick = async (linkId: number) => {
   try {
+    // First, verify the link exists and update the click count
     const result = await db
       .update(linkSchema)
       .set({
@@ -461,6 +463,18 @@ export const trackLinkClick = async (linkId: number) => {
     if (result.length === 0) {
       return { success: false, message: 'Link not found' };
     }
+
+    // Record click history asynchronously (non-blocking)
+    // This won't affect the response to the user
+    db.insert(linkClickHistory)
+      .values({
+        linkId,
+        clickedAt: Date.now(),
+      })
+      .catch((err) => {
+        // Log error but don't fail the click tracking
+        console.error('Failed to record click history:', err);
+      });
 
     return { success: true };
   } catch (error) {
