@@ -51,7 +51,11 @@ export const ListPages = ({
   function handleSelectPage(page) {
     dispatch({
       type: 'changed',
-      payload: page,
+      payload: {
+        ...page,
+        label: page.title,
+        value: page.id,
+      },
     });
   }
 

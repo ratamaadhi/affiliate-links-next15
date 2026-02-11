@@ -3,15 +3,21 @@
 import {
   LinkPageContext,
   LinkPageDispatchContext,
+  LinkPageState,
+  type LinkPageAction,
 } from '@/context/link-page-context';
 import { useReducer } from 'react';
 
-const initialLinkPageState = {
+const initialLinkPageState: LinkPageState = {
   selectedPage: null,
   keywordLink: '',
+  reloadSignal: 0,
 };
 
-function linkPageReducer(state, action) {
+function linkPageReducer(
+  state: LinkPageState,
+  action: LinkPageAction
+): LinkPageState {
   switch (action.type) {
     case 'changed': {
       return {
@@ -23,6 +29,12 @@ function linkPageReducer(state, action) {
       return {
         ...state,
         keywordLink: action.payload,
+      };
+    }
+    case 'trigger-reload': {
+      return {
+        ...state,
+        reloadSignal: state.reloadSignal + 1,
       };
     }
     default: {

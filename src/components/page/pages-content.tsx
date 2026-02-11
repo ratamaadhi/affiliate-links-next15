@@ -42,7 +42,11 @@ export function PagesContent({ defaultPageSlug }: { defaultPageSlug: string }) {
       if (defaultValue) {
         dispatch({
           type: 'changed',
-          payload: defaultValue,
+          payload: {
+            ...defaultValue,
+            label: defaultValue.title,
+            value: defaultValue.id,
+          },
         });
       }
     }

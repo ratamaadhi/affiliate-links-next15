@@ -17,7 +17,7 @@ export function EnhancedDashboardPreview({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const { selectedPage } = useContext(LinkPageContext);
+  const { selectedPage, reloadSignal } = useContext(LinkPageContext);
 
   // Validate username exists to prevent redirect loops
   const isValidUsername =
@@ -79,6 +79,14 @@ export function EnhancedDashboardPreview({
     }
   }, [isLoading, fullLink, shouldShowPreview]);
 
+  // Reset loading state when reloadSignal changes (triggered by mutations)
+  useEffect(() => {
+    if (shouldShowPreview && reloadSignal > 0) {
+      setIsLoading(true);
+      setHasError(false);
+    }
+  }, [reloadSignal, shouldShowPreview]);
+
   // Show empty state if username is invalid or pageLink is undefined
   if (!shouldShowPreview) {
     return (
@@ -115,7 +123,7 @@ export function EnhancedDashboardPreview({
           <div className="relative h-full w-full overflow-hidden border-muted-foreground/30 sm:rounded-[34px] sm:border-4 rounded-none sm:shadow-[0_121px_49px_#00000005,0_68px_41px_#00000014,0_30px_30px_#00000024,0_8px_17px_#00000029] sm:border-muted-foreground/30 border-0 shadow-none">
             {/* Always render iframe but control visibility */}
             <iframe
-              key={`${fullLink}-${retryCount}`}
+              key={`${fullLink}-${reloadSignal}-${retryCount}`}
               className={`w-full h-full border-0 ${isLoading || hasError ? 'invisible absolute' : 'visible relative'}`}
               src={fullLink}
               onLoad={handleIframeLoad}

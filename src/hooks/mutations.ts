@@ -24,6 +24,7 @@ import {
   useUserShortLinks,
 } from './queries';
 import { useAuth } from './useAuth';
+import { useTriggerPreviewReload } from './use-trigger-preview-reload';
 
 export interface UpdateUsernameParams {
   username: string;
@@ -118,11 +119,13 @@ export async function deleteShortLink(
 
 export function useCreatePage() {
   const { mutate } = usePagesInfinite();
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/pages', createPage, {
     onSuccess: (data) => {
       if (data?.success) {
         mutate();
+        triggerReload();
         toast.success('Page created successfully');
       }
     },
@@ -136,11 +139,13 @@ export function useCreatePage() {
 
 export function useUpdatePage() {
   const { mutate } = usePagesInfinite();
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/pages', updatePage, {
     onSuccess: (data) => {
       if (data?.success) {
         mutate();
+        triggerReload();
         toast.success('Page updated successfully');
       }
     },
@@ -154,11 +159,13 @@ export function useUpdatePage() {
 
 export function useDeletePage() {
   const { mutate } = usePagesInfinite();
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/pages', deletePage, {
     onSuccess: (data) => {
       if (data?.success) {
         mutate();
+        triggerReload();
         toast.success('Page deleted successfully');
       }
     },
@@ -185,11 +192,13 @@ export function useCreateLink(
     search,
     pageId,
   });
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/links', createLink, {
     onSuccess: async (result) => {
       // First revalidate to show the new link in the list
       mutate();
+      triggerReload();
 
       // Then trigger health check if linkId is available
       // The checkHealth hook will handle revalidation and loading state
@@ -218,10 +227,12 @@ export function useSwitchIsActive(
 ) {
   const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/links', switchIsActiveLink, {
     onSuccess: () => {
       mutate();
+      triggerReload();
       toast.success('Link updated successfully');
     },
     onError: (error) => {
@@ -242,10 +253,12 @@ export function useDeleteLink(
 ) {
   const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/links', deleteLink, {
     onSuccess: () => {
       mutate();
+      triggerReload();
       toast.success('Link deleted successfully');
     },
     onError: (error) => {
@@ -266,10 +279,12 @@ export function useUpdateLinkOrder(
 ) {
   const { limit = 5, search, pageId } = params;
   const { mutate } = useLinkInfinite({ limit, search, pageId });
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/links', updateLinkOrder, {
     onSuccess: () => {
       mutate();
+      triggerReload();
       toast.success('Link order updated successfully');
     },
     onError: (error) => {
@@ -295,11 +310,13 @@ export function useUpdateLink(
     search,
     pageId,
   });
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/links', updateLink, {
     onSuccess: async (result) => {
       // First revalidate to show the updated link in the list
       mutate();
+      triggerReload();
 
       // Then trigger health check if linkId is available
       // The checkHealth hook will handle revalidation and loading state
@@ -417,11 +434,13 @@ export function useDeleteShortLink(pageId?: number) {
 export function useUpdatePageTheme() {
   const { mutate: mutatePages } = usePagesInfinite();
   const { mutate: globalMutate } = useSWRConfig();
+  const triggerReload = useTriggerPreviewReload();
 
   return useSWRmutation('/page-theme', updatePageTheme, {
     onSuccess: (data) => {
       if (data?.success) {
         mutatePages();
+        triggerReload();
         // Trigger global revalidation to update any cached page data
         globalMutate(() => true, undefined, { revalidate: true });
         toast.success('Theme settings updated successfully');
