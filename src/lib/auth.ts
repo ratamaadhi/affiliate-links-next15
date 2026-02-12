@@ -17,6 +17,7 @@ export type UserWithId = Omit<User, 'id'> & {
 };
 
 export const auth = betterAuth({
+  baseURL: process.env.NEXT_PUBLIC_BASE_URL || process.env.BETTER_AUTH_URL,
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: process.env.NODE_ENV === 'production',

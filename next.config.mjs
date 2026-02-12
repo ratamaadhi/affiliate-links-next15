@@ -31,6 +31,16 @@ const nextConfig = {
 
   // Configure compression
   compress: true,
+
+  // Automatically configure base URL for Vercel deployments
+  env: {
+    // Use production URL if available, otherwise use deployment URL
+    NEXT_PUBLIC_BASE_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000',
+  },
 };
 
 export default process.env.ANALYZE === 'true'
