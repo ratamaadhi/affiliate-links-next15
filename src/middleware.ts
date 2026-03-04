@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { auth } from './lib/auth';
 import { SessionUser } from './lib/types';
 import { getUsernameRedirect } from './lib/cache/username-redirects';
+import { getMiddlewareRedirect } from './lib/cache/middleware-cache';
 
 const AUTH_PAGES = ['/login', '/signup', '/forgot-password', '/reset-password'];
 const ONBOARDING_PAGES = ['/new-username'];
@@ -54,7 +55,24 @@ async function handleUsernameRedirect(pathname: string) {
   return null;
 }
 
-async function handleShortLinkRedirect(pathname: string) {
+/**
+ * Fire-and-forget click tracking for short links
+ * Calls the tracking endpoint without blocking the redirect response
+ * This ensures analytics are captured while maintaining fast redirects
+ */
+function trackClick(code: string, baseUrl: string): void {
+  // Use fetch without await to avoid blocking the redirect
+  fetch(`${baseUrl}/api/s/${code}/track`, {
+    method: 'POST',
+    // Short timeout to avoid hanging
+    signal: AbortSignal.timeout(1000),
+  }).catch((err) => {
+    // Silently fail - tracking failures shouldn't affect redirects
+    console.error('Failed to track short link click:', err);
+  });
+}
+
+async function handleShortLinkRedirect(pathname: string, request: NextRequest) {
   // Only handle /s/{code} paths where code exists
   // Format must be /s/{code} - not /s/ or /s/{code}/extra
   if (!pathname.startsWith('/s/') || pathname === '/s/') {
@@ -70,14 +88,11 @@ async function handleShortLinkRedirect(pathname: string) {
   }
 
   try {
-    // Dynamic import to avoid loading Redis dependencies at edge
-    const { getShortLinkRedirect } = await import(
-      './lib/cache/short-link-redirects'
-    );
-    const redirect = await getShortLinkRedirect(code);
+    // Check in-memory cache only (no Redis in edge runtime)
+    const cached = getMiddlewareRedirect(code);
 
-    if (redirect) {
-      const response = NextResponse.redirect(redirect.targetUrl, 301);
+    if (cached) {
+      const response = NextResponse.redirect(cached.targetUrl, 301);
 
       // Set cache headers for 24-hour CDN/browser caching
       response.headers.set(
@@ -85,14 +100,17 @@ async function handleShortLinkRedirect(pathname: string) {
         'public, max-age=86400, s-maxage=86400'
       );
 
+      // Track click asynchronously (fire-and-forget)
+      trackClick(code, request.url);
+
       return response;
     }
   } catch (error) {
     console.error('Error handling short link redirect:', error);
   }
 
-  // No redirect found, let the request fall through to the page component
-  // which will show the not-found page
+  // No redirect found in cache, let the request fall through to the page component
+  // which will query the database, track the click, and perform redirect
   return null;
 }
 
@@ -101,7 +119,7 @@ export async function middleware(request: NextRequest) {
 
   // Handle short link redirects FIRST (before auth checks)
   // This allows public access without authentication
-  const shortLinkRedirect = await handleShortLinkRedirect(pathname);
+  const shortLinkRedirect = await handleShortLinkRedirect(pathname, request);
   if (shortLinkRedirect) {
     return shortLinkRedirect;
   }
