@@ -1,43 +1,23 @@
-import { CACHE_TTL, SHORT_LINK_KEY } from '@/lib/cache/cache-keys';
-import { cacheGetOrSet } from '@/lib/cache/cache-manager';
-import { getShortLinkByCode, trackShortLinkClick } from '@/server/short-links';
-import { notFound, redirect } from 'next/navigation';
+import { ShortLinkNotFound } from './not-found';
 
 type PageProps = {
   params: Promise<{ code: string }>;
 };
 
 /**
- * Short link redirect page
- * - If short link exists: redirect to target URL
- * - If not found: show branded 404 page
+ * Short link not-found page
+ *
+ * Redirects are handled by middleware for optimal performance with:
+ * - 301 permanent redirects (SEO-friendly)
+ * - Cache-Control headers for CDN/browser caching
+ *
+ * This page only renders when the short link doesn't exist,
+ * showing a branded 404 page to users.
  */
 export default async function ShortLinkPage(props: PageProps) {
-  const params = await props.params;
-  const { code } = params;
-
-  if (!code) {
-    notFound();
-  }
-
-  const cacheKey = SHORT_LINK_KEY(code);
-  const cachedResult = await cacheGetOrSet(
-    cacheKey,
-    async () => await getShortLinkByCode(code),
-    CACHE_TTL.SHORT_LINK
-  );
-
-  const shortLink = cachedResult.data;
-
-  if (!shortLink) {
-    notFound();
-  }
-
-  // Track click before redirecting
-  await trackShortLinkClick(code);
-
-  // Redirect to target URL
-  redirect(shortLink.targetUrl);
+  // If middleware didn't handle the redirect, the link doesn't exist
+  // Show the branded 404 page
+  return <ShortLinkNotFound />;
 }
 
 /**
@@ -46,11 +26,11 @@ export default async function ShortLinkPage(props: PageProps) {
 export async function generateMetadata({ params }: PageProps) {
   const awaitedParams = await params;
   return {
-    title: `Redirecting from ${awaitedParams.code}...`,
+    title: `Link not found: ${awaitedParams.code}`,
     robots: 'noindex, nofollow',
   };
 }
 
-// Disable caching for short link redirects
+// Disable caching for 404 pages
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

@@ -5,6 +5,7 @@ import {
   invalidateShortLinkCache,
   invalidateUserCache,
 } from '@/lib/cache/cache-manager';
+import { invalidateShortLinkRedirectCache } from '@/lib/cache/short-link-redirects';
 import db from '@/lib/db';
 import {
   page,
@@ -253,8 +254,9 @@ export const deleteShortLink = async (id: number, userId: number) => {
 
     await db.delete(shortLink).where(eq(shortLink.id, id));
 
-    // Invalidate cache for the deleted short link
+    // Invalidate cache for the deleted short link (both Redis and in-memory)
     await invalidateShortLinkCache(link.shortCode);
+    invalidateShortLinkRedirectCache(link.shortCode);
 
     // Invalidate user cache to ensure deleted link is removed from user's list
     await invalidateUserCache(userId);

@@ -3,10 +3,11 @@ import { headers } from 'next/headers';
 import { auth } from './lib/auth';
 import { SessionUser } from './lib/types';
 import { getUsernameRedirect } from './lib/cache/username-redirects';
+import { getShortLinkRedirect } from './lib/cache/short-link-redirects';
 
 const AUTH_PAGES = ['/login', '/signup', '/forgot-password', '/reset-password'];
 const ONBOARDING_PAGES = ['/new-username'];
-const PUBLIC_PREFIX_PATHS = ['/api', '/_next', '/s/'] as const;
+const PUBLIC_PREFIX_PATHS = ['/api', '/_next'] as const;
 
 function isPublicRoute(pathname: string): boolean {
   return (
@@ -18,8 +19,8 @@ function isPublicRoute(pathname: string): boolean {
   );
 }
 
-// Note: /s/{code} routes (short URLs) pass through middleware intentionally.
-// The short URL route handler at /app/s/[code]/route.ts performs the actual redirect.
+// Note: /s/{code} routes (short URLs) are now handled by middleware.
+// This allows proper 301 redirects with cache headers for CDN caching.
 
 async function handleUsernameRedirect(pathname: string) {
   const username = pathname.split('/')[1];
@@ -54,8 +55,50 @@ async function handleUsernameRedirect(pathname: string) {
   return null;
 }
 
+async function handleShortLinkRedirect(pathname: string) {
+  // Only handle /s/{code} paths
+  if (!pathname.startsWith('/s/')) {
+    return null;
+  }
+
+  const code = pathname.split('/')[2];
+
+  if (!code) {
+    return null;
+  }
+
+  try {
+    const redirect = await getShortLinkRedirect(code);
+
+    if (redirect) {
+      const response = NextResponse.redirect(redirect.targetUrl, 301);
+
+      // Set cache headers for 24-hour CDN/browser caching
+      response.headers.set(
+        'Cache-Control',
+        'public, max-age=86400, s-maxage=86400'
+      );
+
+      return response;
+    }
+  } catch (error) {
+    console.error('Error handling short link redirect:', error);
+  }
+
+  // No redirect found, let the request fall through to the page component
+  // which will show the not-found page
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Handle short link redirects FIRST (before auth checks)
+  // This allows public access without authentication
+  const shortLinkRedirect = await handleShortLinkRedirect(pathname);
+  if (shortLinkRedirect) {
+    return shortLinkRedirect;
+  }
 
   // Skip middleware for static assets and API routes
   if (isPublicRoute(pathname)) {
