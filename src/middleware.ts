@@ -3,7 +3,6 @@ import { headers } from 'next/headers';
 import { auth } from './lib/auth';
 import { SessionUser } from './lib/types';
 import { getUsernameRedirect } from './lib/cache/username-redirects';
-import { getShortLinkRedirect } from './lib/cache/short-link-redirects';
 
 const AUTH_PAGES = ['/login', '/signup', '/forgot-password', '/reset-password'];
 const ONBOARDING_PAGES = ['/new-username'];
@@ -56,18 +55,25 @@ async function handleUsernameRedirect(pathname: string) {
 }
 
 async function handleShortLinkRedirect(pathname: string) {
-  // Only handle /s/{code} paths
-  if (!pathname.startsWith('/s/')) {
+  // Only handle /s/{code} paths where code exists
+  // Format must be /s/{code} - not /s/ or /s/{code}/extra
+  if (!pathname.startsWith('/s/') || pathname === '/s/') {
     return null;
   }
 
-  const code = pathname.split('/')[2];
+  const parts = pathname.split('/');
+  const code = parts[2];
 
-  if (!code) {
+  // Validate code is a non-empty string and doesn't contain extra path segments
+  if (!code || code === '' || parts.length > 3) {
     return null;
   }
 
   try {
+    // Dynamic import to avoid loading Redis dependencies at edge
+    const { getShortLinkRedirect } = await import(
+      './lib/cache/short-link-redirects'
+    );
     const redirect = await getShortLinkRedirect(code);
 
     if (redirect) {
