@@ -4,7 +4,11 @@ import { auth } from '@/lib/auth';
 import {
   invalidateShortLinkCache,
   invalidateUserCache,
+  cacheSet,
 } from '@/lib/cache/cache-manager';
+import { invalidateShortLinkRedirectCache } from '@/lib/cache/short-link-redirects';
+import { deleteMiddlewareRedirect } from '@/lib/cache/middleware-cache';
+import { SHORT_LINK_DELETED_KEY, CACHE_TTL } from '@/lib/cache/cache-keys';
 import db from '@/lib/db';
 import {
   page,
@@ -253,8 +257,19 @@ export const deleteShortLink = async (id: number, userId: number) => {
 
     await db.delete(shortLink).where(eq(shortLink.id, id));
 
-    // Invalidate cache for the deleted short link
+    // Invalidate cache for the deleted short link (Redis, in-memory caches, and middleware)
     await invalidateShortLinkCache(link.shortCode);
+    invalidateShortLinkRedirectCache(link.shortCode);
+    deleteMiddlewareRedirect(link.shortCode);
+
+    // Set a tombstone in Redis to mark this short link as deleted
+    // This ensures all serverless instances know the link is deleted
+    // The tombstone expires after the same TTL as the short link cache
+    await cacheSet(
+      SHORT_LINK_DELETED_KEY(link.shortCode),
+      true,
+      CACHE_TTL.SHORT_LINK
+    );
 
     // Invalidate user cache to ensure deleted link is removed from user's list
     await invalidateUserCache(userId);

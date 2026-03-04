@@ -32,6 +32,14 @@ export const SHORT_LINK_KEY = (code: string): string =>
   `${CACHE_PREFIX}:shortlink:${code}`;
 
 /**
+ * Short link deleted tombstone keys
+ * Used to mark deleted short links across all serverless instances
+ * Format: shortlink:deleted:{code}
+ */
+export const SHORT_LINK_DELETED_KEY = (code: string): string =>
+  `${CACHE_PREFIX}:shortlink:deleted:${code}`;
+
+/**
  * User pages cache keys
  * Format: user:pages:{userId}
  */

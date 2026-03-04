@@ -1,4 +1,5 @@
 import { getRedisClient, isRedisReady } from './redis';
+import { SHORT_LINK_DELETED_KEY } from './cache-keys';
 
 /**
  * Cache result type
@@ -243,6 +244,38 @@ export const invalidateShortLinkCache = async (
   code: string
 ): Promise<boolean> => {
   return cacheDelete(`affiliate-links:shortlink:${code}`);
+};
+
+/**
+ * Get all deleted short link tombstones
+ * Returns an array of short codes that have been marked as deleted
+ * Used by middleware to prevent redirecting to deleted links
+ * @returns Array of deleted short codes
+ */
+export const getDeletedShortLinks = async (): Promise<string[]> => {
+  const client = getRedisClient();
+
+  if (!client || !isRedisReady()) {
+    return [];
+  }
+
+  try {
+    // Get all keys matching the deleted short link pattern
+    const pattern = `${SHORT_LINK_DELETED_KEY('*')}`;
+    const keys = await client.keys(pattern);
+
+    // Extract the short codes from the keys
+    // Pattern is: affiliate-links:shortlink:deleted:{code}
+    const deletedCodes = keys.map((key) => {
+      const parts = key.split(':');
+      return parts[parts.length - 1]; // Get the last part (the short code)
+    });
+
+    return deletedCodes;
+  } catch (error) {
+    console.error('Error getting deleted short links:', error);
+    return [];
+  }
 };
 
 /**
