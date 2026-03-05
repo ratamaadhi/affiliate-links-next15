@@ -1,5 +1,6 @@
 import { AppSidebar } from '@/components/app-sidebar';
 import { AuthProvider } from '@/components/auth-provider';
+import { DashboardSkeleton } from '@/components/dashboard-skeleton';
 import { ProgressProvider } from '@/components/progress-provider';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Suspense } from 'react';
@@ -13,14 +14,14 @@ export const metadata = {
 export default function Page({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <Suspense fallback={<div>Loading progress...</div>}>
-        <ProgressProvider>
-          <SidebarProvider>
+      <SidebarProvider>
+        <Suspense fallback={<DashboardSkeleton />}>
+          <ProgressProvider>
             <AppSidebar />
             {children}
-          </SidebarProvider>
-        </ProgressProvider>
-      </Suspense>
+          </ProgressProvider>
+        </Suspense>
+      </SidebarProvider>
     </AuthProvider>
   );
 }
