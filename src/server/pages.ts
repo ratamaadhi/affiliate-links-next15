@@ -13,7 +13,7 @@ import { and, count, eq, like, or } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { headers } from 'next/headers';
 import slugify from 'slug';
-import { createShortLink } from './short-links';
+import { createShortLink, updateShortLinksForPageSlug } from './short-links';
 
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 5);
 
@@ -325,6 +325,19 @@ export const updatePage = async (
 
     const newValues: Partial<PageInsert> = { ...arg.values };
 
+    // Get the original page to track slug changes
+    // OPTIMIZATION: Uses primary key index on page.id and index on page.userId (created in migration 0011)
+    const originalPage = await db.query.page.findFirst({
+      where: and(eq(pageSchema.id, arg.id), eq(pageSchema.userId, userId)),
+      columns: { title: true, slug: true },
+    });
+
+    if (!originalPage) {
+      throw new Error('Page not found');
+    }
+
+    const originalSlug = originalPage.slug;
+
     if (arg.values.slug) {
       const slugFormat = /^[a-z0-9-]+$/;
       if (!slugFormat.test(arg.values.slug)) {
@@ -340,31 +353,36 @@ export const updatePage = async (
     }
 
     if (arg.values.title) {
-      // OPTIMIZATION: Uses primary key index on page.id and index on page.userId (created in migration 0011)
-      // This query efficiently retrieves the original page title and slug
-      const originalPage = await db.query.page.findFirst({
-        where: and(eq(pageSchema.id, arg.id), eq(pageSchema.userId, userId)),
-        columns: { title: true, slug: true },
-      });
+      // Check if this is the default page (slug matches username)
+      const isDefaultPage = originalSlug === userUsername;
 
-      if (originalPage) {
-        // Check if this is the default page (slug matches username)
-        const isDefaultPage = originalPage.slug === userUsername;
+      // Only regenerate slug if NOT the default page AND title changed
+      if (!isDefaultPage && originalPage.title !== arg.values.title) {
+        newValues.slug = await generateUniqueSlug(arg.values.title, userId);
+      }
 
-        // Only regenerate slug if NOT the default page AND title changed
-        if (!isDefaultPage && originalPage.title !== arg.values.title) {
-          newValues.slug = await generateUniqueSlug(arg.values.title, userId);
-        }
-
-        // If it's the default page, ensure slug is NOT in newValues
-        // This preserves the slug as the username
-        if (isDefaultPage) {
-          delete newValues.slug;
-        }
+      // If it's the default page, ensure slug is NOT in newValues
+      // This preserves the slug as the username
+      if (isDefaultPage) {
+        delete newValues.slug;
       }
     }
 
-    return await updatePageValues(arg.id, userId, newValues);
+    // Update the page
+    const result = await updatePageValues(arg.id, userId, newValues);
+
+    // Check if slug changed and update associated short links
+    const finalSlug = newValues.slug ?? originalSlug;
+    if (finalSlug !== originalSlug) {
+      try {
+        await updateShortLinksForPageSlug(arg.id, userId, finalSlug);
+      } catch (shortLinkError) {
+        // Log error but don't fail the page update
+        console.error('Failed to update short links for page:', shortLinkError);
+      }
+    }
+
+    return result;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Failed to update page';

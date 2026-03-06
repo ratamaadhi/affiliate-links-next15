@@ -255,21 +255,23 @@ export const deleteShortLink = async (id: number, userId: number) => {
       return { success: false, message: 'Unauthorized' };
     }
 
+    // CRITICAL: Set tombstone FIRST before any cache invalidation or deletion
+    // This prevents race conditions where a concurrent request might re-populate
+    // the cache with the deleted link data before the tombstone is checked.
+    // The tombstone marks the link as deleted across all serverless instances immediately.
+    await cacheSet(
+      SHORT_LINK_DELETED_KEY(link.shortCode),
+      true,
+      CACHE_TTL.SHORT_LINK
+    );
+
+    // Now safe to delete from database and invalidate all caches
     await db.delete(shortLink).where(eq(shortLink.id, id));
 
     // Invalidate cache for the deleted short link (Redis, in-memory caches, and middleware)
     await invalidateShortLinkCache(link.shortCode);
     invalidateShortLinkRedirectCache(link.shortCode);
     deleteMiddlewareRedirect(link.shortCode);
-
-    // Set a tombstone in Redis to mark this short link as deleted
-    // This ensures all serverless instances know the link is deleted
-    // The tombstone expires after the same TTL as the short link cache
-    await cacheSet(
-      SHORT_LINK_DELETED_KEY(link.shortCode),
-      true,
-      CACHE_TTL.SHORT_LINK
-    );
 
     // Invalidate user cache to ensure deleted link is removed from user's list
     await invalidateUserCache(userId);
@@ -357,6 +359,90 @@ export const createShortLinkForPage = async (
   } catch (error) {
     console.error('Failed to create short link for page:', error);
     return { success: false, message: 'Failed to create short link' };
+  }
+};
+
+/**
+ * Build target URL for a page's short link
+ * For default page (slug equals username): /{username}
+ * For other pages: /{username}/{slug}
+ */
+const buildTargetUrl = (username: string, pageSlug: string): string => {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const isDefaultPage = pageSlug === username;
+  return isDefaultPage
+    ? `${baseUrl}/${username}`
+    : `${baseUrl}/${username}/${pageSlug}`;
+};
+
+/**
+ * Update all short link URLs for a page when the page's slug changes
+ * This ensures short links always redirect to the correct URL
+ */
+export const updateShortLinksForPageSlug = async (
+  pageId: number,
+  userId: number,
+  newSlug: string
+): Promise<{ success: boolean; message?: string }> => {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    const sessionUserId = +session?.user?.id;
+
+    if (!sessionUserId) {
+      return { success: false, message: 'User not authenticated' };
+    }
+
+    if (sessionUserId !== userId) {
+      return { success: false, message: 'Unauthorized' };
+    }
+
+    // Get user data
+    const userData = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+      columns: { username: true },
+    });
+
+    if (!userData?.username) {
+      return { success: false, message: 'User not found' };
+    }
+
+    // Build new target URL
+    const newTargetUrl = buildTargetUrl(userData.username, newSlug);
+
+    // Get all short links for this page
+    const existingLinks = await db.query.shortLink.findMany({
+      where: and(eq(shortLink.pageId, pageId), eq(shortLink.userId, userId)),
+      columns: { id: true, shortCode: true, targetUrl: true },
+    });
+
+    if (existingLinks.length === 0) {
+      // No short links to update
+      return { success: true, message: 'No short links to update' };
+    }
+
+    // Update all short links with the new target URL
+    await db
+      .update(shortLink)
+      .set({ targetUrl: newTargetUrl })
+      .where(and(eq(shortLink.pageId, pageId), eq(shortLink.userId, userId)));
+
+    // Invalidate cache for all affected short codes
+    await Promise.all(
+      existingLinks.map((link) => invalidateShortLinkCache(link.shortCode))
+    );
+
+    // Invalidate user cache
+    await invalidateUserCache(userId);
+
+    return {
+      success: true,
+      message: `Updated ${existingLinks.length} short link(s)`,
+    };
+  } catch (error) {
+    console.error('Failed to update short links for page slug:', error);
+    return { success: false, message: 'Failed to update short links' };
   }
 };
 
