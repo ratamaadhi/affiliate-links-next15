@@ -1,5 +1,10 @@
 import { cacheGet, cacheSet } from './cache-manager';
-import { SHORT_LINK_KEY, CACHE_TTL } from './cache-keys';
+import {
+  SHORT_LINK_KEY,
+  CACHE_TTL,
+  SHORT_LINK_DELETED_KEY,
+} from './cache-keys';
+import { isShortLinkDeleted } from './middleware-cache';
 import db from '@/lib/db';
 import { shortLink } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -88,6 +93,33 @@ export async function getShortLinkRedirectFromCache(
 export async function getShortLinkRedirect(
   shortCode: string
 ): Promise<ShortLinkRedirect | null> {
+  // CRITICAL: Check tombstone FIRST before any cache lookups
+  // This prevents returning cached data for deleted short links
+  // Two-tier check: 1) Redis tombstone (shared across instances) 2) Local deleted set (fallback)
+  try {
+    const deletedResult = await cacheGet<boolean>(
+      SHORT_LINK_DELETED_KEY(shortCode)
+    );
+    if (deletedResult.hit && deletedResult.data) {
+      // Clean up cache and pending queries to prevent stale data
+      redirectCache.delete(shortCode);
+      pendingQueries.delete(shortCode);
+      return null;
+    }
+  } catch (error) {
+    console.error('Failed to check Redis deleted short link status:', error);
+  }
+
+  // Fallback: Check local deleted set (when Redis is not available)
+  const isDeleted = isShortLinkDeleted(shortCode);
+  if (isDeleted) {
+    // CRITICAL: Clean up cache and pending queries to prevent stale data
+    // This prevents returning cached data after the deleted entry expires
+    redirectCache.delete(shortCode);
+    pendingQueries.delete(shortCode);
+    return null;
+  }
+
   // 1. Check in-memory cache first (O(1))
   const memCached = redirectCache.get(shortCode);
   if (memCached) {
@@ -96,6 +128,8 @@ export async function getShortLinkRedirect(
       redirectCache.delete(shortCode);
       return null;
     }
+    // Return cached data directly - no DB query needed
+    // Tombstone checks (Redis + local deletedShortLinks) are done above
     return memCached;
   }
 
@@ -170,10 +204,14 @@ export async function getShortLinkRedirect(
  * Invalidate the in-memory cache for a specific short code
  * Called when a short link is created, updated, or deleted
  *
+ * CRITICAL: Also clears pending queries to prevent stale data from being returned
+ *
  * @param shortCode - The short code to invalidate
  */
 export function invalidateShortLinkRedirectCache(shortCode: string): void {
   redirectCache.delete(shortCode);
+  // CRITICAL: Also clear pending queries to prevent returning stale data
+  pendingQueries.delete(shortCode);
 }
 
 /**

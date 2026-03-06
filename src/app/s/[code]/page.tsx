@@ -2,8 +2,16 @@ import { redirect } from 'next/navigation';
 import { ShortLinkNotFound } from './not-found';
 import { getShortLinkRedirect } from '@/lib/cache/short-link-redirects';
 import { trackShortLinkClick } from '@/server/short-links';
-import { cacheSet, getDeletedShortLinks } from '@/lib/cache/cache-manager';
-import { SHORT_LINK_KEY, CACHE_TTL } from '@/lib/cache/cache-keys';
+import {
+  cacheSet,
+  cacheGet,
+  getDeletedShortLinks,
+} from '@/lib/cache/cache-manager';
+import {
+  SHORT_LINK_KEY,
+  CACHE_TTL,
+  SHORT_LINK_DELETED_KEY,
+} from '@/lib/cache/cache-keys';
 import {
   setMiddlewareRedirect,
   syncDeletedShortLinks,
@@ -39,6 +47,18 @@ export default async function ShortLinkPage(props: PageProps) {
     }
   } catch (error) {
     console.error('Failed to sync deleted short links:', error);
+  }
+
+  // Check if this short link has been deleted (Redis tombstone check)
+  // This prevents redirecting to deleted links that might still be in local cache
+  try {
+    const deletedResult = await cacheGet<boolean>(SHORT_LINK_DELETED_KEY(code));
+    if (deletedResult.hit && deletedResult.data) {
+      // This short link has been deleted
+      return <ShortLinkNotFound />;
+    }
+  } catch (error) {
+    console.error('Failed to check deleted short link status:', error);
   }
 
   // Middleware didn't handle this (cache miss or first access)

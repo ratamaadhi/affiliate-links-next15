@@ -94,11 +94,10 @@ async function handleShortLinkRedirect(pathname: string, request: NextRequest) {
     if (cached) {
       const response = NextResponse.redirect(cached.targetUrl, 301);
 
-      // Set cache headers for 24-hour CDN/browser caching
-      response.headers.set(
-        'Cache-Control',
-        'public, max-age=86400, s-maxage=86400'
-      );
+      // Use private caching - prevents browser/CDN from caching redirects
+      // This ensures deleted short links stop working immediately
+      // Server-side in-memory caching still provides performance benefits
+      response.headers.set('Cache-Control', 'private, no-cache');
 
       // Track click asynchronously (fire-and-forget)
       trackClick(code, request.url);
