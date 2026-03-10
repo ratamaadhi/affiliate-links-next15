@@ -1,6 +1,13 @@
 'use client';
 
-import { BookOpen, LayoutGrid, LifeBuoy, Send, Settings2 } from 'lucide-react';
+import {
+  BookOpen,
+  LayoutGrid,
+  Layers,
+  LifeBuoy,
+  Send,
+  Settings2,
+} from 'lucide-react';
 import * as React from 'react';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,10 +35,16 @@ const data = {
   },
   navMain: [
     {
-      title: 'My Aff-links',
+      title: 'Dashboard',
       url: '/dashboard',
       icon: LayoutGrid,
-      isActive: true,
+      items: [],
+    },
+    {
+      title: 'My Aff-links',
+      url: '#',
+      icon: Layers,
+      isActive: false,
       items: [
         {
           title: 'Pages',
