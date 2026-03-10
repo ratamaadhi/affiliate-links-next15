@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDeleteShortLink } from '@/hooks/mutations';
 import { useUserShortLinks } from '@/hooks/queries';
-import { ExternalLink, Trash2, Copy, Clock } from 'lucide-react';
+import { ExternalLink, Trash2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { CopyButton } from '@/components/ui/shadcn-io/copy-button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,11 +23,6 @@ import {
 export function EnhancedShortUrlsList() {
   const { data: links, isLoading } = useUserShortLinks();
   const deleteShortLink = useDeleteShortLink();
-
-  const handleCopy = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast.success('Short URL copied to clipboard');
-  };
 
   const handleDelete = async (id: number) => {
     await deleteShortLink.trigger({ id });
@@ -115,18 +111,15 @@ export function EnhancedShortUrlsList() {
                       <code className="text-[11px] sm:text-xs bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded break-all font-mono font-medium text-foreground/90">
                         {process.env.NEXT_PUBLIC_BASE_URL}/s/{link.shortCode}
                       </code>
-                      <Button
+                      <CopyButton
+                        content={`${process.env.NEXT_PUBLIC_BASE_URL}/s/${link.shortCode}`}
                         variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 sm:h-6 sm:w-6 shrink-0 hover:bg-primary/10"
-                        onClick={() =>
-                          handleCopy(
-                            `${process.env.NEXT_PUBLIC_BASE_URL}/s/${link.shortCode}`
-                          )
+                        size="sm"
+                        className="shrink-0 hover:bg-primary/10"
+                        onCopy={() =>
+                          toast.success('Short URL copied to clipboard')
                         }
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
+                      />
                       {index === 0 && (
                         <Badge
                           variant="default"

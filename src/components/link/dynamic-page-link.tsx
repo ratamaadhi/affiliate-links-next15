@@ -42,7 +42,11 @@ export function DynamicPageLink() {
             My Linkid:{' '}
           </span>
           {pageSlug ? (
-            <Link href={pageUrl} target="_blank" className="hover:underline">
+            <Link
+              href={pageUrl}
+              target="_blank"
+              className="hover:underline text-primary"
+            >
               {pageUrl}
             </Link>
           ) : (
