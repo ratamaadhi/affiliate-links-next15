@@ -46,3 +46,7 @@ dump*
 docker-data
 
 /.playwright-mcp
+
+graphify-out/manifest.json
+graphify-out/cost.json
+graphify-out/cache/
